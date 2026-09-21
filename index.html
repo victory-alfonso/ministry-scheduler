@@ -2977,7 +2977,7 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                     </td>
                     <td style={styles.td} data-label="Verse">{r.role.hasVerse ? (r.verse || <span style={styles.tdMuted}>—</span>) : <span style={styles.tdMuted}>—</span>}</td>
                     <td style={styles.td} data-label="Status">
-                      {hasConflict ? <span style={styles.badgeConflict}>Conflict</span>
+                      {hasConflict ? <span style={styles.badgeConflict}>Schedule Conflict</span>
                         : hasDup ? <span style={styles.badgeDup}>Duplicate</span>
                         : r.name ? <span style={styles.badgeOk}>Confirmed</span>
                         : <span style={styles.tdMuted}>—</span>}
@@ -3005,7 +3005,7 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                     <div style={styles.mcRoleCol}>
                       <div style={styles.mcRoleName}>{searchQuery ? highlightMatch(r.role.name, searchQuery) : r.role.name}</div>
                       {r.role.hasVerse && r.verse && <div style={styles.mcVerse}>{r.verse}</div>}
-                      {hasConflict && <div style={styles.mcStatusNote}><span style={styles.badgeConflict}>Conflict</span></div>}
+                      {hasConflict && <div style={styles.mcStatusNote}><span style={styles.badgeConflict}>Schedule Conflict</span></div>}
                       {!hasConflict && hasDup && <div style={styles.mcStatusNote}><span style={styles.badgeDup}>Duplicate</span></div>}
                     </div>
                     <div style={{ ...styles.mcVolunteer, color: r.name ? "#2A2620" : "#B0A582", fontWeight: r.name ? 600 : 400 }}>
