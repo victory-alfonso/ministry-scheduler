@@ -201,9 +201,11 @@ const DEFAULT_TEAMS = [
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 const norm = (s) => (s || "").toString().trim();
-const emailToKey = (e) => normKey(e).replace(/\./g, ",");
-const keyToEmail = (k) => k.replace(/,/g, ".");
 const normKey = (s) => norm(s).toLowerCase();
+// Firebase Realtime DB keys cannot contain ".", so emails used as keys in the
+// Editors list are stored with "." swapped for "," (commas never appear in real emails).
+const emailToKey = (e) => normKey(e).replace(/\./g, ",");
+const keyToEmail = (k) => (k || "").replace(/,/g, ".");
 const pairKey = (a, b) => [a, b].sort().join("~");
 
 // Loose name matching for "My Schedule": assignments are often typed as a
@@ -1158,8 +1160,8 @@ function App() {
   const legacyNameKey = normKey(userName);
   const matchedRestrictionKey = !config
     ? null
-    : Object.prototype.hasOwnProperty.call(restrictionsObj, userEmail)
-    ? userEmail
+    : Object.prototype.hasOwnProperty.call(restrictionsObj, emailToKey(userEmail))
+    ? emailToKey(userEmail)
     : (legacyNameKey && !legacyNameKey.includes("@") && Object.prototype.hasOwnProperty.call(restrictionsObj, legacyNameKey))
     ? legacyNameKey
     : null;
@@ -3226,7 +3228,7 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
   const addRestriction = () => {
     const email = normKey(restrictEmail);
     if (!email || restrictTeamIds.length === 0) return;
-    updateConfig((prev) => ({ ...prev, restrictions: { ...(prev.restrictions || {}), [email]: { teams: restrictTeamIds, canManage: restrictCanManage } } }));
+    updateConfig((prev) => ({ ...prev, restrictions: { ...(prev.restrictions || {}), [emailToKey(email)]: { teams: restrictTeamIds, canManage: restrictCanManage } } }));
     setRestrictEmail("");
     setRestrictTeamIds([]);
     setRestrictCanManage(false);
@@ -3917,19 +3919,20 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
         </div>
         {restrictionEntries.length > 0 && (
           <div style={styles.restrictList}>
-            {restrictionEntries.map(([email, raw]) => {
+            {restrictionEntries.map(([key, raw]) => {
+              const email = keyToEmail(key);
               const entry = normalizeRestriction(raw);
               const teamNames = entry.teams
                 .map((id) => (config.teams.find((t) => t.id === id) || {}).name || "(deleted team)")
                 .join(", ");
               return (
-                <div key={email} style={styles.restrictRow}>
+                <div key={key} style={styles.restrictRow}>
                   <span style={styles.restrictName}>{email}</span>
                   <span style={styles.restrictTeam}>
                     can edit: {teamNames || "(none yet)"}{entry.canManage ? " · can manage teams" : ""}
                   </span>
                   <button onClick={() => editRestriction(email, entry)} style={styles.linkDanger}>Edit</button>
-                  <button onClick={() => removeRestriction(email)} style={styles.linkDanger}>Remove</button>
+                  <button onClick={() => removeRestriction(key)} style={styles.linkDanger}>Remove</button>
                 </div>
               );
             })}
