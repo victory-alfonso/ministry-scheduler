@@ -940,7 +940,7 @@ function QuickView({ config, monthState, year, month, onPrevMonth, onNextMonth, 
                 <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)}
                   placeholder="e.g. Zerah Torres" style={styles.input} />
                 <div style={{ ...styles.pairNote, marginTop: 8, marginBottom: 0 }}>
-                  First name or surname alone is enough — typing "Cruz" finds "Juan Cruz".
+                  First name or surname alone is enough — typing "Torres" finds "Zerah Torres".
                 </div>
               </div>
               {norm(guestName) ? (
@@ -2977,8 +2977,8 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                     </td>
                     <td style={styles.td} data-label="Verse">{r.role.hasVerse ? (r.verse || <span style={styles.tdMuted}>—</span>) : <span style={styles.tdMuted}>—</span>}</td>
                     <td style={styles.td} data-label="Status">
-                      {hasConflict ? <span style={styles.badgeConflict}>Double-booked</span>
-                        : hasDup ? <span style={styles.badgeDup}>Also on this team</span>
+                      {hasConflict ? <span style={styles.badgeConflict}>Conflict</span>
+                        : hasDup ? <span style={styles.badgeDup}>Duplicate</span>
                         : r.name ? <span style={styles.badgeOk}>Confirmed</span>
                         : <span style={styles.tdMuted}>—</span>}
                     </td>
@@ -3005,8 +3005,8 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                     <div style={styles.mcRoleCol}>
                       <div style={styles.mcRoleName}>{searchQuery ? highlightMatch(r.role.name, searchQuery) : r.role.name}</div>
                       {r.role.hasVerse && r.verse && <div style={styles.mcVerse}>{r.verse}</div>}
-                      {hasConflict && <div style={styles.mcStatusNote}><span style={styles.badgeConflict}>Double-booked</span></div>}
-                      {!hasConflict && hasDup && <div style={styles.mcStatusNote}><span style={styles.badgeDup}>Also on this team</span></div>}
+                      {hasConflict && <div style={styles.mcStatusNote}><span style={styles.badgeConflict}>Conflict</span></div>}
+                      {!hasConflict && hasDup && <div style={styles.mcStatusNote}><span style={styles.badgeDup}>Duplicate</span></div>}
                     </div>
                     <div style={{ ...styles.mcVolunteer, color: r.name ? "#2A2620" : "#B0A582", fontWeight: r.name ? 600 : 400 }}>
                       <span style={r.name && hasConflict ? styles.nameConflict : r.name && hasDup ? styles.nameDup : undefined}>
@@ -3126,8 +3126,8 @@ function MyScheduleView({ config, monthState, userName, year, month }) {
                           {m.name}{!exactMatch && <span style={styles.tdMuted}> (close match)</span>}
                         </td>
                         <td style={styles.td}>
-                          {hasConflict ? <span style={styles.badgeConflict}>Double-booked</span>
-                            : hasDup ? <span style={styles.badgeDup}>Also on this team</span>
+                          {hasConflict ? <span style={styles.badgeConflict}>Conflict</span>
+                            : hasDup ? <span style={styles.badgeDup}>Duplicate</span>
                             : <span style={styles.badgeOk}>Confirmed</span>}
                         </td>
                       </tr>
