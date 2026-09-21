@@ -588,7 +588,7 @@ function findIssues(config, monthState, week, slot, teamId, roleId, name) {
     if (tId === teamId) {
       issues.push({ type: "duplicate", team: otherTeam, role: otherRole });
     } else if (!isCompatible(teamId, tId, config.teams, config.compatiblePairs)) {
-      issues.push({ type: "conflict", team: otherTeam, role: otherRole });
+      issues.push({ type: "Schedule Conflict", team: otherTeam, role: otherRole });
     }
   }
   return issues;
@@ -1609,10 +1609,10 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
           const value = monthState.assignments[key] || "";
           const verseValue = (monthState.verses && monthState.verses[key]) || "";
           const issues = findIssues(config, monthState, week, slot, team.id, role.id, value);
-          const hasConflict = issues.some((x) => x.type === "conflict");
+          const hasConflict = issues.some((x) => x.type === "Schedule Conflict");
           const hasDup = issues.some((x) => x.type === "duplicate");          
           const dupIssues = issues.filter((x) => x.type === "duplicate");
-          const conflictIssues = issues.filter((x) => x.type === "conflict");
+          const conflictIssues = issues.filter((x) => x.type === "Schedule Conflict");
           const warningParts = [];
           if (dupIssues.length > 0) warningParts.push(`Also serving as ${dupIssues.map((iss) => iss.role.name).join(" & ")} on this team`);
           if (conflictIssues.length > 0) warningParts.push(`Also booked for ${conflictIssues.map((iss) => `${iss.team.name} — ${iss.role.name}`).join(" & ")}`);
@@ -2728,7 +2728,7 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
 
     const VolunteerCell = ({ row }) => {
       const r = resolvePrintRow(config, monthState, week, slot, row);
-      const hasConflict = r.issues.some((x) => x.type === "conflict");
+      const hasConflict = r.issues.some((x) => x.type === "Schedule Conflict");
       const hasDup = r.issues.some((x) => x.type === "duplicate");
       if (r.editable) {
         return (
@@ -2963,7 +2963,7 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                 <tr><td colSpan={5} style={styles.emptyNote}>No teams, roles, or volunteers match "{searchQuery}".</td></tr>
               )}
               {filteredRows.map((r, idx) => {
-                const hasConflict = r.issues.some((x) => x.type === "conflict");
+                const hasConflict = r.issues.some((x) => x.type === "Schedule Conflict");
                 const hasDup = r.issues.some((x) => x.type === "duplicate");
                 return (
                   <tr key={r.key} className="master-row" style={{ background: hasConflict ? "#FBE9E5" : hasDup ? "#FBF3DC" : idx % 2 === 0 ? "#FFFFFF" : "#FAF6EA" }}>
@@ -2997,7 +2997,7 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
             <div key={section.team.id} style={styles.masterSection}>
               <div style={styles.mcTeamHeader}>{searchQuery ? highlightMatch(section.team.name, searchQuery) : section.team.name}</div>
               {section.rows.map((r, i) => {
-                const hasConflict = r.issues.some((x) => x.type === "conflict");
+                const hasConflict = r.issues.some((x) => x.type === "Schedule Conflict");
                 const hasDup = r.issues.some((x) => x.type === "duplicate");
                 const isLast = i === section.rows.length - 1;
                 return (
@@ -3113,7 +3113,7 @@ function MyScheduleView({ config, monthState, userName, year, month }) {
               <tbody>
                 {w.slots.flatMap((sl) =>
                   sl.matches.map((m, idx) => {
-                    const hasConflict = m.issues.some((x) => x.type === "conflict");
+                    const hasConflict = m.issues.some((x) => x.type === "Schedule Conflict");
                     const hasDup = m.issues.some((x) => x.type === "duplicate");
                     const exactMatch = myNames.some((n) => normKey(n) === normKey(m.name));
                     return (
@@ -3126,7 +3126,7 @@ function MyScheduleView({ config, monthState, userName, year, month }) {
                           {m.name}{!exactMatch && <span style={styles.tdMuted}> (close match)</span>}
                         </td>
                         <td style={styles.td}>
-                          {hasConflict ? <span style={styles.badgeConflict}>Conflict</span>
+                          {hasConflict ? <span style={styles.badgeConflict}>Schedule Conflict</span>
                             : hasDup ? <span style={styles.badgeDup}>Duplicate</span>
                             : <span style={styles.badgeOk}>Confirmed</span>}
                         </td>
