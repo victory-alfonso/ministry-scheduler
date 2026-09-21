@@ -201,6 +201,8 @@ const DEFAULT_TEAMS = [
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 const norm = (s) => (s || "").toString().trim();
+const emailToKey = (e) => normKey(e).replace(/\./g, ",");
+const keyToEmail = (k) => k.replace(/,/g, ".");
 const normKey = (s) => norm(s).toLowerCase();
 const pairKey = (a, b) => [a, b].sort().join("~");
 
