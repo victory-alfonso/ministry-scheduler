@@ -1615,7 +1615,7 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
           const conflictIssues = issues.filter((x) => x.type === "Schedule Conflict");
           const warningParts = [];
           if (dupIssues.length > 0) warningParts.push(`Also serving as ${dupIssues.map((iss) => iss.role.name).join(" & ")} on this team`);
-          if (conflictIssues.length > 0) warningParts.push(`Also booked for ${conflictIssues.map((iss) => `${iss.team.name} — ${iss.role.name}`).join(" & ")}`);
+          if (conflictIssues.length > 0) warningParts.push(`Also scheduled for ${conflictIssues.map((iss) => `${iss.team.name} — ${iss.role.name}`).join(" & ")}`);
           const nameWarningText = warningParts.length > 0 ? warningParts.join(" | ") : null;
           const roleVolunteers = (role.volunteers || []).slice().sort((a, b) => a.localeCompare(b));
           const meta = (monthState.editMeta && monthState.editMeta[key]) || null;
