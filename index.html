@@ -1663,7 +1663,12 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
 // A branded confirmation dialog for destructive "Clear all" actions,
 // rendered through a portal so it sits above everything (sidebar, sticky
 // headers, etc.) regardless of where in the tree it's triggered from.
-function ClearNamesModal({ teamName, onCancel, onConfirm }) {
+function ClearNamesModal({ teamName, onCancel, onConfirm,
+  title = "Clear Names",
+  body = "This will remove all volunteer names and verses from this ministry tab for this service, and update the Master List.",
+  note = "Only this tab will be affected. Other ministry tabs stay untouched.",
+  warning = "This cannot be undone. Please make sure you're on the right tab before continuing.",
+  confirmLabel = "Yes, Clear Names" }) {
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onCancel(); };
     document.addEventListener("keydown", onKey);
@@ -1675,22 +1680,17 @@ function ClearNamesModal({ teamName, onCancel, onConfirm }) {
       <div style={styles.modalCard}>
         <div style={styles.modalIconRow}>
           <div style={styles.modalIconBadge}>!</div>
-          <div style={styles.modalTitle}>Clear Names</div>
+          <div style={styles.modalTitle}>{title}</div>
         </div>
-        <div style={styles.modalBody}>
-          This will remove all volunteer names and verses from this ministry
-          tab for this service, and update the Master List.
-        </div>
+        <div style={styles.modalBody}>{body}</div>
         <div style={styles.modalHighlight}>
           <div style={styles.modalHighlightTeam}>{teamName}</div>
-          <div style={styles.modalHighlightNote}>Only this tab will be affected. Other ministry tabs stay untouched.</div>
+          <div style={styles.modalHighlightNote}>{note}</div>
         </div>
-        <div style={styles.modalWarning}>
-          This cannot be undone. Please make sure you're on the right tab before continuing.
-        </div>
+        <div style={styles.modalWarning}>{warning}</div>
         <div style={styles.modalActions}>
           <button onClick={onCancel} style={styles.modalCancelBtn}>Cancel</button>
-          <button onClick={onConfirm} style={styles.modalConfirmBtn}>Yes, Clear Names</button>
+          <button onClick={onConfirm} style={styles.modalConfirmBtn}>{confirmLabel}</button>
         </div>
       </div>
     </div>,
@@ -2422,6 +2422,7 @@ function WarningIcon({ text, style }) {
 }
 
 function ServiceInfoView({ monthState, updateMonthState, week, slot, year, month, locked, userName }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const key = serviceInfoKey(week, slot);
   const info = (monthState.serviceInfo && monthState.serviceInfo[key]) || { series: "", topic: "", verse: "", announcements: "", headcountVolunteer: "", headcountAdult: "", headcountKids: "" };
   const editMeta = monthState.editMeta || {};
@@ -2444,10 +2445,34 @@ function ServiceInfoView({ monthState, updateMonthState, week, slot, year, month
 
   const lockedStyle = locked ? { background: "#F3EFE2", cursor: "default" } : {};
 
+  const INFO_FIELDS = ["series", "topic", "verse", "announcements", "headcountVolunteer", "headcountAdult", "headcountKids"];
+  const hasAnyValue = INFO_FIELDS.some((f) => norm(info[f]));
+  const confirmClearAll = () => {
+    setConfirmOpen(false);
+    if (locked) return;
+    updateMonthState((prev) => {
+      const nextServiceInfo = { ...(prev.serviceInfo || {}) };
+      delete nextServiceInfo[key];
+      let nextEditMeta = { ...(prev.editMeta || {}) };
+      INFO_FIELDS.forEach((f) => {
+        nextEditMeta = withEditMeta(nextEditMeta, key + "__" + f, userName);
+      });
+      return { ...prev, serviceInfo: nextServiceInfo, editMeta: nextEditMeta };
+    });
+  };
+
   return (
     <div style={styles.viewWrap}>
       <header style={styles.viewHeader}>
-        <h1 style={styles.h1}>Service Details</h1>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <h1 style={styles.h1}>Service Details</h1>
+          {!locked && (
+            <button onClick={() => hasAnyValue && setConfirmOpen(true)} disabled={!hasAnyValue}
+              style={{ ...styles.smallBtn, background: "#A6402F", opacity: hasAnyValue ? 1 : 0.45, cursor: hasAnyValue ? "pointer" : "default" }}>
+              Clear all
+            </button>
+          )}
+        </div>
         <div style={styles.viewMeta}>
           {weekDisplayLabel(week, monthState.weekLabels, year, month)} · {slot}
           {locked && <span style={styles.flexTag}>view only — only Service Lead editors can change this</span>}
@@ -2499,6 +2524,18 @@ function ServiceInfoView({ monthState, updateMonthState, week, slot, year, month
           </div>
         </div>
       </div>
+      {confirmOpen && (
+        <ClearNamesModal
+          teamName="Service Details"
+          title="Clear Service Details"
+          body="This will remove the series name, topic, verse, announcements and head counts for this service."
+          note="Only this service's details will be affected. Volunteer names in the ministry tabs stay untouched."
+          warning="This cannot be undone. Please make sure you're on the right service before continuing."
+          confirmLabel="Yes, Clear Details"
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={confirmClearAll}
+        />
+      )}
     </div>
   );
 }
