@@ -1545,6 +1545,56 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
   const [exporting, setExporting] = useState(null); // null | "image" | "pdf"
   const sheetRef = useRef(null);
 
+  // ---- Per-role volunteer list editing (add / remove right on the ministry tab) ----
+  // Same data as Manage Teams (role.volunteers in the shared config), so the
+  // dropdown on each role and the Manage Teams list always stay in sync.
+  const [openVolRoles, setOpenVolRoles] = useState({}); // roleId -> bool (panel expanded)
+  const [volDraft, setVolDraft] = useState({});         // roleId -> textarea text
+  const parseVolunteerNames = (raw) =>
+    (raw || "").split(/[\n,]/).map((x) => norm(x)).filter(Boolean);
+  const addVolunteers = (roleId) => {
+    if (locked || !team) return;
+    const names = parseVolunteerNames(volDraft[roleId]);
+    if (names.length === 0) return;
+    updateConfig((prev) => ({
+      ...prev,
+      teams: prev.teams.map((t) => {
+        if (t.id !== team.id) return t;
+        return {
+          ...t,
+          roles: t.roles.map((r) => {
+            if (r.id !== roleId) return r;
+            const existing = r.volunteers || [];
+            const seen = new Set(existing.map((v) => normKey(v)));
+            const additions = [];
+            names.forEach((nm) => {
+              const k = normKey(nm);
+              if (seen.has(k)) return;
+              seen.add(k);
+              additions.push(nm);
+            });
+            if (additions.length === 0) return r;
+            return { ...r, volunteers: [...existing, ...additions] };
+          }),
+        };
+      }),
+    }));
+    setVolDraft((prev) => ({ ...prev, [roleId]: "" }));
+  };
+  const removeVolunteerFromRole = (roleId, name) => {
+    if (locked || !team) return;
+    updateConfig((prev) => ({
+      ...prev,
+      teams: prev.teams.map((t) => {
+        if (t.id !== team.id) return t;
+        return {
+          ...t,
+          roles: t.roles.map((r) => (r.id === roleId ? { ...r, volunteers: (r.volunteers || []).filter((v) => v !== name) } : r)),
+        };
+      }),
+    }));
+  };
+
   // Same share/download + capture approach as the Master List's print sheet:
   // phones get the native share sheet (so the image can go straight into a
   // group chat), desktop just downloads the file.
@@ -1849,7 +1899,47 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
                       style={{ ...styles.input, width: "100%", boxSizing: "border-box", ...(locked ? { background: "#F3EFE2", cursor: "default" } : {}) }}
                     />
                   )}
-                </div>                
+                </div>
+                {!locked && (
+                  <div style={{ marginTop: 8 }}>
+                    <button
+                      onClick={() => setOpenVolRoles((prev) => ({ ...prev, [role.id]: !prev[role.id] }))}
+                      style={{ border: "none", background: "none", padding: 0, cursor: "pointer", color: "#1F3864", fontSize: 12.5, fontWeight: 600, fontFamily: "system-ui, sans-serif" }}>
+                      👥 Volunteer list ({roleVolunteers.length}) {openVolRoles[role.id] ? "▴" : "▾"}
+                    </button>
+                    {openVolRoles[role.id] && (
+                      <div style={{ marginTop: 8, padding: 12, background: "#FBF8EE", border: "1px solid #EFE7D3", borderRadius: 10 }}>
+                        <div style={{ fontSize: 11.5, color: "#8A7F5E", marginBottom: 8, fontFamily: "system-ui, sans-serif" }}>
+                          Mga pwedeng piliin sa dropdown ng <b>{role.name}</b>. Pwedeng magdagdag ng marami nang sabay — paghiwalayin ng comma o new line.
+                        </div>
+                        {roleVolunteers.length === 0 ? (
+                          <div style={{ fontSize: 12, color: "#B0A582", marginBottom: 8, fontFamily: "system-ui, sans-serif" }}>Wala pang volunteers sa role na ito.</div>
+                        ) : (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                            {roleVolunteers.map((name) => (
+                              <span key={name} style={{ background: "#EFE7D3", borderRadius: 20, padding: "4px 6px 4px 11px", fontSize: 12.5, display: "flex", alignItems: "center", gap: 6, fontFamily: "system-ui, sans-serif" }}>
+                                {name}
+                                <button onClick={() => removeVolunteerFromRole(role.id, name)}
+                                  aria-label={"Remove " + name}
+                                  style={{ border: "none", background: "#E3D8B8", color: "#A6402F", cursor: "pointer", fontSize: 13, lineHeight: 1, width: 20, height: 20, borderRadius: "50%", padding: 0 }}>×</button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div style={{ display: "flex", gap: 6, alignItems: "flex-start", flexWrap: "wrap" }}>
+                          <textarea
+                            value={volDraft[role.id] || ""}
+                            onChange={(e) => setVolDraft((prev) => ({ ...prev, [role.id]: e.target.value }))}
+                            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addVolunteers(role.id); } }}
+                            placeholder="Add volunteer name(s)…"
+                            rows={1}
+                            style={{ ...styles.input, width: "auto", flex: 1, minWidth: 160, resize: "vertical", minHeight: 38, boxSizing: "border-box", fontFamily: "system-ui, sans-serif" }} />
+                          <button onClick={() => addVolunteers(role.id)} style={styles.smallBtn}>+ Add</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           );
