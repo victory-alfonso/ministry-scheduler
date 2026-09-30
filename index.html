@@ -3614,6 +3614,56 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
   const [role4, setRole4] = useState("");
   const [overrideDraft, setOverrideDraft] = useState({});
   const [newVolunteerName, setNewVolunteerName] = useState({});
+  // Drag-to-reorder roles: { teamId, roleId, overId } while a handle is held
+  const [roleDrag, setRoleDrag] = useState(null);
+  const roleDragRef = useRef(null);
+  roleDragRef.current = roleDrag;
+
+  const moveRole = (teamId, fromId, toId) => {
+    if (!fromId || !toId || fromId === toId) return;
+    updateConfig((prev) => ({
+      ...prev,
+      teams: prev.teams.map((t) => {
+        if (t.id !== teamId) return t;
+        const list = t.roles.slice();
+        const from = list.findIndex((r) => r.id === fromId);
+        const to = list.findIndex((r) => r.id === toId);
+        if (from < 0 || to < 0) return t;
+        const [item] = list.splice(from, 1);
+        list.splice(to, 0, item);
+        return { ...t, roles: list };
+      }),
+    }));
+  };
+
+  useEffect(() => {
+    if (!roleDrag) return;
+    const onMove = (e) => {
+      const cur = roleDragRef.current;
+      if (!cur) return;
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const row = el && el.closest ? el.closest("[data-role-row]") : null;
+      const overId = row && row.getAttribute("data-team-id") === cur.teamId ? row.getAttribute("data-role-id") : cur.overId;
+      if (overId !== cur.overId) setRoleDrag({ ...cur, overId });
+      // auto-scroll near the screen edges
+      if (e.clientY < 70) window.scrollBy(0, -14);
+      else if (e.clientY > window.innerHeight - 70) window.scrollBy(0, 14);
+      e.preventDefault();
+    };
+    const onUp = () => {
+      const cur = roleDragRef.current;
+      if (cur) moveRole(cur.teamId, cur.roleId, cur.overId);
+      setRoleDrag(null);
+    };
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [!!roleDrag]);
 
   const printSettings = config.printSettings || {};
   const setPrintSetting = (field, value) => {
@@ -3905,8 +3955,19 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
             </label>
             <div style={styles.roleList}>
               {(team.roles || []).map((role) => (
-                <div key={role.id} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                <div key={role.id} data-role-row="1" data-team-id={team.id} data-role-id={role.id}
+                  style={{
+                    display: "flex", flexDirection: "column", gap: 3, borderRadius: 8,
+                    opacity: roleDrag && roleDrag.teamId === team.id && roleDrag.roleId === role.id ? 0.45 : 1,
+                    outline: roleDrag && roleDrag.teamId === team.id && roleDrag.overId === role.id && roleDrag.roleId !== role.id ? "2px dashed #B8912F" : "none",
+                    outlineOffset: 3,
+                  }}>
                   <div style={styles.roleEditRow}>
+                    <span
+                      title="I-drag para ilipat ang role"
+                      aria-label="Drag to reorder role"
+                      onPointerDown={(e) => { e.preventDefault(); setRoleDrag({ teamId: team.id, roleId: role.id, overId: role.id }); }}
+                      style={{ cursor: roleDrag ? "grabbing" : "grab", touchAction: "none", userSelect: "none", fontSize: 18, lineHeight: 1, color: "#9B8F6C", padding: "4px 6px", flexShrink: 0 }}>⠿</span>
                     <input value={role.name} onChange={(e) => renameRole(team.id, role.id, e.target.value)} style={styles.roleEditInput} />
                     <button onClick={() => removeRole(team.id, role.id)} style={styles.iconDanger} aria-label="Remove role">×</button>
                   </div>
