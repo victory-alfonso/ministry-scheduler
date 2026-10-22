@@ -310,6 +310,10 @@ function nthSundayOfMonth(year, month, week) {
   const date = new Date(year, month - 1, day);
   return date.getMonth() === month - 1 ? date : null;
 }
+// The coming Sunday (or today, if today is Sunday)
+function upcomingSunday(from) {
+  return new Date(from.getFullYear(), from.getMonth(), from.getDate() + ((7 - from.getDay()) % 7));
+}
 function formatDateLong(date) {
   return `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
@@ -946,7 +950,10 @@ function AuthGate({ auth, onSignedIn, onBack }) {
 // updateMonthState, so nothing here can write to the shared schedule.
 function QuickView({ config, monthState, year, month, onPrevMonth, onNextMonth, onLogin }) {
   const [qtab, setQtab] = useState("myschedule"); // "myschedule" | "master"
-  const [week, setWeek] = useState(1);
+  const [week, setWeek] = useState(() => {
+    const sunday = upcomingSunday(new Date());
+    return sunday.getFullYear() === year && sunday.getMonth() + 1 === month ? Math.ceil(sunday.getDate() / 7) : 1;
+  });
   const [slot, setSlot] = useState(SLOTS[0]);
   const [guestName, setGuestName] = useState(() => {
     try { return localStorage.getItem("ministry-scheduler-guest-name") || ""; } catch (e) { return ""; }
@@ -1070,11 +1077,13 @@ function QuickView({ config, monthState, year, month, onPrevMonth, onNextMonth, 
 
 function App() {
   const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
+  // Start on the coming Sunday (today if it's Sunday) so the right week is open
+  const startSunday = upcomingSunday(now);
+  const [year, setYear] = useState(startSunday.getFullYear());
+  const [month, setMonth] = useState(startSunday.getMonth() + 1);
   const [config, setConfig] = useState(null);
   const [monthState, setMonthState] = useState(null);
-  const [week, setWeek] = useState(1);
+  const [week, setWeek] = useState(Math.ceil(startSunday.getDate() / 7));
   const [slot, setSlot] = useState(SLOTS[0]);
   const [activeTeamId, setActiveTeamId] = useState(DEFAULT_TEAMS[0].id);
   const [tab, setTab] = useState("assign");
