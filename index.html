@@ -278,6 +278,15 @@ function highlightPrefix(name, query) {
   });
 }
 const assignKey = (week, slot, teamId, roleId) => `${week}|${slot}|${teamId}|${roleId}`;
+// "Song 2" -> "2nd Song", used as the placeholder in the song boxes
+const songPlaceholder = (role) => {
+  const m = role && norm(role.name).match(/^song\s*(\d+)$/i);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  const lastTwo = n % 100;
+  const suffix = lastTwo >= 11 && lastTwo <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th");
+  return `${n}${suffix} Song`;
+};
 // Song roles (Song 1, Song 2...) copy the first service to the other services.
 // Can be turned off per role in Manage teams.
 const copiesFirstSlot = (role) => {
@@ -2072,7 +2081,7 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
                           onChange={(val) => setName(role.id, val, s)}
                           volunteers={roleVolunteers}
                           locked={locked}
-                          placeholder={isMobile ? `+ ${shortSlot(s)}` : "Volunteer name"}
+                          placeholder={isMobile ? `+ ${shortSlot(s)}` : (songPlaceholder(role) || "Volunteer name")}
                           meta={meta}
                           allowAbove={!isMobile}
                           warningText={nameWarningText}
