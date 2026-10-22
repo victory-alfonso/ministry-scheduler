@@ -15,44 +15,14 @@
 <link rel="icon" type="image/png" sizes="16x16" href="./icons/favicon-16.png" />
 <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
 <title>Victory Alfonso</title>
-<script>
-(function () {
-  try {
-    var t = localStorage.getItem("ministry-scheduler-theme");
-    if (t !== "dark" && t !== "light") t = (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
-    document.documentElement.setAttribute("data-theme", t);
-    var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute("content", t === "dark" ? "#171615" : "#F6F1E4");
-  } catch (e) {}
-})();
-</script>
-
 <style>
-  /* ---- Light / dark theme (toggle button, saved per device) ---- */
-  :root { --bFBF8EE:#FBF8EE;--l1F3864:#1F3864;--lF6F1E4:#F6F1E4;--t7A6E4E:#7A6E4E;--bF6DE8C:#F6DE8C;--t23211D:#23211D;--tEFE7D3:#EFE7D3;--tC9CFE0:#C9CFE0;--tA6402F:#A6402F;--t3B6B3E:#3B6B3E;--t1F3864:#1F3864;--bFFFFFF:#FFFFFF;--t1A1A1A:#1A1A1A;--bA9782F:#A9782F;--b2F4858:#2F4858;--l23211D:#23211D;--t8A7F5E:#8A7F5E;--t6B6B6B:#6B6B6B;--bA6402F:#A6402F;--bF6F1E4:#F6F1E4;--lEFE7D3:#EFE7D3;--lD8CFB0:#D8CFB0;--bF3EFE2:#F3EFE2;--tB0A582:#B0A582;--bEFE7D3:#EFE7D3;--bE3D8B8:#E3D8B8;--b1F3864:#1F3864;--bD8CFB0:#D8CFB0;--tA99B72:#A99B72;--tC9D5EE:#C9D5EE;--tEDF1FA:#EDF1FA;--t8C2F22:#8C2F22;--t8A6A1A:#8A6A1A;--t3B5A8A:#3B5A8A;--bFBE9E5:#FBE9E5;--bFBF3DC:#FBF3DC;--bFAF6EA:#FAF6EA;--lF1EBDA:#F1EBDA;--bFCFAF3:#FCFAF3;--t2A2620:#2A2620;--lB8912F:#B8912F;--t9B8F6C:#9B8F6C;--lE4DCC6:#E4DCC6;--t4A4230:#4A4230;--b23211D:#23211D;--tCFC49E:#CFC49E;--b2B2820:#2B2820;--b3A362C:#3A362C;--tF3ECD8:#F3ECD8;--b3B3830:#3B3830;--l3B3830:#3B3830;--tD9CFAF:#D9CFAF;--t5C5230:#5C5230;--tB8AD8C:#B8AD8C;--b7FB07A:#7FB07A;--lA9782F:#A9782F;--t867A5C:#867A5C;--bE7DEC2:#E7DEC2;--bFDFBF4:#FDFBF4;--lC24A3A:#C24A3A;--lB8AD8C:#B8AD8C;--b3E5F92:#3E5F92;--b16294B:#16294B;--l16294B:#16294B;--tA9782F:#A9782F;--b24406F:#24406F;--bEBBAB0:#EBBAB0;--t7A2418:#7A2418;--bEEDCA0:#EEDCA0;--t6B4F0D:#6B4F0D;--bCFDCC4:#CFDCC4;--t385026:#385026;--t6B5E3E:#6B5E3E;--bF3E4DF:#F3E4DF;--lCBBF97:#CBBF97;--bB4C6E7:#B4C6E7;--bD9E2F3:#D9E2F3;--bEDF1FA:#EDF1FA;--lB7BFC9:#B7BFC9;--bE5A430:#E5A430;--l2F4858:#2F4858; color-scheme: light; }
-  :root[data-theme="dark"] { --bFBF8EE:#26231F;--l1F3864:#5578B0;--lF6F1E4:#171615;--t7A6E4E:#B3A883;--bF6DE8C:#7A6320;--t23211D:#EDE6D6;--tEFE7D3:#EFE7D3;--tC9CFE0:#C9CFE0;--tA6402F:#E07A66;--t3B6B3E:#7FC27F;--t1F3864:#8FA8E0;--bFFFFFF:#2A2723;--t1A1A1A:#EDE6D6;--bA9782F:#A9782F;--b2F4858:#3C5A6E;--l23211D:#5A5347;--t8A7F5E:#A89D7C;--t6B6B6B:#A89D7C;--bA6402F:#B24A38;--bF6F1E4:#171615;--lEFE7D3:#35312A;--lD8CFB0:#4A443A;--bF3EFE2:#201E1B;--tB0A582:#8A7F5E;--bEFE7D3:#3A352E;--bE3D8B8:#4A443A;--b1F3864:#34548C;--bD8CFB0:#4A443A;--tA99B72:#A99B72;--tC9D5EE:#C9D5EE;--tEDF1FA:#EDF1FA;--t8C2F22:#F08A78;--t8A6A1A:#E5B84A;--t3B5A8A:#8FA8E0;--bFBE9E5:#4A2420;--bFBF3DC:#40371C;--bFAF6EA:#2C2823;--lF1EBDA:#322E28;--bFCFAF3:#292621;--t2A2620:#EDE6D6;--lB8912F:#B8912F;--t9B8F6C:#9B8F6C;--lE4DCC6:#3C372F;--t4A4230:#CFC6AA;--b23211D:#100F0E;--tCFC49E:#CFC49E;--b2B2820:#1E1C19;--b3A362C:#3A362C;--tF3ECD8:#F3ECD8;--b3B3830:#3B3830;--l3B3830:#3B3830;--tD9CFAF:#D9CFAF;--t5C5230:#C8BC96;--tB8AD8C:#B8AD8C;--b7FB07A:#7FB07A;--lA9782F:#A9782F;--t867A5C:#A89D7C;--bE7DEC2:#3E382F;--bFDFBF4:#292621;--lC24A3A:#C24A3A;--lB8AD8C:#5A5347;--b3E5F92:#5578B0;--b16294B:#27406E;--l16294B:#27406E;--tA9782F:#D9A24A;--b24406F:#2D4C80;--bEBBAB0:#7A3A30;--t7A2418:#F08A78;--bEEDCA0:#6B5A24;--t6B4F0D:#E5B84A;--bCFDCC4:#2F4A33;--t385026:#9BCB8A;--t6B5E3E:#B3A883;--bF3E4DF:#4A2D28;--lCBBF97:#5A5347;--bB4C6E7:#3A4F7A;--bD9E2F3:#2A3550;--bEDF1FA:#26304A;--lB7BFC9:#4A4F58;--bE5A430:#E5A430;--l2F4858:#2F4858; color-scheme: dark; }
-  /* Printable sheets stay "paper" (white, black text) in either theme, and on real print */
-  .paper { --bFBF8EE:#FBF8EE;--l1F3864:#1F3864;--lF6F1E4:#F6F1E4;--t7A6E4E:#7A6E4E;--bF6DE8C:#F6DE8C;--t23211D:#23211D;--tEFE7D3:#EFE7D3;--tC9CFE0:#C9CFE0;--tA6402F:#A6402F;--t3B6B3E:#3B6B3E;--t1F3864:#1F3864;--bFFFFFF:#FFFFFF;--t1A1A1A:#1A1A1A;--bA9782F:#A9782F;--b2F4858:#2F4858;--l23211D:#23211D;--t8A7F5E:#8A7F5E;--t6B6B6B:#6B6B6B;--bA6402F:#A6402F;--bF6F1E4:#F6F1E4;--lEFE7D3:#EFE7D3;--lD8CFB0:#D8CFB0;--bF3EFE2:#F3EFE2;--tB0A582:#B0A582;--bEFE7D3:#EFE7D3;--bE3D8B8:#E3D8B8;--b1F3864:#1F3864;--bD8CFB0:#D8CFB0;--tA99B72:#A99B72;--tC9D5EE:#C9D5EE;--tEDF1FA:#EDF1FA;--t8C2F22:#8C2F22;--t8A6A1A:#8A6A1A;--t3B5A8A:#3B5A8A;--bFBE9E5:#FBE9E5;--bFBF3DC:#FBF3DC;--bFAF6EA:#FAF6EA;--lF1EBDA:#F1EBDA;--bFCFAF3:#FCFAF3;--t2A2620:#2A2620;--lB8912F:#B8912F;--t9B8F6C:#9B8F6C;--lE4DCC6:#E4DCC6;--t4A4230:#4A4230;--b23211D:#23211D;--tCFC49E:#CFC49E;--b2B2820:#2B2820;--b3A362C:#3A362C;--tF3ECD8:#F3ECD8;--b3B3830:#3B3830;--l3B3830:#3B3830;--tD9CFAF:#D9CFAF;--t5C5230:#5C5230;--tB8AD8C:#B8AD8C;--b7FB07A:#7FB07A;--lA9782F:#A9782F;--t867A5C:#867A5C;--bE7DEC2:#E7DEC2;--bFDFBF4:#FDFBF4;--lC24A3A:#C24A3A;--lB8AD8C:#B8AD8C;--b3E5F92:#3E5F92;--b16294B:#16294B;--l16294B:#16294B;--tA9782F:#A9782F;--b24406F:#24406F;--bEBBAB0:#EBBAB0;--t7A2418:#7A2418;--bEEDCA0:#EEDCA0;--t6B4F0D:#6B4F0D;--bCFDCC4:#CFDCC4;--t385026:#385026;--t6B5E3E:#6B5E3E;--bF3E4DF:#F3E4DF;--lCBBF97:#CBBF97;--bB4C6E7:#B4C6E7;--bD9E2F3:#D9E2F3;--bEDF1FA:#EDF1FA;--lB7BFC9:#B7BFC9;--bE5A430:#E5A430;--l2F4858:#2F4858; color-scheme: light; }
-  @media print { :root[data-theme="dark"] { --bFBF8EE:#FBF8EE;--l1F3864:#1F3864;--lF6F1E4:#F6F1E4;--t7A6E4E:#7A6E4E;--bF6DE8C:#F6DE8C;--t23211D:#23211D;--tEFE7D3:#EFE7D3;--tC9CFE0:#C9CFE0;--tA6402F:#A6402F;--t3B6B3E:#3B6B3E;--t1F3864:#1F3864;--bFFFFFF:#FFFFFF;--t1A1A1A:#1A1A1A;--bA9782F:#A9782F;--b2F4858:#2F4858;--l23211D:#23211D;--t8A7F5E:#8A7F5E;--t6B6B6B:#6B6B6B;--bA6402F:#A6402F;--bF6F1E4:#F6F1E4;--lEFE7D3:#EFE7D3;--lD8CFB0:#D8CFB0;--bF3EFE2:#F3EFE2;--tB0A582:#B0A582;--bEFE7D3:#EFE7D3;--bE3D8B8:#E3D8B8;--b1F3864:#1F3864;--bD8CFB0:#D8CFB0;--tA99B72:#A99B72;--tC9D5EE:#C9D5EE;--tEDF1FA:#EDF1FA;--t8C2F22:#8C2F22;--t8A6A1A:#8A6A1A;--t3B5A8A:#3B5A8A;--bFBE9E5:#FBE9E5;--bFBF3DC:#FBF3DC;--bFAF6EA:#FAF6EA;--lF1EBDA:#F1EBDA;--bFCFAF3:#FCFAF3;--t2A2620:#2A2620;--lB8912F:#B8912F;--t9B8F6C:#9B8F6C;--lE4DCC6:#E4DCC6;--t4A4230:#4A4230;--b23211D:#23211D;--tCFC49E:#CFC49E;--b2B2820:#2B2820;--b3A362C:#3A362C;--tF3ECD8:#F3ECD8;--b3B3830:#3B3830;--l3B3830:#3B3830;--tD9CFAF:#D9CFAF;--t5C5230:#5C5230;--tB8AD8C:#B8AD8C;--b7FB07A:#7FB07A;--lA9782F:#A9782F;--t867A5C:#867A5C;--bE7DEC2:#E7DEC2;--bFDFBF4:#FDFBF4;--lC24A3A:#C24A3A;--lB8AD8C:#B8AD8C;--b3E5F92:#3E5F92;--b16294B:#16294B;--l16294B:#16294B;--tA9782F:#A9782F;--b24406F:#24406F;--bEBBAB0:#EBBAB0;--t7A2418:#7A2418;--bEEDCA0:#EEDCA0;--t6B4F0D:#6B4F0D;--bCFDCC4:#CFDCC4;--t385026:#385026;--t6B5E3E:#6B5E3E;--bF3E4DF:#F3E4DF;--lCBBF97:#CBBF97;--bB4C6E7:#B4C6E7;--bD9E2F3:#D9E2F3;--bEDF1FA:#EDF1FA;--lB7BFC9:#B7BFC9;--bE5A430:#E5A430;--l2F4858:#2F4858; color-scheme: light; } }
-  .theme-toggle { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--lD8CFB0); background: var(--bFBF8EE); color: #C9A227; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; flex: 0 0 auto; transition: transform .15s ease, background .2s ease; }
-  .theme-toggle:hover { transform: scale(1.06); }
-  .theme-toggle:active { transform: scale(0.94); }
-  :root:not([data-theme="dark"]) .theme-toggle { color: #A9782F; }
-  .theme-toggle svg { display: block; }
-
-  @media (max-width: 860px) { .theme-toggle-view { display: none !important; } }
-  @media (max-width: 640px) {
-    .qv-header { flex-wrap: nowrap !important; padding-left: 14px !important; padding-right: 14px !important; gap: 8px !important; }
-    .qv-sub { display: none !important; }
-    .qv-header .qv-title { font-size: 15px !important; line-height: 1.15 !important; }
-  }
-  html { background: var(--bF6F1E4); }
+  html { background: #FBF8EE; }
   body { overflow-x: clip; }
   input, button, select, textarea, a { touch-action: manipulation; }
   .volunteer-suggest-item:hover { background: rgba(255,255,255,0.16) !important; }
   .volunteer-suggest-item:active { background: rgba(255,255,255,0.26) !important; }
   .nav-item:hover { background: rgba(239,231,211,0.08) !important; }
-  input:focus, textarea:focus, select:focus { border-color: var(--l1F3864) !important; box-shadow: 0 0 0 3px rgba(31,56,100,0.15) !important; }
+  input:focus, textarea:focus, select:focus { border-color: #1F3864 !important; box-shadow: 0 0 0 3px rgba(31,56,100,0.15) !important; }
 
   .sheet-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; }
   .sheet-toolbar button { flex: 0 0 auto; }
@@ -78,10 +48,10 @@
     .responsive-table { min-width: 0 !important; width: 100%; }
     .responsive-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
     .responsive-table, .responsive-table tbody, .responsive-table tr, .responsive-table td { display: block; width: 100%; box-sizing: border-box; }
-    .responsive-table tr { border-bottom: 8px solid var(--lF6F1E4); padding: 10px 0; }
+    .responsive-table tr { border-bottom: 8px solid #F6F1E4; padding: 10px 0; }
     .responsive-table tr:last-child { border-bottom: none; }
     .responsive-table td { border-top: none !important; padding: 6px 18px !important; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; text-align: right; }
-    .responsive-table td[data-label]::before { content: attr(data-label); font-weight: 600; color: var(--t7A6E4E); font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; flex-shrink: 0; text-align: left; }
+    .responsive-table td[data-label]::before { content: attr(data-label); font-weight: 600; color: #7A6E4E; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; flex-shrink: 0; text-align: left; }
   }
 
 
@@ -293,7 +263,7 @@ function highlightMatch(text, query) {
   return (
     <React.Fragment>
       {t.slice(0, idx)}
-      <mark style={{ background: "var(--bF6DE8C)", color: "var(--t23211D)", borderRadius: 3, padding: "0 1px" }}>{t.slice(idx, idx + q.length)}</mark>
+      <mark style={{ background: "#F6DE8C", color: "#23211D", borderRadius: 3, padding: "0 1px" }}>{t.slice(idx, idx + q.length)}</mark>
       {t.slice(idx + q.length)}
     </React.Fragment>
   );
@@ -746,49 +716,9 @@ function SetupScreen() {
 // the schedule or grab a printable master list skip account creation
 // entirely (Quick View), while editors go straight into the normal
 // Firebase-authenticated flow (Login).
-
-// ---- Light / dark theme toggle (moon / sun button) ----
-function getTheme() {
-  return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
-}
-function applyTheme(t) {
-  document.documentElement.setAttribute("data-theme", t);
-  try { localStorage.setItem("ministry-scheduler-theme", t); } catch (e) { /* ignore */ }
-  const m = document.querySelector('meta[name="theme-color"]');
-  if (m) m.setAttribute("content", t === "dark" ? "#171615" : "#F6F1E4");
-  window.dispatchEvent(new Event("themechange"));
-}
-function ThemeToggle({ style, className }) {
-  const [theme, setTheme] = React.useState(getTheme());
-  React.useEffect(() => {
-    const sync = () => setTheme(getTheme());
-    window.addEventListener("themechange", sync);
-    return () => window.removeEventListener("themechange", sync);
-  }, []);
-  const dark = theme === "dark";
-  return (
-    <button type="button" className={"theme-toggle no-print" + (className ? " " + className : "")} style={style}
-      onClick={() => applyTheme(dark ? "light" : "dark")}
-      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-      title={dark ? "Switch to light mode" : "Switch to dark mode"}>
-      {dark ? (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
-        </svg>
-      ) : (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="4.2" fill="currentColor" />
-          <path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M5.3 18.7L7 17M17 7l1.7-1.7" />
-        </svg>
-      )}
-    </button>
-  );
-}
-
 function EntryChoice({ onQuickView, onLogin }) {
   return (
-    <div style={{ ...styles.setupScreen, position: "relative" }}>
-      <ThemeToggle style={{ position: "absolute", top: "calc(16px + env(safe-area-inset-top, 0px))", right: 16 }} />
+    <div style={styles.setupScreen}>
       <div style={styles.setupCard}>
         <h1 style={{ ...styles.h1, marginBottom: 10 }}>Victory Alfonso</h1>
         <p style={styles.setupText}>What would you like to do?</p>
@@ -798,8 +728,8 @@ function EntryChoice({ onQuickView, onLogin }) {
             <div style={styles.entryChoiceDesc}>Check your schedule or print the master list — no account needed.</div>
           </button>
           <button onClick={onLogin} style={{ ...styles.entryChoiceBtn, ...styles.entryChoiceBtnPrimary }}>
-            <div style={{ ...styles.entryChoiceTitle, color: "var(--tEFE7D3)" }}>🔑 Login</div>
-            <div style={{ ...styles.entryChoiceDesc, color: "var(--tC9CFE0)" }}>Sign in to access the site and edit assignments.</div>
+            <div style={{ ...styles.entryChoiceTitle, color: "#EFE7D3" }}>🔑 Login</div>
+            <div style={{ ...styles.entryChoiceDesc, color: "#C9CFE0" }}>Sign in to access the site and edit assignments.</div>
           </button>
         </div>
       </div>
@@ -941,8 +871,7 @@ function AuthGate({ auth, onSignedIn, onBack }) {
   };
 
   return (
-    <div style={{ ...styles.setupScreen, position: "relative" }}>
-      <ThemeToggle style={{ position: "absolute", top: "calc(16px + env(safe-area-inset-top, 0px))", right: 16 }} />
+    <div style={styles.setupScreen}>
       <div style={styles.setupCard}>
         {onBack && (
           <button onClick={onBack} style={styles.backLink}>← Back</button>
@@ -977,11 +906,11 @@ function AuthGate({ auth, onSignedIn, onBack }) {
               </button>
             </div>
           )}
-          {error && <div style={{ color: "var(--tA6402F)", fontSize: 13, fontFamily: "system-ui, sans-serif" }}>{error}</div>}
-          {notice && <div style={{ color: "var(--t3B6B3E)", fontSize: 13, fontFamily: "system-ui, sans-serif" }}>{notice}</div>}
+          {error && <div style={{ color: "#A6402F", fontSize: 13, fontFamily: "system-ui, sans-serif" }}>{error}</div>}
+          {notice && <div style={{ color: "#3B6B3E", fontSize: 13, fontFamily: "system-ui, sans-serif" }}>{notice}</div>}
           {unverifiedUser && (
             <button onClick={resendVerification} disabled={busy}
-              style={{ background: "none", border: "none", color: "var(--t1F3864)", fontSize: 12.5, cursor: "pointer", fontFamily: "system-ui, sans-serif", padding: 0, textAlign: "left", fontWeight: 600 }}>
+              style={{ background: "none", border: "none", color: "#1F3864", fontSize: 12.5, cursor: "pointer", fontFamily: "system-ui, sans-serif", padding: 0, textAlign: "left", fontWeight: 600 }}>
               Resend verification email
             </button>
           )}
@@ -991,19 +920,19 @@ function AuthGate({ auth, onSignedIn, onBack }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {mode !== "signup" && (
               <button onClick={() => switchMode("signup")}
-                style={{ background: "none", border: "none", color: "var(--t7A6E4E)", fontSize: 12.5, cursor: "pointer", fontFamily: "system-ui, sans-serif", padding: 0, textAlign: "left" }}>
+                style={{ background: "none", border: "none", color: "#7A6E4E", fontSize: 12.5, cursor: "pointer", fontFamily: "system-ui, sans-serif", padding: 0, textAlign: "left" }}>
                 New here? Create an account
               </button>
             )}
             {mode !== "signin" && (
               <button onClick={() => switchMode("signin")}
-                style={{ background: "none", border: "none", color: "var(--t7A6E4E)", fontSize: 12.5, cursor: "pointer", fontFamily: "system-ui, sans-serif", padding: 0, textAlign: "left" }}>
+                style={{ background: "none", border: "none", color: "#7A6E4E", fontSize: 12.5, cursor: "pointer", fontFamily: "system-ui, sans-serif", padding: 0, textAlign: "left" }}>
                 Already have an account? Sign in
               </button>
             )}
             {mode !== "reset" && (
               <button onClick={() => switchMode("reset")}
-                style={{ background: "none", border: "none", color: "var(--t7A6E4E)", fontSize: 12.5, cursor: "pointer", fontFamily: "system-ui, sans-serif", padding: 0, textAlign: "left" }}>
+                style={{ background: "none", border: "none", color: "#7A6E4E", fontSize: 12.5, cursor: "pointer", fontFamily: "system-ui, sans-serif", padding: 0, textAlign: "left" }}>
                 Forgot password?
               </button>
             )}
@@ -1064,18 +993,15 @@ function QuickView({ config, monthState, year, month, onPrevMonth, onNextMonth, 
     <React.Fragment>
       <Watermark />
       <div className="app-shell" style={styles.quickViewShell}>
-        <header className="no-print qv-header" style={styles.quickViewHeader}>
+        <header className="no-print" style={styles.quickViewHeader}>
           <div style={styles.quickViewBrand}>
             <img src="./icons/victory.png" alt="" style={styles.brandMark} />
             <div>
-              <div className="qv-title" style={styles.quickViewBrandTitle}>Victory Alfonso</div>
-              <div className="qv-sub" style={styles.quickViewBrandSub}>Quick View — no account needed</div>
+              <div style={styles.quickViewBrandTitle}>Victory Alfonso</div>
+              <div style={styles.quickViewBrandSub}>Quick View — no account needed</div>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button onClick={onLogin} style={styles.smallBtn}>🔑 Login</button>
-            <ThemeToggle />
-          </div>
+          <button onClick={onLogin} style={styles.smallBtn}>🔑 Login</button>
         </header>
 
         <main className="app-main" style={styles.quickViewBody}>
@@ -1574,20 +1500,17 @@ function Sidebar({ config, monthState, week, setWeek, slot, setSlot, tab, setTab
             </nav>
           </React.Fragment>
         )}
-        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          {(onRenameUser || onChangePassword) && (
-            <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-              {onRenameUser && (
-                <button onClick={() => setRenaming(true)} style={{ ...styles.compactEditNickname, marginTop: 0 }} aria-label="Edit your name" title="Edit your name">✎</button>
-              )}
-              {onChangePassword && (
-                <button onClick={() => setChangingPassword(true)} style={{ ...styles.compactEditNickname, marginTop: 0 }} aria-label="Change password" title="Change password">🔒</button>
-              )}
-            </div>
-          )}
-          <ThemeToggle />
-        </div>
-        <button onClick={switchUser} style={{ ...styles.compactSwitchUser, marginTop: 0 }} aria-label="Switch user" title={`${userName} — tap to switch`}>
+        {(onRenameUser || onChangePassword) && (
+          <div style={{ marginTop: "auto", display: "flex", gap: 6, flexShrink: 0 }}>
+            {onRenameUser && (
+              <button onClick={() => setRenaming(true)} style={{ ...styles.compactEditNickname, marginTop: 0 }} aria-label="Edit your name" title="Edit your name">✎</button>
+            )}
+            {onChangePassword && (
+              <button onClick={() => setChangingPassword(true)} style={{ ...styles.compactEditNickname, marginTop: 0 }} aria-label="Change password" title="Change password">🔒</button>
+            )}
+          </div>
+        )}
+        <button onClick={switchUser} style={styles.compactSwitchUser} aria-label="Switch user" title={`${userName} — tap to switch`}>
           <span style={styles.compactSwitchAvatar}>{initials(userName)}</span>
           <span style={styles.compactSwitchLabel}>Switch</span>
         </button>
@@ -1974,18 +1897,18 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
     const dateBarCell = { background: NAVY_DARK, color: "#FFFFFF", fontWeight: 700, fontSize: 13, textAlign: "center", padding: "6px 8px", border: `1px solid ${GRID}` };
     const headerCell = { background: NAVY_MED, color: "#FFFFFF", fontWeight: 700, fontSize: 12, textAlign: "center", padding: "5px 8px", border: `1px solid ${GRID}` };
     const roleCell = { background: NAVY_MED, color: "#FFFFFF", fontWeight: 700, fontSize: 12.5, textAlign: "left", padding: "5px 10px", border: `1px solid ${GRID}`, whiteSpace: "nowrap" };
-    const valueCell = { background: "var(--bFFFFFF)", color: "var(--t1A1A1A)", fontSize: 12.5, textAlign: "left", padding: "5px 10px", border: `1px solid ${GRID}`, whiteSpace: "normal" };
+    const valueCell = { background: "#FFFFFF", color: "#1A1A1A", fontSize: 12.5, textAlign: "left", padding: "5px 10px", border: `1px solid ${GRID}`, whiteSpace: "normal" };
     return (
       <div className="print-sheet-wrap" style={styles.viewWrap}>
         <div className="no-print sheet-toolbar">
           <button onClick={() => setMode("edit")} style={{ ...styles.smallBtn, whiteSpace: "normal" }}>← Back</button>
-          <button onClick={() => window.print()} style={{ ...styles.smallBtn, background: "var(--bA9782F)", whiteSpace: "normal" }}>🖨 Print</button>
+          <button onClick={() => window.print()} style={{ ...styles.smallBtn, background: "#A9782F", whiteSpace: "normal" }}>🖨 Print</button>
           <button onClick={() => exportMonthSheet("image", sheetLabel)} disabled={!!exporting}
-            style={{ ...styles.smallBtn, background: "var(--b2F4858)", opacity: exporting && exporting !== "image" ? 0.6 : 1, whiteSpace: "normal" }}>
+            style={{ ...styles.smallBtn, background: "#2F4858", opacity: exporting && exporting !== "image" ? 0.6 : 1, whiteSpace: "normal" }}>
             {exporting === "image" ? "Working…" : "🖼 Save as Image"}
           </button>
           <button onClick={() => exportMonthSheet("pdf", sheetLabel)} disabled={!!exporting}
-            style={{ ...styles.smallBtn, background: "var(--b2F4858)", opacity: exporting && exporting !== "pdf" ? 0.6 : 1, whiteSpace: "normal" }}>
+            style={{ ...styles.smallBtn, background: "#2F4858", opacity: exporting && exporting !== "pdf" ? 0.6 : 1, whiteSpace: "normal" }}>
             {exporting === "pdf" ? "Working…" : "📄 Save as PDF"}
           </button>
         </div>
@@ -1994,20 +1917,20 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
               no flex/centering here, so this div and the table inside it are
               free to stretch to the full width of the printable page instead
               of shrink-wrapping to their content and leaving blank margin. */}
-          <div ref={sheetRef} className="paper" style={{ background: "var(--bFFFFFF)", padding: 12, minWidth: 480 }}>
+          <div ref={sheetRef} style={{ background: "#FFFFFF", padding: 12, minWidth: 480 }}>
             {/* Same banner style as the Master List's run sheet (dark navy
                 title bar + light-blue sub bar), just with the ministry name
                 worked into the sub line instead of a single service time.
                 No inline-block wrapper here either, so the banner spans the
                 same full width as the table below it. */}
-            <div style={{ border: "2px solid var(--l23211D)", marginBottom: 14, fontFamily: "Calibri, Arial, sans-serif" }}>
+            <div style={{ border: "2px solid #23211D", marginBottom: 14, fontFamily: "Calibri, Arial, sans-serif" }}>
               <div style={styles.sheetBannerMain}>{printSettings.churchName || "VICTORY ALFONSO CHURCH SUNDAY SERVICE"}</div>
               <div style={styles.sheetBannerSub}>
                 {[printSettings.campus || "VICTORY ALFONSO", team.name, monthLabelText].filter(Boolean).join(" | ")}
               </div>
             </div>
             {weeksData.length === 0 ? (
-              <div style={{ fontFamily: "Calibri, Arial, sans-serif", color: "var(--t8A7F5E)", textAlign: "center", padding: 20 }}>
+              <div style={{ fontFamily: "Calibri, Arial, sans-serif", color: "#8A7F5E", textAlign: "center", padding: 20 }}>
                 No Sundays found for this month.
               </div>
             ) : (
@@ -2059,7 +1982,7 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
                               <td key={s} style={valueCell}>
                                 {name}
                                 {role.hasVerse && verse && (
-                                  <div style={{ fontSize: 10.5, color: "var(--t6B6B6B)", marginTop: 2, whiteSpace: "normal" }}>{verse}</div>
+                                  <div style={{ fontSize: 10.5, color: "#6B6B6B", marginTop: 2, whiteSpace: "normal" }}>{verse}</div>
                                 )}
                               </td>
                             );
@@ -2103,11 +2026,10 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
             <button onClick={() => setMode("print")} style={styles.smallBtn}>🖨 Print month</button>
             {!locked && (
               <button onClick={() => hasAnyValue && setConfirmOpen(true)} disabled={!hasAnyValue}
-                style={{ ...styles.smallBtn, background: "var(--bA6402F)", opacity: hasAnyValue ? 1 : 0.45, cursor: hasAnyValue ? "pointer" : "default" }}>
+                style={{ ...styles.smallBtn, background: "#A6402F", opacity: hasAnyValue ? 1 : 0.45, cursor: hasAnyValue ? "pointer" : "default" }}>
                 Clear all
               </button>
             )}
-            <ThemeToggle className="theme-toggle-view" />
           </div>
         </div>
         <div style={styles.viewMeta}>
@@ -2123,7 +2045,7 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
           top while scrolling. */}
       <div className="no-print" style={{
         position: "sticky", top: isMobile ? "env(safe-area-inset-top, 0px)" : 0, zIndex: 20,
-        background: "var(--bF6F1E4)", display: "flex", alignItems: "center",
+        background: "#F6F1E4", display: "flex", alignItems: "center",
         ...(isMobile ? { padding: "6px 0 8px", gap: 0 } : { padding: "8px 23px 10px", gap: 20 }),
       }}>
         {!isMobile && <div style={{ width: 210, flexShrink: 0 }} />}
@@ -2142,7 +2064,7 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
         {team.roles.map((role, i) => {
           const roleVolunteers = (role.volunteers || []).slice().sort((a, b) => a.localeCompare(b));
           return (
-            <div key={role.id} style={{ ...styles.roleRow, ...(i % 2 === 1 ? styles.roleRowAlt : {}), borderTop: i === 0 ? "none" : "1px solid var(--lEFE7D3)", ...(isMobile ? { flexDirection: "column", gap: 8, padding: "12px 10px" } : {}) }}>
+            <div key={role.id} style={{ ...styles.roleRow, ...(i % 2 === 1 ? styles.roleRowAlt : {}), borderTop: i === 0 ? "none" : "1px solid #EFE7D3", ...(isMobile ? { flexDirection: "column", gap: 8, padding: "12px 10px" } : {}) }}>
               <div style={{ ...styles.roleName, ...(isMobile ? { width: "100%", paddingTop: 0 } : {}) }}><span style={styles.roleNameDot} />{role.name}</div>
                 <div style={{ ...styles.roleInputWrap, ...(isMobile ? { width: "100%" } : {}) }}>
                 <div style={{ display: "grid", gridTemplateColumns: `repeat(${SLOTS.length}, minmax(0, 1fr))`, gap: isMobile ? 6 : 10, alignItems: "start" }}>
@@ -2163,7 +2085,7 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
                     const verseMeta = (monthState.editMeta && monthState.editMeta[key + "__verse"]) || null;
                     // On a phone each column is only ~90px wide, so the field gets
                     // smaller text/padding and wraps long names instead of cutting them off.
-                    const cellStyle = isMobile ? { padding: "7px 5px", fontSize: 12, lineHeight: 1.25, minHeight: 38, borderLeft: "1px solid var(--lD8CFB0)" } : {};
+                    const cellStyle = isMobile ? { padding: "7px 5px", fontSize: 12, lineHeight: 1.25, minHeight: 38, borderLeft: "1px solid #D8CFB0" } : {};
                     return (
                       <div key={s} style={{ minWidth: 0 }}>
                         <div aria-hidden="true" style={{ height: 3, borderRadius: 3, background: slotColor(si), marginBottom: 5 }} />
@@ -2179,7 +2101,7 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
                           compact={isMobile}
                           popupTitle={`${role.name} · ${s}`}
                           popupMinWidth={220}
-                          style={{ ...styles.input, flex: 1, ...cellStyle, ...(hasConflict ? styles.inputConflict : hasDup ? styles.inputDup : {}), ...(locked ? { background: "var(--bF3EFE2)", cursor: "default" } : {}) }}
+                          style={{ ...styles.input, flex: 1, ...cellStyle, ...(hasConflict ? styles.inputConflict : hasDup ? styles.inputDup : {}), ...(locked ? { background: "#F3EFE2", cursor: "default" } : {}) }}
                         />
                         {role.hasVerse && (
                           <TextFieldWithMeta
@@ -2189,7 +2111,7 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
                             locked={locked}
                             meta={verseMeta}
                             wrapStyle={{ marginTop: 6 }}
-                            style={{ ...styles.input, width: "100%", boxSizing: "border-box", ...(isMobile ? { padding: "6px 5px", fontSize: 12, borderLeft: "1px solid var(--lD8CFB0)" } : {}), ...(locked ? { background: "var(--bF3EFE2)", cursor: "default" } : {}) }}
+                            style={{ ...styles.input, width: "100%", boxSizing: "border-box", ...(isMobile ? { padding: "6px 5px", fontSize: 12, borderLeft: "1px solid #D8CFB0" } : {}), ...(locked ? { background: "#F3EFE2", cursor: "default" } : {}) }}
                           />
                         )}
                       </div>
@@ -2200,24 +2122,24 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
                   <div style={{ marginTop: 8 }}>
                     <button
                       onClick={() => setOpenVolRoles((prev) => ({ ...prev, [role.id]: !prev[role.id] }))}
-                      style={{ border: "none", background: "none", padding: 0, cursor: "pointer", color: "var(--t1F3864)", fontSize: 12.5, fontWeight: 600, fontFamily: "system-ui, sans-serif" }}>
+                      style={{ border: "none", background: "none", padding: 0, cursor: "pointer", color: "#1F3864", fontSize: 12.5, fontWeight: 600, fontFamily: "system-ui, sans-serif" }}>
                       👥 Volunteer list ({roleVolunteers.length}) {openVolRoles[role.id] ? "▴" : "▾"}
                     </button>
                     {openVolRoles[role.id] && (
-                      <div style={{ marginTop: 8, padding: 12, background: "var(--bFBF8EE)", border: "1px solid var(--lEFE7D3)", borderRadius: 10 }}>
-                        <div style={{ fontSize: 11.5, color: "var(--t8A7F5E)", marginBottom: 8, fontFamily: "system-ui, sans-serif" }}>
+                      <div style={{ marginTop: 8, padding: 12, background: "#FBF8EE", border: "1px solid #EFE7D3", borderRadius: 10 }}>
+                        <div style={{ fontSize: 11.5, color: "#8A7F5E", marginBottom: 8, fontFamily: "system-ui, sans-serif" }}>
                           Mga pwedeng piliin sa dropdown ng <b>{role.name}</b>. Pwedeng magdagdag ng marami nang sabay — paghiwalayin ng comma o new line.
                         </div>
                         {roleVolunteers.length === 0 ? (
-                          <div style={{ fontSize: 12, color: "var(--tB0A582)", marginBottom: 8, fontFamily: "system-ui, sans-serif" }}>Wala pang volunteers sa role na ito.</div>
+                          <div style={{ fontSize: 12, color: "#B0A582", marginBottom: 8, fontFamily: "system-ui, sans-serif" }}>Wala pang volunteers sa role na ito.</div>
                         ) : (
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
                             {roleVolunteers.map((name) => (
-                              <span key={name} style={{ background: "var(--bEFE7D3)", borderRadius: 20, padding: "4px 6px 4px 11px", fontSize: 12.5, display: "flex", alignItems: "center", gap: 6, fontFamily: "system-ui, sans-serif" }}>
+                              <span key={name} style={{ background: "#EFE7D3", borderRadius: 20, padding: "4px 6px 4px 11px", fontSize: 12.5, display: "flex", alignItems: "center", gap: 6, fontFamily: "system-ui, sans-serif" }}>
                                 {name}
                                 <button onClick={() => removeVolunteerFromRole(role.id, name)}
                                   aria-label={"Remove " + name}
-                                  style={{ border: "none", background: "var(--bE3D8B8)", color: "var(--tA6402F)", cursor: "pointer", fontSize: 13, lineHeight: 1, width: 20, height: 20, borderRadius: "50%", padding: 0 }}>×</button>
+                                  style={{ border: "none", background: "#E3D8B8", color: "#A6402F", cursor: "pointer", fontSize: 13, lineHeight: 1, width: 20, height: 20, borderRadius: "50%", padding: 0 }}>×</button>
                               </span>
                             ))}
                           </div>
@@ -2318,7 +2240,7 @@ function RenameModal({ currentName, onRenameUser, onDone }) {
     <div className="no-print" style={styles.modalOverlay} onMouseDown={(e) => { if (e.target === e.currentTarget) onDone(); }}>
       <div style={styles.modalCard}>
         <div style={styles.modalIconRow}>
-          <div style={{ ...styles.modalIconBadge, background: "var(--b1F3864)" }}>✎</div>
+          <div style={{ ...styles.modalIconBadge, background: "#1F3864" }}>✎</div>
           <div style={styles.modalTitle}>Edit Your Name</div>
         </div>
         <div style={styles.modalBody}>
@@ -2330,7 +2252,7 @@ function RenameModal({ currentName, onRenameUser, onDone }) {
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") save(); }}
           placeholder="e.g. Zerah Torres" style={{ ...styles.input, marginBottom: error ? 8 : 16 }} />
-        {error && <div style={{ color: "var(--tA6402F)", fontSize: 12.5, fontFamily: "system-ui, sans-serif", marginBottom: 16 }}>{error}</div>}
+        {error && <div style={{ color: "#A6402F", fontSize: 12.5, fontFamily: "system-ui, sans-serif", marginBottom: 16 }}>{error}</div>}
         <div style={styles.modalActions}>
           <button onClick={onDone} style={styles.modalCancelBtn} disabled={busy}>Cancel</button>
           <button onClick={save} style={{ ...styles.smallBtn, padding: "9px 18px", opacity: busy ? 0.6 : 1 }} disabled={busy}>
@@ -2384,7 +2306,7 @@ function ChangePasswordModal({ onChangePassword, onDone }) {
     <div className="no-print" style={styles.modalOverlay} onMouseDown={(e) => { if (e.target === e.currentTarget) onDone(); }}>
       <div style={styles.modalCard}>
         <div style={styles.modalIconRow}>
-          <div style={{ ...styles.modalIconBadge, background: "var(--b1F3864)" }}>🔒</div>
+          <div style={{ ...styles.modalIconBadge, background: "#1F3864" }}>🔒</div>
           <div style={styles.modalTitle}>Change Password</div>
         </div>
         {done ? (
@@ -2429,7 +2351,7 @@ function ChangePasswordModal({ onChangePassword, onDone }) {
                 </button>
               </div>
             </div>
-            {error && <div style={{ color: "var(--tA6402F)", fontSize: 12.5, fontFamily: "system-ui, sans-serif", marginBottom: 16 }}>{error}</div>}
+            {error && <div style={{ color: "#A6402F", fontSize: 12.5, fontFamily: "system-ui, sans-serif", marginBottom: 16 }}>{error}</div>}
             <div style={styles.modalActions}>
               <button onClick={onDone} style={styles.modalCancelBtn} disabled={busy}>Cancel</button>
               <button onClick={save} style={{ ...styles.smallBtn, padding: "9px 18px", opacity: busy ? 0.6 : 1 }} disabled={busy}>
@@ -2517,7 +2439,7 @@ function LastChangedBadge({ meta, anchorRef, align }) {
           ...(align === "top" ? { top: 10 } : { top: "50%", transform: "translateY(-50%)" }),
           width: 22, height: 22, borderRadius: "50%", border: "none", padding: 0,
           display: "flex", alignItems: "center", justifyContent: "center",
-          background: show ? "var(--bD8CFB0)" : "transparent",
+          background: show ? "#D8CFB0" : "transparent",
           cursor: "pointer", overflow: "hidden",
           userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none", touchAction: "manipulation",
           transition: "background 0.15s ease",
@@ -2526,7 +2448,7 @@ function LastChangedBadge({ meta, anchorRef, align }) {
         <span style={{
           position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 13, fontWeight: 700, fontFamily: "Georgia, serif",
-          color: "var(--tA99B72)", lineHeight: 1,
+          color: "#A99B72", lineHeight: 1,
           opacity: show ? 0 : 1, transform: show ? "scale(0.4) rotate(-20deg)" : "scale(1) rotate(0deg)",
           transition: "opacity 0.18s ease, transform 0.18s ease",
           pointerEvents: "none", WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none",
@@ -2617,12 +2539,12 @@ function MasterEditInfo({ meta, style }) {
         onTouchEnd={() => setShow(false)}
         onTouchCancel={() => setShow(false)}
         onContextMenu={(e) => e.preventDefault()}
-        style={{ ...styles.masterMetaBtn, background: show ? "var(--bD8CFB0)" : "transparent", ...(style || {}) }}
+        style={{ ...styles.masterMetaBtn, background: show ? "#D8CFB0" : "transparent", ...(style || {}) }}
       >
         <span style={{
           position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 10.5, fontWeight: 700, fontFamily: "Georgia, serif",
-          color: "var(--tA99B72)", lineHeight: 1,
+          color: "#A99B72", lineHeight: 1,
           opacity: show ? 0 : 1, transform: show ? "scale(0.4) rotate(-20deg)" : "scale(1) rotate(0deg)",
           transition: "opacity 0.18s ease, transform 0.18s ease",
           pointerEvents: "none", WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none",
@@ -2889,7 +2811,7 @@ function VolunteerNameInput({ value, onChange, volunteers, locked, placeholder, 
           style={{
             ...boxStyle,
             display: "flex", alignItems: "center",
-            ...(value ? {} : { color: "var(--tA99B72)" }),
+            ...(value ? {} : { color: "#A99B72" }),
             cursor: locked ? "default" : "pointer",
           }}
         >
@@ -2906,7 +2828,7 @@ function VolunteerNameInput({ value, onChange, volunteers, locked, placeholder, 
           style={{
             position: "absolute", top: "50%", transform: "translateY(-50%)",
             right: hasMeta ? 34 : 8, width: 22, height: 22, borderRadius: "50%",
-            border: "none", background: "transparent", color: "var(--tA99B72)",
+            border: "none", background: "transparent", color: "#A99B72",
             display: "flex", alignItems: "center", justifyContent: "center",
             cursor: "pointer", padding: 0,
           }}
@@ -2931,7 +2853,7 @@ function VolunteerNameInput({ value, onChange, volunteers, locked, placeholder, 
             ...(popupData.coords.top != null ? { top: popupData.coords.top, bottom: "auto" } : { bottom: popupData.coords.bottom, top: "auto" }),
           }}>
           {(popupTitle || compact) && (
-            <div style={{ padding: "9px 14px 8px", borderBottom: "1px solid rgba(255,255,255,0.16)", color: "var(--tC9D5EE)", fontSize: 12, lineHeight: 1.35, fontFamily: "system-ui, sans-serif" }}>
+            <div style={{ padding: "9px 14px 8px", borderBottom: "1px solid rgba(255,255,255,0.16)", color: "#C9D5EE", fontSize: 12, lineHeight: 1.35, fontFamily: "system-ui, sans-serif" }}>
               {popupTitle && <div style={{ fontWeight: 600, letterSpacing: 0.2 }}>{popupTitle}</div>}
               {compact && hasMetaInfo(meta) && (
                 <div style={{ fontStyle: "italic", opacity: 0.85, marginTop: 2 }}>
@@ -2942,7 +2864,7 @@ function VolunteerNameInput({ value, onChange, volunteers, locked, placeholder, 
                 <button type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={startTyping}
-                  style={{ marginTop: 6, padding: "5px 10px", border: "none", borderRadius: 6, background: "rgba(255,255,255,0.14)", color: "var(--tEDF1FA)", fontSize: 12, fontFamily: "system-ui, sans-serif", cursor: "pointer" }}>
+                  style={{ marginTop: 6, padding: "5px 10px", border: "none", borderRadius: 6, background: "rgba(255,255,255,0.14)", color: "#EDF1FA", fontSize: 12, fontFamily: "system-ui, sans-serif", cursor: "pointer" }}>
                   ✎ Type a name instead
                 </button>
               )}
@@ -3059,7 +2981,7 @@ function ServiceInfoView({ monthState, updateMonthState, week, slot, year, month
     });
   };
 
-  const lockedStyle = locked ? { background: "var(--bF3EFE2)", cursor: "default" } : {};
+  const lockedStyle = locked ? { background: "#F3EFE2", cursor: "default" } : {};
 
   const INFO_FIELDS = ["series", "topic", "verse", "announcements", "headcountVolunteer", "headcountAdult", "headcountKids"];
   const hasAnyValue = INFO_FIELDS.some((f) => norm(info[f]));
@@ -3082,15 +3004,12 @@ function ServiceInfoView({ monthState, updateMonthState, week, slot, year, month
       <header style={styles.viewHeader}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <h1 style={styles.h1}>Service Details</h1>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            {!locked && (
-              <button onClick={() => hasAnyValue && setConfirmOpen(true)} disabled={!hasAnyValue}
-                style={{ ...styles.smallBtn, background: "var(--bA6402F)", opacity: hasAnyValue ? 1 : 0.45, cursor: hasAnyValue ? "pointer" : "default" }}>
-                Clear all
-              </button>
-            )}
-            <ThemeToggle className="theme-toggle-view" />
-          </div>
+          {!locked && (
+            <button onClick={() => hasAnyValue && setConfirmOpen(true)} disabled={!hasAnyValue}
+              style={{ ...styles.smallBtn, background: "#A6402F", opacity: hasAnyValue ? 1 : 0.45, cursor: hasAnyValue ? "pointer" : "default" }}>
+              Clear all
+            </button>
+          )}
         </div>
         <div style={styles.viewMeta}>
           {weekDisplayLabel(week, monthState.weekLabels, year, month)} · {slot}
@@ -3125,17 +3044,17 @@ function ServiceInfoView({ monthState, updateMonthState, week, slot, year, month
             <div style={styles.fieldLabel}>Head count (for the print sheet)</div>
             <div style={{ display: "flex", gap: 10 }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11.5, color: "var(--t8A7F5E)", marginBottom: 4, fontFamily: "system-ui, sans-serif" }}>Volunteers</div>
+                <div style={{ fontSize: 11.5, color: "#8A7F5E", marginBottom: 4, fontFamily: "system-ui, sans-serif" }}>Volunteers</div>
                 <TextFieldWithMeta value={info.headcountVolunteer || ""} onChange={(v) => setField("headcountVolunteer", v)}
                   inputMode="numeric" locked={locked} meta={fieldMeta("headcountVolunteer")} style={{ ...styles.input, ...lockedStyle }} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11.5, color: "var(--t8A7F5E)", marginBottom: 4, fontFamily: "system-ui, sans-serif" }}>Adults</div>
+                <div style={{ fontSize: 11.5, color: "#8A7F5E", marginBottom: 4, fontFamily: "system-ui, sans-serif" }}>Adults</div>
                 <TextFieldWithMeta value={info.headcountAdult || ""} onChange={(v) => setField("headcountAdult", v)}
                   inputMode="numeric" locked={locked} meta={fieldMeta("headcountAdult")} style={{ ...styles.input, ...lockedStyle }} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11.5, color: "var(--t8A7F5E)", marginBottom: 4, fontFamily: "system-ui, sans-serif" }}>Kids</div>
+                <div style={{ fontSize: 11.5, color: "#8A7F5E", marginBottom: 4, fontFamily: "system-ui, sans-serif" }}>Kids</div>
                 <TextFieldWithMeta value={info.headcountKids || ""} onChange={(v) => setField("headcountKids", v)}
                   inputMode="numeric" locked={locked} meta={fieldMeta("headcountKids")} style={{ ...styles.input, ...lockedStyle }} />
               </div>
@@ -3465,7 +3384,7 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
         );
       }
       return (
-        <span style={{ color: hasConflict ? "var(--t8C2F22)" : hasDup ? "var(--t8A6A1A)" : "inherit", fontWeight: hasConflict || hasDup ? 700 : 400 }}>
+        <span style={{ color: hasConflict ? "#8C2F22" : hasDup ? "#8A6A1A" : "inherit", fontWeight: hasConflict || hasDup ? 700 : 400 }}>
           {r.value || ""}
         </span>
       );
@@ -3475,18 +3394,18 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
       <div className="print-sheet-wrap" style={styles.viewWrap}>
         <div className="no-print sheet-toolbar">
           <button onClick={() => setView("list")} style={{ ...styles.smallBtn, whiteSpace: "normal" }}>← Back to list view</button>
-          <button onClick={() => window.print()} style={{ ...styles.smallBtn, background: "var(--bA9782F)", whiteSpace: "normal" }}>🖨 Print</button>
+          <button onClick={() => window.print()} style={{ ...styles.smallBtn, background: "#A9782F", whiteSpace: "normal" }}>🖨 Print</button>
           <button onClick={() => exportSheet("image", `Master List - ${dateLabel} - ${slot}`)} disabled={!!exporting}
-            style={{ ...styles.smallBtn, background: "var(--b2F4858)", opacity: exporting && exporting !== "image" ? 0.6 : 1, whiteSpace: "normal" }}>
+            style={{ ...styles.smallBtn, background: "#2F4858", opacity: exporting && exporting !== "image" ? 0.6 : 1, whiteSpace: "normal" }}>
             {exporting === "image" ? "Ginagawa…" : "🖼 Save as Image"}
           </button>
           <button onClick={() => exportSheet("pdf", `Master List - ${dateLabel} - ${slot}`)} disabled={!!exporting}
-            style={{ ...styles.smallBtn, background: "var(--b2F4858)", opacity: exporting && exporting !== "pdf" ? 0.6 : 1, whiteSpace: "normal" }}>
+            style={{ ...styles.smallBtn, background: "#2F4858", opacity: exporting && exporting !== "pdf" ? 0.6 : 1, whiteSpace: "normal" }}>
             {exporting === "pdf" ? "Ginagawa…" : "📄 Save as PDF"}
           </button>
         </div>
         <div className="sheet-scroll">
-        <div className="print-sheet paper" style={styles.sheet} ref={sheetRef}>
+        <div className="print-sheet" style={styles.sheet} ref={sheetRef}>
           <div className="print-sheet-watermark" style={styles.sheetWatermark} aria-hidden="true">
             <img ref={wmImgRef} src="./icons/VictoryWatermark.png" alt="" style={styles.sheetWatermarkImg} />
           </div>
@@ -3547,7 +3466,7 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                       <td style={styles.sheetTd}>
                         {row.task || ""}
                         {verseText && (
-                          <div style={{ fontWeight: 400, fontStyle: "italic", fontSize: 10.5, marginTop: 3, color: "var(--t3B5A8A)" }}>{verseText}</div>
+                          <div style={{ fontWeight: 400, fontStyle: "italic", fontSize: 10.5, marginTop: 3, color: "#3B5A8A" }}>{verseText}</div>
                         )}
                       </td>
                       <td style={styles.sheetTd}><VolunteerCell row={row} /></td>
@@ -3599,7 +3518,7 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                   <tbody>
                     {program.soloRows.map((row) => (
                       <tr key={row.id}>
-                        <td style={{ ...styles.sheetTdTall, background: "var(--b1F3864)", color: "#FFFFFF", fontWeight: 700 }}>{row.label.toUpperCase()}</td>
+                        <td style={{ ...styles.sheetTdTall, background: "#1F3864", color: "#FFFFFF", fontWeight: 700 }}>{row.label.toUpperCase()}</td>
                         <td style={styles.sheetTdTall}><VolunteerCell row={row} /></td>
                       </tr>
                     ))}
@@ -3609,7 +3528,7 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
             )}
             <div>
               <div style={styles.sheetSectionHead}>ANNOUNCEMENTS</div>
-              <div style={{ border: "1px solid var(--l23211D)", borderTop: "none", padding: "8px 10px", fontSize: 12.5, whiteSpace: "pre-wrap", minHeight: 30 }}>{info.announcements || ""}</div>
+              <div style={{ border: "1px solid #23211D", borderTop: "none", padding: "8px 10px", fontSize: 12.5, whiteSpace: "pre-wrap", minHeight: 30 }}>{info.announcements || ""}</div>
             </div>
           </div>
 
@@ -3643,10 +3562,7 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
   return (
     <div style={styles.viewWrap}>
       <header style={styles.viewHeader}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-          <h1 style={styles.h1}>Master List</h1>
-          <ThemeToggle className="theme-toggle-view" />
-        </div>
+        <h1 style={styles.h1}>Master List</h1>
         <div style={styles.viewMeta}>
           {dateLabel} · {slot} · {filled} of {rows.length} roles filled
           {searchQuery && ` · ${filteredRows.length} match${filteredRows.length === 1 ? "" : "es"}`}
@@ -3697,7 +3613,7 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                 const hasConflict = r.issues.some((x) => x.type === "Schedule Conflict");
                 const hasDup = r.issues.some((x) => x.type === "duplicate");
                 return (
-                  <tr key={r.key} className="master-row" style={{ background: hasConflict ? "var(--bFBE9E5)" : hasDup ? "var(--bFBF3DC)" : idx % 2 === 0 ? "var(--bFFFFFF)" : "var(--bFAF6EA)" }}>
+                  <tr key={r.key} className="master-row" style={{ background: hasConflict ? "#FBE9E5" : hasDup ? "#FBF3DC" : idx % 2 === 0 ? "#FFFFFF" : "#FAF6EA" }}>
                     <td style={styles.td} data-label="Team">{searchQuery ? highlightMatch(r.team.name, searchQuery) : r.team.name}</td>
                     <td style={styles.td} data-label="Role">{searchQuery ? highlightMatch(r.role.name, searchQuery) : r.role.name}</td>
                     <td style={{ ...styles.td, fontWeight: r.name ? 600 : 400 }} data-label="Volunteer">
@@ -3732,14 +3648,14 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                 const hasDup = r.issues.some((x) => x.type === "duplicate");
                 const isLast = i === section.rows.length - 1;
                 return (
-                  <div key={r.key} className="mc-row" style={{ ...styles.mcRow, borderBottom: isLast ? "none" : "1px solid var(--lF1EBDA)", background: i % 2 === 1 ? "var(--bFCFAF3)" : "var(--bFFFFFF)" }}>
+                  <div key={r.key} className="mc-row" style={{ ...styles.mcRow, borderBottom: isLast ? "none" : "1px solid #F1EBDA", background: i % 2 === 1 ? "#FCFAF3" : "#FFFFFF" }}>
                     <div style={styles.mcRoleCol}>
                       <div style={styles.mcRoleName}>{searchQuery ? highlightMatch(r.role.name, searchQuery) : r.role.name}</div>
                       {r.role.hasVerse && r.verse && <div style={styles.mcVerse}>{r.verse}</div>}
                       {hasConflict && <div style={styles.mcStatusNote}><span style={styles.badgeConflict}>Schedule Conflict</span></div>}
                       {!hasConflict && hasDup && <div style={styles.mcStatusNote}><span style={styles.badgeDup}>Duplicate</span></div>}
                     </div>
-                    <div style={{ ...styles.mcVolunteer, color: r.name ? "var(--t2A2620)" : "var(--tB0A582)", fontWeight: r.name ? 600 : 400 }}>
+                    <div style={{ ...styles.mcVolunteer, color: r.name ? "#2A2620" : "#B0A582", fontWeight: r.name ? 600 : 400 }}>
                       <span style={r.name && hasConflict ? styles.nameConflict : r.name && hasDup ? styles.nameDup : undefined}>
                         {r.name ? (searchQuery ? highlightMatch(r.name, searchQuery) : r.name) : <span style={styles.mcOpen}>— open —</span>}
                         <MasterEditInfo meta={r.meta} />
@@ -3806,10 +3722,7 @@ function MyScheduleView({ config, monthState, userName, year, month, partial }) 
   return (
     <div style={styles.viewWrap}>
       <header style={styles.viewHeader}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-          <h1 style={styles.h1}>My Schedule</h1>
-          <ThemeToggle className="theme-toggle-view" />
-        </div>
+        <h1 style={styles.h1}>My Schedule</h1>
         <div style={styles.viewMeta}>
           {monthLabel(year, month)} · {totalAssignments} assignment{totalAssignments === 1 ? "" : "s"}
         </div>
@@ -3853,7 +3766,7 @@ function MyScheduleView({ config, monthState, userName, year, month, partial }) 
                     const exactMatch = myNames.some((n) => normKey(n) === normKey(m.name));
                     return (
                       <tr key={`${sl.slot}-${m.team.id}-${m.role.id}`}
-                        style={{ background: hasConflict ? "var(--bFBE9E5)" : hasDup ? "var(--bFBF3DC)" : idx % 2 === 0 ? "var(--bFFFFFF)" : "var(--bFAF6EA)" }}>
+                        style={{ background: hasConflict ? "#FBE9E5" : hasDup ? "#FBF3DC" : idx % 2 === 0 ? "#FFFFFF" : "#FAF6EA" }}>
                         <td style={styles.td}>{sl.slot}</td>
                         <td style={styles.td}>{m.team.name}</td>
                         <td style={styles.td}>{m.role.name}</td>
@@ -4213,10 +4126,7 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
   return (
     <div style={styles.viewWrap}>
       <header style={styles.viewHeader}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-          <h1 style={styles.h1}>Manage Teams</h1>
-          <ThemeToggle className="theme-toggle-view" />
-        </div>
+        <h1 style={styles.h1}>Manage Teams</h1>
         <div style={styles.viewMeta}>Edit teams and roles, and decide which teams may share a volunteer at the same service.</div>
       </header>
       <div style={styles.manageGrid}>
@@ -4238,7 +4148,7 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
                   style={{
                     display: "flex", flexDirection: "column", gap: 3, borderRadius: 8,
                     opacity: roleDrag && roleDrag.teamId === team.id && roleDrag.roleId === role.id ? 0.45 : 1,
-                    outline: roleDrag && roleDrag.teamId === team.id && roleDrag.overId === role.id && roleDrag.roleId !== role.id ? "2px dashed var(--lB8912F)" : "none",
+                    outline: roleDrag && roleDrag.teamId === team.id && roleDrag.overId === role.id && roleDrag.roleId !== role.id ? "2px dashed #B8912F" : "none",
                     outlineOffset: 3,
                   }}>
                   <div style={styles.roleEditRow}>
@@ -4246,15 +4156,15 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
                       title="I-drag para ilipat ang role"
                       aria-label="Drag to reorder role"
                       onPointerDown={(e) => { e.preventDefault(); setRoleDrag({ teamId: team.id, roleId: role.id, overId: role.id }); }}
-                      style={{ cursor: roleDrag ? "grabbing" : "grab", touchAction: "none", userSelect: "none", fontSize: 18, lineHeight: 1, color: "var(--t9B8F6C)", padding: "4px 6px", flexShrink: 0 }}>⠿</span>
+                      style={{ cursor: roleDrag ? "grabbing" : "grab", touchAction: "none", userSelect: "none", fontSize: 18, lineHeight: 1, color: "#9B8F6C", padding: "4px 6px", flexShrink: 0 }}>⠿</span>
                     <input value={role.name} onChange={(e) => renameRole(team.id, role.id, e.target.value)} style={styles.roleEditInput} />
                     <button onClick={() => removeRole(team.id, role.id)} style={styles.iconDanger} aria-label="Remove role">×</button>
                   </div>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "var(--t8A7F5E)", paddingLeft: 2 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#8A7F5E", paddingLeft: 2 }}>
                     <input type="checkbox" checked={!!role.hasVerse} onChange={() => toggleRoleVerse(team.id, role.id)} />
                     Add a verse box next to this role
                   </label>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "var(--t8A7F5E)", paddingLeft: 2 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#8A7F5E", paddingLeft: 2 }}>
                     <input type="checkbox" checked={copiesFirstSlot(role)} onChange={() => setRoleField(team.id, role.id, "copyFirstSlot", !copiesFirstSlot(role))} />
                     Copy {SLOTS[0]} to the other services (can still be edited)
                   </label>
@@ -4268,16 +4178,16 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
                     placeholder="Task description for the print sheet (optional)"
                     style={{ ...styles.roleEditInput, fontSize: 11.5, padding: "5px 7px", marginLeft: 2, marginRight: 2 }} />
                   <div style={{ paddingLeft: 2, paddingTop: 2 }}>
-                    <div style={{ fontSize: 10.5, color: "var(--t9B8F6C)", marginBottom: 4 }}>
+                    <div style={{ fontSize: 10.5, color: "#9B8F6C", marginBottom: 4 }}>
                       Volunteers for this role (dropdown on Assign volunteers) — paste
                       several names at once, separated by commas or new lines
                     </div>
                     {(role.volunteers || []).length > 0 && (
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 5 }}>
                         {(role.volunteers || []).slice().sort((a, b) => a.localeCompare(b)).map((name) => (
-                          <span key={name} style={{ background: "var(--bEFE7D3)", borderRadius: 20, padding: "2px 8px", fontSize: 11, display: "flex", alignItems: "center", gap: 5 }}>
+                          <span key={name} style={{ background: "#EFE7D3", borderRadius: 20, padding: "2px 8px", fontSize: 11, display: "flex", alignItems: "center", gap: 5 }}>
                             {name}
-                            <button onClick={() => removeVolunteer(team.id, role.id, name)} style={{ border: "none", background: "none", color: "var(--tA6402F)", cursor: "pointer", fontSize: 12, lineHeight: 1, padding: 0 }} aria-label="Remove volunteer">×</button>
+                            <button onClick={() => removeVolunteer(team.id, role.id, name)} style={{ border: "none", background: "none", color: "#A6402F", cursor: "pointer", fontSize: 12, lineHeight: 1, padding: 0 }} aria-label="Remove volunteer">×</button>
                           </span>
                         ))}
                       </div>
@@ -4299,7 +4209,7 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
                   onKeyDown={(e) => { if (e.key === "Enter") addRole(team.id); }} />
                 <button onClick={() => addRole(team.id)} style={styles.smallBtn}>Add</button>
               </div>
-              <div style={{ fontSize: 11, color: "var(--t9B8F6C)", marginTop: 2, lineHeight: 1.4 }}>
+              <div style={{ fontSize: 11, color: "#9B8F6C", marginTop: 2, lineHeight: 1.4 }}>
                 Volunteer names are only added to this list from here — typing a
                 name on Assign volunteers no longer adds it automatically.
               </div>
@@ -4460,8 +4370,8 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
               <React.Fragment>
                 <input value={section.time || ""} onChange={(e) => updateSection(section.id, "time", e.target.value)}
                   placeholder="Time shown next to this divider (optional)" style={{ ...styles.roleEditInput, maxWidth: 220, marginBottom: 8 }} />
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingTop: 6, borderTop: "1px dashed var(--lE4DCC6)" }}>
-                  <span style={{ fontSize: 11.5, color: "var(--t8A7F5E)" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingTop: 6, borderTop: "1px dashed #E4DCC6" }}>
+                  <span style={{ fontSize: 11.5, color: "#8A7F5E" }}>
                     Overrides for specific weeks/slots (optional) — push this divider's Time later or
                     earlier on weeks where earlier rows ran long/short, or give a future service slot
                     its own end time:
@@ -4469,7 +4379,7 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
                   {(section.overrides || []).length > 0 && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       {(section.overrides || []).map((ov) => (
-                        <div key={ov.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, background: "var(--bF6F1E4)", borderRadius: 6, padding: "4px 8px" }}>
+                        <div key={ov.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, background: "#F6F1E4", borderRadius: 6, padding: "4px 8px" }}>
                           <span style={{ flex: 1 }}>
                             {(ov.weeks && ov.weeks.length ? `Wk ${ov.weeks.join(",")}` : "All weeks")}
                             {" · "}
@@ -4483,16 +4393,16 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
                     </div>
                   )}
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                    <span style={{ fontSize: 11, color: "var(--t8A7F5E)" }}>Weeks:</span>
+                    <span style={{ fontSize: 11, color: "#8A7F5E" }}>Weeks:</span>
                     {WEEKS.map((w) => (
-                      <label key={w} style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 11, color: "var(--t8A7F5E)" }}>
+                      <label key={w} style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 11, color: "#8A7F5E" }}>
                         <input type="checkbox" checked={dividerDraft.weeks.includes(w)} onChange={() => toggleOverrideDraftWeek(section.id, w)} />
                         {w}
                       </label>
                     ))}
-                    <span style={{ fontSize: 11, color: "var(--t8A7F5E)", marginLeft: 6 }}>Slots:</span>
+                    <span style={{ fontSize: 11, color: "#8A7F5E", marginLeft: 6 }}>Slots:</span>
                     {SLOTS.map((s) => (
-                      <label key={s} style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 11, color: "var(--t8A7F5E)" }}>
+                      <label key={s} style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 11, color: "#8A7F5E" }}>
                         <input type="checkbox" checked={dividerDraft.slots.includes(s)} onChange={() => toggleOverrideDraftSlot(section.id, s)} />
                         {s}
                       </label>
@@ -4507,17 +4417,17 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
               </React.Fragment>
             ) : (
               <React.Fragment>
-                <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: "1px dashed var(--lE4DCC6)" }}>
-                  <div style={{ fontSize: 11.5, color: "var(--t8A7F5E)", marginBottom: 4 }}>
+                <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: "1px dashed #E4DCC6" }}>
+                  <div style={{ fontSize: 11.5, color: "#8A7F5E", marginBottom: 4 }}>
                     Extra lines under Program label (optional) — pulls a role's live value, e.g. song titles under "PRAISE AND WORSHIP"
                   </div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
                     {(section.programSubRoles || []).map((tag) => {
                       const opt = allRoleOptions.find((r) => r.tag === tag);
                       return (
-                        <span key={tag} style={{ background: "var(--bEFE7D3)", borderRadius: 20, padding: "3px 10px", fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
+                        <span key={tag} style={{ background: "#EFE7D3", borderRadius: 20, padding: "3px 10px", fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
                           {opt ? opt.label : tag}
-                          <button onClick={() => removeProgramSubRole(section.id, tag)} style={{ border: "none", background: "none", color: "var(--tA6402F)", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }} aria-label="Remove">×</button>
+                          <button onClick={() => removeProgramSubRole(section.id, tag)} style={{ border: "none", background: "none", color: "#A6402F", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }} aria-label="Remove">×</button>
                         </span>
                       );
                     })}
@@ -4534,7 +4444,7 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
                 {(section.rows || []).map((row) => {
                   const draft = getOverrideDraft(row.id);
                   return (
-                  <div key={row.id} style={{ border: "1px solid var(--lE4DCC6)", borderRadius: 8, padding: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                  <div key={row.id} style={{ border: "1px solid #E4DCC6", borderRadius: 8, padding: 8, display: "flex", flexDirection: "column", gap: 4 }}>
                     <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                       <input value={row.time || ""} onChange={(e) => updateRow(section.id, row.id, "time", e.target.value)}
                         placeholder="Time" style={{ ...styles.roleEditInput, fontSize: 11.5, padding: "5px 7px" }} />
@@ -4553,14 +4463,14 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
                       <input value={row.fixedText || ""} onChange={(e) => updateRow(section.id, row.id, "fixedText", e.target.value)}
                         placeholder="Fixed text (e.g. ALL AVAILABLE USHERS) — leave blank for a free-text box" style={{ ...styles.roleEditInput, fontSize: 12.5 }} />
                     )}
-                    <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "var(--t8A7F5E)" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#8A7F5E" }}>
                       <input type="checkbox" checked={!!row.checkbox} onChange={() => updateRow(section.id, row.id, "checkbox", !row.checkbox)} />
                       Show a checkbox for this row
                     </label>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", paddingTop: 2, borderTop: "1px dashed var(--lE4DCC6)" }}>
-                      <span style={{ fontSize: 11.5, color: "var(--t8A7F5E)" }}>Show on weeks:</span>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", paddingTop: 2, borderTop: "1px dashed #E4DCC6" }}>
+                      <span style={{ fontSize: 11.5, color: "#8A7F5E" }}>Show on weeks:</span>
                       {WEEKS.map((w) => (
-                        <label key={w} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11.5, color: "var(--t8A7F5E)" }}>
+                        <label key={w} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11.5, color: "#8A7F5E" }}>
                           <input type="checkbox"
                             checked={!row.showWeeks || row.showWeeks.length === 0 || row.showWeeks.includes(w)}
                             onChange={() => toggleRowWeek(section.id, row.id, row, w)} />
@@ -4568,14 +4478,14 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
                         </label>
                       ))}
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingTop: 4, borderTop: "1px dashed var(--lE4DCC6)" }}>
-                      <span style={{ fontSize: 11.5, color: "var(--t8A7F5E)" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingTop: 4, borderTop: "1px dashed #E4DCC6" }}>
+                      <span style={{ fontSize: 11.5, color: "#8A7F5E" }}>
                         Overrides for specific weeks/slots (optional) — different Time or Duration on certain weeks, or a whole separate slot (e.g. future 3:00 PM):
                       </span>
                       {(row.overrides || []).length > 0 && (
                         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                           {(row.overrides || []).map((ov) => (
-                            <div key={ov.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, background: "var(--bF6F1E4)", borderRadius: 6, padding: "4px 8px" }}>
+                            <div key={ov.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, background: "#F6F1E4", borderRadius: 6, padding: "4px 8px" }}>
                               <span style={{ flex: 1 }}>
                                 {(ov.weeks && ov.weeks.length ? `Wk ${ov.weeks.join(",")}` : "All weeks")}
                                 {" · "}
@@ -4589,16 +4499,16 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
                         </div>
                       )}
                       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                        <span style={{ fontSize: 11, color: "var(--t8A7F5E)" }}>Weeks:</span>
+                        <span style={{ fontSize: 11, color: "#8A7F5E" }}>Weeks:</span>
                         {WEEKS.map((w) => (
-                          <label key={w} style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 11, color: "var(--t8A7F5E)" }}>
+                          <label key={w} style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 11, color: "#8A7F5E" }}>
                             <input type="checkbox" checked={draft.weeks.includes(w)} onChange={() => toggleOverrideDraftWeek(row.id, w)} />
                             {w}
                           </label>
                         ))}
-                        <span style={{ fontSize: 11, color: "var(--t8A7F5E)", marginLeft: 6 }}>Slots:</span>
+                        <span style={{ fontSize: 11, color: "#8A7F5E", marginLeft: 6 }}>Slots:</span>
                         {SLOTS.map((s) => (
-                          <label key={s} style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 11, color: "var(--t8A7F5E)" }}>
+                          <label key={s} style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 11, color: "#8A7F5E" }}>
                             <input type="checkbox" checked={draft.slots.includes(s)} onChange={() => toggleOverrideDraftSlot(row.id, s)} />
                             {s}
                           </label>
@@ -4612,8 +4522,8 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
                         <button onClick={() => addRowOverride(section.id, row.id)} style={styles.smallBtn}>Add override</button>
                       </div>
                     </div>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center", paddingTop: 2, borderTop: "1px dashed var(--lE4DCC6)" }}>
-                      <span style={{ fontSize: 11.5, color: "var(--t8A7F5E)" }}>Move to section:</span>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", paddingTop: 2, borderTop: "1px dashed #E4DCC6" }}>
+                      <span style={{ fontSize: 11.5, color: "#8A7F5E" }}>Move to section:</span>
                       <select value="" onChange={(e) => { if (e.target.value) moveRowToSection(section.id, row.id, e.target.value); }}
                         style={{ ...styles.restrictSelect, fontSize: 11.5, padding: "4px 6px" }}>
                         <option value="">— choose a group —</option>
@@ -4757,184 +4667,184 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
 const styles = {
   watermark: { position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", zIndex: 9999, opacity: 0.2 },
   watermarkImg: { width: "45%", maxWidth: 480, objectFit: "contain" },
-  app: { display: "flex", minHeight: "100vh", background: "var(--bF6F1E4)", color: "var(--t2A2620)", fontFamily: '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif' },
-  setupScreen: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bF6F1E4)", padding: 24 },
-  setupCard: { maxWidth: 520, background: "var(--bFFFFFF)", border: "1px solid var(--lE4DCC6)", borderRadius: 12, padding: 32 },
-  setupText: { fontFamily: "system-ui, sans-serif", fontSize: 14.5, lineHeight: 1.7, color: "var(--t4A4230)" },
-  backLink: { background: "none", border: "none", color: "var(--t7A6E4E)", fontSize: 12.5, cursor: "pointer", fontFamily: "system-ui, sans-serif", padding: 0, marginBottom: 14, display: "block" },
-  entryChoiceBtn: { textAlign: "left", padding: "16px 18px", borderRadius: 10, border: "1px solid var(--lE4DCC6)", background: "var(--bFBF8EE)", cursor: "pointer", fontFamily: "system-ui, sans-serif" },
-  entryChoiceBtnPrimary: { background: "var(--b1F3864)", border: "1px solid var(--l1F3864)" },
-  entryChoiceTitle: { fontSize: 15.5, fontWeight: 700, color: "var(--t23211D)", marginBottom: 4 },
-  entryChoiceDesc: { fontSize: 13, color: "var(--t7A6E4E)", lineHeight: 1.5 },
-  quickViewShell: { minHeight: "100vh", background: "var(--bF6F1E4)", color: "var(--t2A2620)", fontFamily: '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif' },
-  quickViewHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "calc(18px + env(safe-area-inset-top, 0px)) 24px 18px", borderBottom: "1px solid var(--lE4DCC6)", background: "var(--bFBF8EE)", flexWrap: "wrap" },
+  app: { display: "flex", minHeight: "100vh", background: "#F6F1E4", color: "#2A2620", fontFamily: '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif' },
+  setupScreen: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F6F1E4", padding: 24 },
+  setupCard: { maxWidth: 520, background: "#FFFFFF", border: "1px solid #E4DCC6", borderRadius: 12, padding: 32 },
+  setupText: { fontFamily: "system-ui, sans-serif", fontSize: 14.5, lineHeight: 1.7, color: "#4A4230" },
+  backLink: { background: "none", border: "none", color: "#7A6E4E", fontSize: 12.5, cursor: "pointer", fontFamily: "system-ui, sans-serif", padding: 0, marginBottom: 14, display: "block" },
+  entryChoiceBtn: { textAlign: "left", padding: "16px 18px", borderRadius: 10, border: "1px solid #E4DCC6", background: "#FBF8EE", cursor: "pointer", fontFamily: "system-ui, sans-serif" },
+  entryChoiceBtnPrimary: { background: "#1F3864", border: "1px solid #1F3864" },
+  entryChoiceTitle: { fontSize: 15.5, fontWeight: 700, color: "#23211D", marginBottom: 4 },
+  entryChoiceDesc: { fontSize: 13, color: "#7A6E4E", lineHeight: 1.5 },
+  quickViewShell: { minHeight: "100vh", background: "#F6F1E4", color: "#2A2620", fontFamily: '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif' },
+  quickViewHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "calc(18px + env(safe-area-inset-top, 0px)) 24px 18px", borderBottom: "1px solid #E4DCC6", background: "#FBF8EE", flexWrap: "wrap" },
   quickViewBrand: { display: "flex", alignItems: "center", gap: 10 },
-  quickViewBrandTitle: { fontFamily: "Georgia, serif", fontSize: 16.5, lineHeight: 1.2, color: "var(--t23211D)" },
-  quickViewBrandSub: { fontSize: 11.5, color: "var(--t7A6E4E)", marginTop: 2, fontFamily: "system-ui, sans-serif" },
+  quickViewBrandTitle: { fontFamily: "Georgia, serif", fontSize: 16.5, lineHeight: 1.2, color: "#23211D" },
+  quickViewBrandSub: { fontSize: 11.5, color: "#7A6E4E", marginTop: 2, fontFamily: "system-ui, sans-serif" },
   quickViewBody: { padding: "28px 24px 48px", maxWidth: 900, margin: "0 auto" },
-  code: { background: "var(--bEFE7D3)", padding: "1px 6px", borderRadius: 4, fontSize: 13 },
-  sidebar: { width: 260, flexShrink: 0, background: "var(--b23211D)", color: "var(--tEFE7D3)", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "24px 18px", boxSizing: "border-box", position: "sticky", top: 0, height: "100vh", overflowY: "auto", alignSelf: "flex-start" },
-  sidebarCompact: { width: 64, flexShrink: 0, background: "var(--b23211D)", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "calc(16px + env(safe-area-inset-top, 0px)) 6px calc(16px + env(safe-area-inset-bottom, 0px))", boxSizing: "border-box", height: "100vh", position: "sticky", top: 0, overflowY: "auto" },
+  code: { background: "#EFE7D3", padding: "1px 6px", borderRadius: 4, fontSize: 13 },
+  sidebar: { width: 260, flexShrink: 0, background: "#23211D", color: "#EFE7D3", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "24px 18px", boxSizing: "border-box", position: "sticky", top: 0, height: "100vh", overflowY: "auto", alignSelf: "flex-start" },
+  sidebarCompact: { width: 64, flexShrink: 0, background: "#23211D", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "calc(16px + env(safe-area-inset-top, 0px)) 6px calc(16px + env(safe-area-inset-bottom, 0px))", boxSizing: "border-box", height: "100vh", position: "sticky", top: 0, overflowY: "auto" },
   compactBrandMark: { width: 30, height: 30, borderRadius: 7, objectFit: "cover", marginBottom: 6 },
   compactNavList: { display: "flex", flexDirection: "column", gap: 6, width: "100%", alignItems: "center" },
-  compactNavItem: { width: 46, height: 46, borderRadius: 10, border: "none", background: "transparent", color: "var(--tEFE7D3)", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
-  compactNavItemSmall: { width: 40, height: 32, borderRadius: 8, fontSize: 11, fontFamily: "system-ui, sans-serif", fontWeight: 700, color: "var(--tCFC49E)", background: "var(--b2B2820)" },
-  compactNavItemActive: { background: "var(--b3A362C)", color: "var(--tF3ECD8)", boxShadow: "inset 0 0 0 1.5px #C9A227" },
-  compactDivider: { width: "70%", height: 1, background: "var(--b3B3830)", margin: "6px 0" },
+  compactNavItem: { width: 46, height: 46, borderRadius: 10, border: "none", background: "transparent", color: "#EFE7D3", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
+  compactNavItemSmall: { width: 40, height: 32, borderRadius: 8, fontSize: 11, fontFamily: "system-ui, sans-serif", fontWeight: 700, color: "#CFC49E", background: "#2B2820" },
+  compactNavItemActive: { background: "#3A362C", color: "#F3ECD8", boxShadow: "inset 0 0 0 1.5px #C9A227" },
+  compactDivider: { width: "70%", height: 1, background: "#3B3830", margin: "6px 0" },
   compactSwitchUser: { marginTop: "auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: "4px 0 0", flexShrink: 0 },
-  compactSwitchAvatar: { width: 34, height: 34, borderRadius: "50%", border: "1px solid var(--l3B3830)", background: "var(--b2B2820)", color: "var(--tD9CFAF)", fontSize: 12, fontWeight: 700, fontFamily: "system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center" },
-  compactSwitchLabel: { fontSize: 9.5, color: "var(--t9B8F6C)", fontFamily: "system-ui, sans-serif", lineHeight: 1 },
+  compactSwitchAvatar: { width: 34, height: 34, borderRadius: "50%", border: "1px solid #3B3830", background: "#2B2820", color: "#D9CFAF", fontSize: 12, fontWeight: 700, fontFamily: "system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center" },
+  compactSwitchLabel: { fontSize: 9.5, color: "#9B8F6C", fontFamily: "system-ui, sans-serif", lineHeight: 1 },
   mainMobile: { padding: "calc(18px + env(safe-area-inset-top, 0px)) 16px calc(18px + env(safe-area-inset-bottom, 0px))" },
-  mobileControls: { background: "var(--bFFFFFF)", border: "1px solid var(--lE4DCC6)", borderRadius: 10, padding: "10px 12px", marginBottom: 16, display: "flex", flexDirection: "column", gap: 8 },
+  mobileControls: { background: "#FFFFFF", border: "1px solid #E4DCC6", borderRadius: 10, padding: "10px 12px", marginBottom: 16, display: "flex", flexDirection: "column", gap: 8 },
   mobileControlsRow: { display: "flex", alignItems: "center", gap: 8, overflowX: "auto" },
-  mobileMonthNav: { display: "flex", alignItems: "center", gap: 4, background: "var(--bF6F1E4)", border: "1px solid var(--lE4DCC6)", borderRadius: 6, padding: "3px 6px", flexShrink: 0 },
-  mobileMonthLabel: { fontFamily: "system-ui, sans-serif", fontSize: 12.5, fontWeight: 600, color: "var(--t4A4230)", whiteSpace: "nowrap", padding: "0 2px" },
-  mobilePresencePill: { fontFamily: "system-ui, sans-serif", fontSize: 11.5, color: "var(--t5C5230)", background: "var(--bEFE7D3)", borderRadius: 20, padding: "5px 10px", whiteSpace: "nowrap", flexShrink: 0, border: "none", cursor: "pointer" },
-  mobilePresenceDropdown: { background: "var(--b23211D)", borderRadius: 10, padding: "8px 0", minWidth: 150, boxShadow: "0 10px 25px -5px rgba(20,18,14,0.4)", zIndex: 1000000, animation: "popIn 0.12s ease-out" },
-  mobilePresenceDropdownItem: { display: "flex", alignItems: "center", gap: 7, padding: "6px 14px", fontFamily: "system-ui, sans-serif", fontSize: 12.5, color: "var(--tEFE7D3)", whiteSpace: "nowrap" },
-  mobileWeekBtn: { width: 30, height: 30, flexShrink: 0, borderRadius: 6, border: "1px solid var(--lD8CFB0)", background: "var(--bF6F1E4)", color: "var(--t4A4230)", cursor: "pointer", fontFamily: "system-ui, sans-serif", fontSize: 12.5 },
-  mobileSlotBtn: { padding: "6px 10px", flexShrink: 0, borderRadius: 6, border: "1px solid var(--lD8CFB0)", background: "var(--bF6F1E4)", color: "var(--t4A4230)", cursor: "pointer", fontFamily: "system-ui, sans-serif", fontSize: 12 },
-  mobileWeekDate: { fontSize: 11.5, color: "var(--t8A7F5E)", fontFamily: "system-ui, sans-serif" },
+  mobileMonthNav: { display: "flex", alignItems: "center", gap: 4, background: "#F6F1E4", border: "1px solid #E4DCC6", borderRadius: 6, padding: "3px 6px", flexShrink: 0 },
+  mobileMonthLabel: { fontFamily: "system-ui, sans-serif", fontSize: 12.5, fontWeight: 600, color: "#4A4230", whiteSpace: "nowrap", padding: "0 2px" },
+  mobilePresencePill: { fontFamily: "system-ui, sans-serif", fontSize: 11.5, color: "#5C5230", background: "#EFE7D3", borderRadius: 20, padding: "5px 10px", whiteSpace: "nowrap", flexShrink: 0, border: "none", cursor: "pointer" },
+  mobilePresenceDropdown: { background: "#23211D", borderRadius: 10, padding: "8px 0", minWidth: 150, boxShadow: "0 10px 25px -5px rgba(20,18,14,0.4)", zIndex: 1000000, animation: "popIn 0.12s ease-out" },
+  mobilePresenceDropdownItem: { display: "flex", alignItems: "center", gap: 7, padding: "6px 14px", fontFamily: "system-ui, sans-serif", fontSize: 12.5, color: "#EFE7D3", whiteSpace: "nowrap" },
+  mobileWeekBtn: { width: 30, height: 30, flexShrink: 0, borderRadius: 6, border: "1px solid #D8CFB0", background: "#F6F1E4", color: "#4A4230", cursor: "pointer", fontFamily: "system-ui, sans-serif", fontSize: 12.5 },
+  mobileSlotBtn: { padding: "6px 10px", flexShrink: 0, borderRadius: 6, border: "1px solid #D8CFB0", background: "#F6F1E4", color: "#4A4230", cursor: "pointer", fontFamily: "system-ui, sans-serif", fontSize: 12 },
+  mobileWeekDate: { fontSize: 11.5, color: "#8A7F5E", fontFamily: "system-ui, sans-serif" },
   brand: { display: "flex", alignItems: "center", gap: 10, marginBottom: 26 },
   brandMark: { width: 34, height: 34, borderRadius: 6, objectFit: "cover", flexShrink: 0 },
   brandTitle: { fontFamily: "Georgia, serif", fontSize: 16.5, lineHeight: 1.2 },
-  brandSub: { fontSize: 11.5, color: "var(--tB8AD8C)", marginTop: 2, fontFamily: "system-ui, sans-serif" },
-  sectionLabel: { fontSize: 11, letterSpacing: 0.3, color: "var(--t9B8F6C)", margin: "20px 0 8px", fontFamily: "system-ui, sans-serif" },
+  brandSub: { fontSize: 11.5, color: "#B8AD8C", marginTop: 2, fontFamily: "system-ui, sans-serif" },
+  sectionLabel: { fontSize: 11, letterSpacing: 0.3, color: "#9B8F6C", margin: "20px 0 8px", fontFamily: "system-ui, sans-serif" },
   whosHere: { marginBottom: 4 },
-  presenceRow: { display: "flex", alignItems: "center", gap: 7, padding: "3px 0", fontFamily: "system-ui, sans-serif", fontSize: 12.5, color: "var(--tD9CFAF)" },
-  presenceDot: { width: 7, height: 7, borderRadius: "50%", background: "var(--b7FB07A)", flexShrink: 0 },
+  presenceRow: { display: "flex", alignItems: "center", gap: 7, padding: "3px 0", fontFamily: "system-ui, sans-serif", fontSize: 12.5, color: "#D9CFAF" },
+  presenceDot: { width: 7, height: 7, borderRadius: "50%", background: "#7FB07A", flexShrink: 0 },
   presenceName: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  editNicknameBtn: { background: "none", border: "none", color: "var(--t9B8F6C)", fontSize: 12, cursor: "pointer", padding: "0 0 0 2px", flexShrink: 0, lineHeight: 1 },
-  compactEditNickname: { marginTop: "auto", width: 26, height: 26, borderRadius: "50%", border: "1px solid var(--l3B3830)", background: "var(--b2B2820)", color: "var(--t9B8F6C)", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  switchUserLink: { background: "none", border: "none", color: "var(--t9B8F6C)", fontSize: 11, cursor: "pointer", padding: "4px 0 0", fontFamily: "system-ui, sans-serif", textAlign: "left" },
-  restrictedNote: { fontSize: 11.5, color: "var(--t9B8F6C)", fontFamily: "system-ui, sans-serif", marginTop: 8, lineHeight: 1.5 },
+  editNicknameBtn: { background: "none", border: "none", color: "#9B8F6C", fontSize: 12, cursor: "pointer", padding: "0 0 0 2px", flexShrink: 0, lineHeight: 1 },
+  compactEditNickname: { marginTop: "auto", width: 26, height: 26, borderRadius: "50%", border: "1px solid #3B3830", background: "#2B2820", color: "#9B8F6C", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  switchUserLink: { background: "none", border: "none", color: "#9B8F6C", fontSize: 11, cursor: "pointer", padding: "4px 0 0", fontFamily: "system-ui, sans-serif", textAlign: "left" },
+  restrictedNote: { fontSize: 11.5, color: "#9B8F6C", fontFamily: "system-ui, sans-serif", marginTop: 8, lineHeight: 1.5 },
   weekRow: { display: "flex", gap: 6 },
-  monthNavRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, background: "var(--b2B2820)", border: "1px solid var(--l3B3830)", borderRadius: 6, padding: "6px 8px" },
-  monthNavBtn: { background: "transparent", border: "none", color: "var(--tD9CFAF)", fontSize: 17, cursor: "pointer", padding: "0 6px", lineHeight: 1 },
-  monthNavLabel: { fontFamily: "system-ui, sans-serif", fontSize: 13, color: "var(--tEFE7D3)", fontWeight: 600, textAlign: "center", flex: 1 },
-  weekBtn: { flex: 1, padding: "8px 0", borderRadius: 6, border: "1px solid var(--l3B3830)", background: "transparent", color: "var(--tD9CFAF)", cursor: "pointer", fontFamily: "system-ui, sans-serif", fontSize: 13 },
-  weekBtnActive: { background: "var(--bA9782F)", borderColor: "var(--lA9782F)", color: "var(--t23211D)", fontWeight: 700 },
-  weekDateLabel: { fontSize: 12, color: "var(--tB8AD8C)", marginTop: 8, fontFamily: "system-ui, sans-serif" },
+  monthNavRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, background: "#2B2820", border: "1px solid #3B3830", borderRadius: 6, padding: "6px 8px" },
+  monthNavBtn: { background: "transparent", border: "none", color: "#D9CFAF", fontSize: 17, cursor: "pointer", padding: "0 6px", lineHeight: 1 },
+  monthNavLabel: { fontFamily: "system-ui, sans-serif", fontSize: 13, color: "#EFE7D3", fontWeight: 600, textAlign: "center", flex: 1 },
+  weekBtn: { flex: 1, padding: "8px 0", borderRadius: 6, border: "1px solid #3B3830", background: "transparent", color: "#D9CFAF", cursor: "pointer", fontFamily: "system-ui, sans-serif", fontSize: 13 },
+  weekBtnActive: { background: "#A9782F", borderColor: "#A9782F", color: "#23211D", fontWeight: 700 },
+  weekDateLabel: { fontSize: 12, color: "#B8AD8C", marginTop: 8, fontFamily: "system-ui, sans-serif" },
   slotRow: { display: "flex", flexDirection: "column", gap: 6, marginTop: 14 },
-  slotBtn: { padding: "9px 12px", borderRadius: 6, border: "1px solid var(--l3B3830)", background: "transparent", color: "var(--tD9CFAF)", cursor: "pointer", textAlign: "left", fontFamily: "system-ui, sans-serif", fontSize: 13.5 },
-  slotBtnActive: { background: "var(--b1F3864)", borderColor: "var(--l1F3864)", color: "var(--tEFE7D3)", fontWeight: 600 },
+  slotBtn: { padding: "9px 12px", borderRadius: 6, border: "1px solid #3B3830", background: "transparent", color: "#D9CFAF", cursor: "pointer", textAlign: "left", fontFamily: "system-ui, sans-serif", fontSize: 13.5 },
+  slotBtnActive: { background: "#1F3864", borderColor: "#1F3864", color: "#EFE7D3", fontWeight: 600 },
   navList: { display: "flex", flexDirection: "column", gap: 3 },
-  navItem: { textAlign: "left", background: "transparent", border: "none", borderLeft: "3px solid transparent", color: "var(--tCFC49E)", padding: "9px 12px", borderRadius: 8, cursor: "pointer", fontFamily: "system-ui, sans-serif", fontSize: 13.5, transition: "background 0.15s ease, border-color 0.15s ease" },
-  navItemActive: { background: "linear-gradient(90deg, rgba(169,120,47,0.22) 0%, rgba(51,47,39,0.9) 60%)", borderLeft: "3px solid var(--lA9782F)", color: "var(--tF3ECD8)", fontWeight: 700, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)" },
-  sidebarFoot: { fontSize: 11, color: "var(--t867A5C)", lineHeight: 1.5, fontFamily: "system-ui, sans-serif", borderTop: "1px solid var(--l3B3830)", paddingTop: 14 },
+  navItem: { textAlign: "left", background: "transparent", border: "none", borderLeft: "3px solid transparent", color: "#CFC49E", padding: "9px 12px", borderRadius: 8, cursor: "pointer", fontFamily: "system-ui, sans-serif", fontSize: 13.5, transition: "background 0.15s ease, border-color 0.15s ease" },
+  navItemActive: { background: "linear-gradient(90deg, rgba(169,120,47,0.22) 0%, rgba(51,47,39,0.9) 60%)", borderLeft: "3px solid #A9782F", color: "#F3ECD8", fontWeight: 700, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)" },
+  sidebarFoot: { fontSize: 11, color: "#867A5C", lineHeight: 1.5, fontFamily: "system-ui, sans-serif", borderTop: "1px solid #3B3830", paddingTop: 14 },
   main: { flex: 1, padding: "40px 48px", overflowY: "auto" },
   viewWrap: { maxWidth: 900 },
   viewHeader: { marginBottom: 22 },
-  h1: { fontSize: 28, margin: 0, fontFamily: "Georgia, serif", color: "var(--t1F3864)", letterSpacing: 0.2 },
-  viewMeta: { color: "var(--t7A6E4E)", fontSize: 13, marginTop: 6, fontFamily: "system-ui, sans-serif", fontWeight: 500, textTransform: "uppercase", letterSpacing: 0.5 },
-  flexTag: { marginLeft: 10, background: "var(--bE7DEC2)", color: "var(--t5C5230)", padding: "2px 8px", borderRadius: 20, fontSize: 11.5 },
-  rolesCard: { background: "linear-gradient(180deg, var(--bFFFFFF) 0%, var(--bFDFBF4) 100%)", border: "1px solid var(--lEFE7D3)", borderRadius: 16, overflowX: "auto", WebkitOverflowScrolling: "touch", boxShadow: "0 14px 32px -12px rgba(35,33,29,0.16), 0 4px 10px -6px rgba(35,33,29,0.08)" },
-  emptyNote: { padding: 20, color: "var(--t8A7F5E)", fontFamily: "system-ui, sans-serif", fontSize: 14 },
+  h1: { fontSize: 28, margin: 0, fontFamily: "Georgia, serif", color: "#1F3864", letterSpacing: 0.2 },
+  viewMeta: { color: "#7A6E4E", fontSize: 13, marginTop: 6, fontFamily: "system-ui, sans-serif", fontWeight: 500, textTransform: "uppercase", letterSpacing: 0.5 },
+  flexTag: { marginLeft: 10, background: "#E7DEC2", color: "#5C5230", padding: "2px 8px", borderRadius: 20, fontSize: 11.5 },
+  rolesCard: { background: "linear-gradient(180deg, #FFFFFF 0%, #FDFBF4 100%)", border: "1px solid #EFE7D3", borderRadius: 16, overflowX: "auto", WebkitOverflowScrolling: "touch", boxShadow: "0 14px 32px -12px rgba(35,33,29,0.16), 0 4px 10px -6px rgba(35,33,29,0.08)" },
+  emptyNote: { padding: 20, color: "#8A7F5E", fontFamily: "system-ui, sans-serif", fontSize: 14 },
   roleRow: { display: "flex", alignItems: "flex-start", padding: "18px 22px", gap: 20, transition: "background 0.15s ease" },
-  roleRowAlt: { background: "linear-gradient(90deg, var(--bFBF8EE) 0%, var(--bFCFAF3) 100%)" },
-  roleName: { width: 210, flexShrink: 0, paddingTop: 10, fontSize: 14.5, fontWeight: 600, color: "var(--t1F3864)", fontFamily: "system-ui, sans-serif", display: "flex", alignItems: "center", gap: 6 },
-  roleNameDot: { width: 5, height: 5, borderRadius: "50%", background: "var(--bA9782F)", flexShrink: 0 },
+  roleRowAlt: { background: "linear-gradient(90deg, #FBF8EE 0%, #FCFAF3 100%)" },
+  roleName: { width: 210, flexShrink: 0, paddingTop: 10, fontSize: 14.5, fontWeight: 600, color: "#1F3864", fontFamily: "system-ui, sans-serif", display: "flex", alignItems: "center", gap: 6 },
+  roleNameDot: { width: 5, height: 5, borderRadius: "50%", background: "#A9782F", flexShrink: 0 },
   roleInputWrap: { flex: 1 },
-  fieldLabel: { fontSize: 12.5, color: "var(--t7A6E4E)", marginBottom: 6, fontFamily: "system-ui, sans-serif", fontWeight: 600 },
-  input: { width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 8, border: "1px solid var(--lE4DCC6)", borderLeft: "3px solid var(--lD8CFB0)", fontSize: 15, fontFamily: "system-ui, sans-serif", color: "var(--t2A2620)", outline: "none", background: "var(--bFFFFFF)", transition: "box-shadow 0.15s ease, border-color 0.15s ease, border-left-color 0.15s ease" },
+  fieldLabel: { fontSize: 12.5, color: "#7A6E4E", marginBottom: 6, fontFamily: "system-ui, sans-serif", fontWeight: 600 },
+  input: { width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 8, border: "1px solid #E4DCC6", borderLeft: "3px solid #D8CFB0", fontSize: 15, fontFamily: "system-ui, sans-serif", color: "#2A2620", outline: "none", background: "#FFFFFF", transition: "box-shadow 0.15s ease, border-color 0.15s ease, border-left-color 0.15s ease" },
   passwordFieldWrap: { position: "relative", width: "100%" },
-  passwordToggleBtn: { position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "var(--t7A6E4E)", padding: 8, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" },
-  inputConflict: { borderColor: "var(--lC24A3A)", background: "var(--bFFFFFF)", animation: "warnGlow 0.9s ease-in-out infinite" },
-  inputDup: { borderColor: "var(--lC24A3A)", background: "var(--bFFFFFF)", animation: "warnGlow 0.9s ease-in-out infinite" },
+  passwordToggleBtn: { position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#7A6E4E", padding: 8, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" },
+  inputConflict: { borderColor: "#C24A3A", background: "#FFFFFF", animation: "warnGlow 0.9s ease-in-out infinite" },
+  inputDup: { borderColor: "#C24A3A", background: "#FFFFFF", animation: "warnGlow 0.9s ease-in-out infinite" },
   warnIconBtn: { flexShrink: 0, width: 16, height: 16, border: "none", padding: 0, background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", animation: "warnGlowDot 0.9s ease-in-out infinite" },
   issueNote: { fontSize: 12.5, marginTop: 6, fontFamily: "system-ui, sans-serif", lineHeight: 1.5 },
-  editMetaNote: { fontSize: 11.5, marginTop: 5, fontFamily: "system-ui, sans-serif", color: "var(--tA99B72)", fontStyle: "italic" },
-  editMetaNoteSm: { fontSize: 10.5, marginTop: 2, fontFamily: "system-ui, sans-serif", color: "var(--tA99B72)", fontStyle: "italic", fontWeight: 400 },
+  editMetaNote: { fontSize: 11.5, marginTop: 5, fontFamily: "system-ui, sans-serif", color: "#A99B72", fontStyle: "italic" },
+  editMetaNoteSm: { fontSize: 10.5, marginTop: 2, fontFamily: "system-ui, sans-serif", color: "#A99B72", fontStyle: "italic", fontWeight: 400 },
   masterMetaBtn: { position: "relative", verticalAlign: "middle", marginLeft: 5, width: 18, height: 18, borderRadius: "50%", border: "none", padding: 0, display: "inline-block", cursor: "pointer", overflow: "hidden", flexShrink: 0, userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none", touchAction: "manipulation", transition: "background 0.15s ease" },
-  nameConflict: { color: "var(--tA6402F)" },
-  nameDup: { color: "var(--tA6402F)" },
-  suggestDropdown: { position: "absolute", top: "calc(100% + 2px)", left: 0, right: 0, background: "var(--bFFFFFF)", border: "1px solid var(--lB8AD8C)", borderRadius: 6, boxShadow: "0 2px 6px rgba(35,33,29,0.12)", maxHeight: 220, overflowY: "auto", zIndex: 20 },
-  suggestPopup: { position: "fixed", background: "linear-gradient(180deg, var(--b3E5F92) 0%, var(--b1F3864) 55%, var(--b16294B) 100%)", borderRadius: 12, border: "1px solid var(--l16294B)", boxShadow: "0 20px 25px -5px rgba(15,23,42,0.45), 0 8px 10px -6px rgba(15,23,42,0.35), 0 1px 0 rgba(255,255,255,0.12) inset", maxHeight: 240, overflowY: "auto", zIndex: 1000000 },
-  suggestItem: { padding: "9px 14px", fontSize: 16, fontFamily: "system-ui, sans-serif", color: "var(--tEDF1FA)", cursor: "pointer", transition: "background 0.1s ease" },
-  masterCard: { background: "var(--bFFFFFF)", border: "1px solid var(--lE4DCC6)", borderRadius: 16, overflowX: "auto", WebkitOverflowScrolling: "touch", boxShadow: "0 12px 28px -10px rgba(35,33,29,0.22), 0 4px 10px -6px rgba(35,33,29,0.12)" },
-  masterInfoCard: { background: "var(--bFBF8EE)", border: "1px solid var(--lE4DCC6)", borderRadius: 16, padding: "16px 20px", display: "flex", flexDirection: "column" },
-  masterInfoItem: { padding: "10px 0", borderBottom: "1px solid var(--lEFE7D3)" },
-  masterInfoLabel: { fontFamily: "system-ui, sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: "var(--tA9782F)" },
-  masterInfoValue: { fontFamily: "system-ui, sans-serif", fontSize: 14, color: "var(--t2A2620)", marginTop: 3, lineHeight: 1.5, whiteSpace: "pre-wrap" },
-  masterProgressTrack: { height: 6, borderRadius: 20, background: "var(--bEFE7D3)", overflow: "hidden", marginTop: 10, maxWidth: 260 },
-  masterProgressFill: { height: "100%", borderRadius: 20, background: "linear-gradient(90deg, var(--bA9782F) 0%, var(--b1F3864) 100%)", transition: "width 0.3s ease" },
+  nameConflict: { color: "#A6402F" },
+  nameDup: { color: "#A6402F" },
+  suggestDropdown: { position: "absolute", top: "calc(100% + 2px)", left: 0, right: 0, background: "#FFFFFF", border: "1px solid #B8AD8C", borderRadius: 6, boxShadow: "0 2px 6px rgba(35,33,29,0.12)", maxHeight: 220, overflowY: "auto", zIndex: 20 },
+  suggestPopup: { position: "fixed", background: "linear-gradient(180deg, #3E5F92 0%, #1F3864 55%, #16294B 100%)", borderRadius: 12, border: "1px solid #16294B", boxShadow: "0 20px 25px -5px rgba(15,23,42,0.45), 0 8px 10px -6px rgba(15,23,42,0.35), 0 1px 0 rgba(255,255,255,0.12) inset", maxHeight: 240, overflowY: "auto", zIndex: 1000000 },
+  suggestItem: { padding: "9px 14px", fontSize: 16, fontFamily: "system-ui, sans-serif", color: "#EDF1FA", cursor: "pointer", transition: "background 0.1s ease" },
+  masterCard: { background: "#FFFFFF", border: "1px solid #E4DCC6", borderRadius: 16, overflowX: "auto", WebkitOverflowScrolling: "touch", boxShadow: "0 12px 28px -10px rgba(35,33,29,0.22), 0 4px 10px -6px rgba(35,33,29,0.12)" },
+  masterInfoCard: { background: "#FBF8EE", border: "1px solid #E4DCC6", borderRadius: 16, padding: "16px 20px", display: "flex", flexDirection: "column" },
+  masterInfoItem: { padding: "10px 0", borderBottom: "1px solid #EFE7D3" },
+  masterInfoLabel: { fontFamily: "system-ui, sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: "#A9782F" },
+  masterInfoValue: { fontFamily: "system-ui, sans-serif", fontSize: 14, color: "#2A2620", marginTop: 3, lineHeight: 1.5, whiteSpace: "pre-wrap" },
+  masterProgressTrack: { height: 6, borderRadius: 20, background: "#EFE7D3", overflow: "hidden", marginTop: 10, maxWidth: 260 },
+  masterProgressFill: { height: "100%", borderRadius: 20, background: "linear-gradient(90deg, #A9782F 0%, #1F3864 100%)", transition: "width 0.3s ease" },
   masterSectionWrap: { display: "flex", flexDirection: "column", gap: 14, width: "100%" },
-  masterSection: { background: "var(--bFFFFFF)", border: "1px solid var(--lE4DCC6)", borderRadius: 14, overflow: "hidden", boxShadow: "0 8px 20px -12px rgba(35,33,29,0.2)" },
-  mcTeamHeader: { background: "linear-gradient(90deg, var(--b1F3864) 0%, var(--b24406F) 100%)", color: "var(--tEFE7D3)", fontFamily: "system-ui, sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 0.6, textTransform: "uppercase", padding: "11px 18px", borderBottom: "1px solid rgba(255,255,255,0.1)" },
+  masterSection: { background: "#FFFFFF", border: "1px solid #E4DCC6", borderRadius: 14, overflow: "hidden", boxShadow: "0 8px 20px -12px rgba(35,33,29,0.2)" },
+  mcTeamHeader: { background: "linear-gradient(90deg, #1F3864 0%, #24406F 100%)", color: "#EFE7D3", fontFamily: "system-ui, sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 0.6, textTransform: "uppercase", padding: "11px 18px", borderBottom: "1px solid rgba(255,255,255,0.1)" },
   mcRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 14, padding: "14px 18px" },
   mcRoleCol: { flex: 1, minWidth: 0 },
-  mcRoleName: { fontFamily: "system-ui, sans-serif", fontSize: 14.5, fontWeight: 600, color: "var(--t2A2620)", overflowWrap: "anywhere", wordBreak: "break-word" },
-  mcVerse: { fontFamily: "system-ui, sans-serif", fontSize: 12, color: "var(--t7A6E4E)", marginTop: 3 },
+  mcRoleName: { fontFamily: "system-ui, sans-serif", fontSize: 14.5, fontWeight: 600, color: "#2A2620", overflowWrap: "anywhere", wordBreak: "break-word" },
+  mcVerse: { fontFamily: "system-ui, sans-serif", fontSize: 12, color: "#7A6E4E", marginTop: 3 },
   mcStatusNote: { marginTop: 6 },
   mcVolunteer: { fontFamily: "system-ui, sans-serif", fontSize: 14.5, textAlign: "right", flexShrink: 0, maxWidth: "50%", overflowWrap: "anywhere", wordBreak: "break-word" },
-  mcOpen: { color: "var(--tB0A582)", fontStyle: "italic", fontSize: 13.5 },
+  mcOpen: { color: "#B0A582", fontStyle: "italic", fontSize: 13.5 },
   table: { minWidth: 640, borderCollapse: "collapse", fontFamily: "system-ui, sans-serif", fontSize: 13.5, width: "100%" },
-  th: { textAlign: "left", padding: "13px 18px", background: "var(--bEFE7D3)", color: "var(--t5C5230)", fontWeight: 700, fontSize: 11.5, letterSpacing: 0.4, textTransform: "uppercase", borderBottom: "2px solid var(--l1F3864)" },
-  td: { padding: "13px 18px", borderTop: "1px solid var(--lF1EBDA)" },
-  tdMuted: { color: "var(--tB0A582)", fontStyle: "italic" },
-  badgeConflict: { display: "inline-block", background: "var(--bEBBAB0)", color: "var(--t7A2418)", padding: "3px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 700, letterSpacing: 0.2 },
-  badgeDup: { display: "inline-block", background: "var(--bEEDCA0)", color: "var(--t6B4F0D)", padding: "3px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 700, letterSpacing: 0.2 },
-  badgeOk: { display: "inline-block", background: "var(--bCFDCC4)", color: "var(--t385026)", padding: "3px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 700, letterSpacing: 0.2 },
+  th: { textAlign: "left", padding: "13px 18px", background: "#EFE7D3", color: "#5C5230", fontWeight: 700, fontSize: 11.5, letterSpacing: 0.4, textTransform: "uppercase", borderBottom: "2px solid #1F3864" },
+  td: { padding: "13px 18px", borderTop: "1px solid #F1EBDA" },
+  tdMuted: { color: "#B0A582", fontStyle: "italic" },
+  badgeConflict: { display: "inline-block", background: "#EBBAB0", color: "#7A2418", padding: "3px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 700, letterSpacing: 0.2 },
+  badgeDup: { display: "inline-block", background: "#EEDCA0", color: "#6B4F0D", padding: "3px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 700, letterSpacing: 0.2 },
+  badgeOk: { display: "inline-block", background: "#CFDCC4", color: "#385026", padding: "3px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 700, letterSpacing: 0.2 },
   manageGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 },
-  teamCard: { background: "var(--bFFFFFF)", border: "1px solid var(--lE4DCC6)", borderRadius: 14, padding: 16, fontFamily: "system-ui, sans-serif", boxShadow: "0 12px 28px -10px rgba(35,33,29,0.22), 0 4px 10px -6px rgba(35,33,29,0.12)" },
-  teamCardSummary: { cursor: "pointer", fontFamily: "Georgia, serif", fontSize: 16, color: "var(--t1F3864)", listStyle: "revert" },
+  teamCard: { background: "#FFFFFF", border: "1px solid #E4DCC6", borderRadius: 14, padding: 16, fontFamily: "system-ui, sans-serif", boxShadow: "0 12px 28px -10px rgba(35,33,29,0.22), 0 4px 10px -6px rgba(35,33,29,0.12)" },
+  teamCardSummary: { cursor: "pointer", fontFamily: "Georgia, serif", fontSize: 16, color: "#1F3864", listStyle: "revert" },
   teamCardBody: { marginTop: 12 },
   teamCardHead: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" },
   teamNameInput: { fontFamily: "Georgia, serif", fontSize: 16, border: "none", borderBottom: "1px solid transparent", padding: "2px 0", flex: 1, minWidth: 120, outline: "none", background: "transparent" },
-  linkDanger: { background: "none", border: "none", color: "var(--tA6402F)", fontSize: 12, cursor: "pointer", padding: 0, fontFamily: "system-ui, sans-serif" },
-  flexToggle: { display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "var(--t6B5E3E)", marginBottom: 12 },
+  linkDanger: { background: "none", border: "none", color: "#A6402F", fontSize: 12, cursor: "pointer", padding: 0, fontFamily: "system-ui, sans-serif" },
+  flexToggle: { display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#6B5E3E", marginBottom: 12 },
   roleList: { display: "flex", flexDirection: "column", gap: 6 },
   roleEditRow: { display: "flex", alignItems: "center", gap: 6 },
-  roleEditInput: { flex: 1, minWidth: 0, padding: "7px 10px", borderRadius: 6, border: "1px solid var(--lD8CFB0)", fontSize: 13.5, fontFamily: "system-ui, sans-serif", outline: "none" },
-  iconDanger: { background: "var(--bF3E4DF)", color: "var(--tA6402F)", border: "none", borderRadius: 6, width: 26, height: 26, cursor: "pointer", fontSize: 16, lineHeight: 1, flexShrink: 0 },
+  roleEditInput: { flex: 1, minWidth: 0, padding: "7px 10px", borderRadius: 6, border: "1px solid #D8CFB0", fontSize: 13.5, fontFamily: "system-ui, sans-serif", outline: "none" },
+  iconDanger: { background: "#F3E4DF", color: "#A6402F", border: "none", borderRadius: 6, width: 26, height: 26, cursor: "pointer", fontSize: 16, lineHeight: 1, flexShrink: 0 },
   addRoleRow: { display: "flex", gap: 6, marginTop: 4 },
-  smallBtn: { padding: "7px 12px", borderRadius: 6, border: "none", background: "var(--b1F3864)", color: "var(--tEFE7D3)", cursor: "pointer", fontSize: 13, fontFamily: "system-ui, sans-serif", whiteSpace: "nowrap" },
-  ghostBtn: { padding: "7px 12px", borderRadius: 6, border: "1px solid var(--lD8CFB0)", background: "var(--bFFFFFF)", color: "var(--t6B5E3E)", cursor: "pointer", fontSize: 13, fontFamily: "system-ui, sans-serif", whiteSpace: "nowrap" },
-  toolbarInput: { padding: "7px 12px", boxSizing: "border-box", borderRadius: 6, border: "1px solid var(--lD8CFB0)", fontSize: 13.5, fontFamily: "system-ui, sans-serif", color: "var(--t2A2620)", outline: "none", background: "var(--bFFFFFF)" },
-  lightCard: { background: "var(--bFBF8EE)", border: "1px solid var(--lEFE7D3)", borderRadius: 12, padding: "14px 18px" },
-  newTeamCard: { border: "1.5px dashed var(--lCBBF97)", borderRadius: 10, padding: 16, display: "flex", flexDirection: "column", gap: 8, justifyContent: "center" },
-  newTeamLabel: { fontFamily: "system-ui, sans-serif", fontSize: 13, color: "var(--t7A6E4E)", fontWeight: 600 },
-  pairNote: { fontFamily: "system-ui, sans-serif", fontSize: 12.5, color: "var(--t7A6E4E)", marginBottom: 10, maxWidth: 560 },
+  smallBtn: { padding: "7px 12px", borderRadius: 6, border: "none", background: "#1F3864", color: "#EFE7D3", cursor: "pointer", fontSize: 13, fontFamily: "system-ui, sans-serif", whiteSpace: "nowrap" },
+  ghostBtn: { padding: "7px 12px", borderRadius: 6, border: "1px solid #D8CFB0", background: "#FFFFFF", color: "#6B5E3E", cursor: "pointer", fontSize: 13, fontFamily: "system-ui, sans-serif", whiteSpace: "nowrap" },
+  toolbarInput: { padding: "7px 12px", boxSizing: "border-box", borderRadius: 6, border: "1px solid #D8CFB0", fontSize: 13.5, fontFamily: "system-ui, sans-serif", color: "#2A2620", outline: "none", background: "#FFFFFF" },
+  lightCard: { background: "#FBF8EE", border: "1px solid #EFE7D3", borderRadius: 12, padding: "14px 18px" },
+  newTeamCard: { border: "1.5px dashed #CBBF97", borderRadius: 10, padding: 16, display: "flex", flexDirection: "column", gap: 8, justifyContent: "center" },
+  newTeamLabel: { fontFamily: "system-ui, sans-serif", fontSize: 13, color: "#7A6E4E", fontWeight: 600 },
+  pairNote: { fontFamily: "system-ui, sans-serif", fontSize: 12.5, color: "#7A6E4E", marginBottom: 10, maxWidth: 560 },
   pairGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8 },
-  pairItem: { display: "flex", alignItems: "center", gap: 8, fontFamily: "system-ui, sans-serif", fontSize: 13, background: "var(--bFFFFFF)", border: "1px solid var(--lE4DCC6)", borderRadius: 8, padding: "8px 10px" },
+  pairItem: { display: "flex", alignItems: "center", gap: 8, fontFamily: "system-ui, sans-serif", fontSize: 13, background: "#FFFFFF", border: "1px solid #E4DCC6", borderRadius: 8, padding: "8px 10px" },
   weekLabelGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 },
-  weekLabelItem: { display: "flex", flexDirection: "column", gap: 4, fontFamily: "system-ui, sans-serif", fontSize: 12.5, color: "var(--t7A6E4E)" },
-  weekLabelInput: { padding: "7px 10px", borderRadius: 6, border: "1px solid var(--lD8CFB0)", fontSize: 13, fontFamily: "system-ui, sans-serif", outline: "none" },
+  weekLabelItem: { display: "flex", flexDirection: "column", gap: 4, fontFamily: "system-ui, sans-serif", fontSize: 12.5, color: "#7A6E4E" },
+  weekLabelInput: { padding: "7px 10px", borderRadius: 6, border: "1px solid #D8CFB0", fontSize: 13, fontFamily: "system-ui, sans-serif", outline: "none" },
   restrictAddRow: { display: "flex", gap: 8, flexWrap: "wrap", maxWidth: 640 },
-  restrictSelect: { padding: "8px 10px", borderRadius: 6, border: "1px solid var(--lD8CFB0)", fontSize: 13.5, fontFamily: "system-ui, sans-serif", background: "var(--bFFFFFF)", color: "var(--t2A2620)", minWidth: 0, maxWidth: "100%" },
+  restrictSelect: { padding: "8px 10px", borderRadius: 6, border: "1px solid #D8CFB0", fontSize: 13.5, fontFamily: "system-ui, sans-serif", background: "#FFFFFF", color: "#2A2620", minWidth: 0, maxWidth: "100%" },
   restrictList: { marginTop: 14, display: "flex", flexDirection: "column", gap: 6, maxWidth: 640 },
-  restrictRow: { display: "flex", alignItems: "center", gap: 12, background: "var(--bFFFFFF)", border: "1px solid var(--lE4DCC6)", borderRadius: 8, padding: "9px 12px", fontFamily: "system-ui, sans-serif", fontSize: 13, flexWrap: "wrap" },
+  restrictRow: { display: "flex", alignItems: "center", gap: 12, background: "#FFFFFF", border: "1px solid #E4DCC6", borderRadius: 8, padding: "9px 12px", fontFamily: "system-ui, sans-serif", fontSize: 13, flexWrap: "wrap" },
   restrictName: { fontWeight: 600, minWidth: 120 },
-  restrictTeam: { flex: 1, color: "var(--t7A6E4E)" },
+  restrictTeam: { flex: 1, color: "#7A6E4E" },
 
-  sheet: { position: "relative", background: "var(--bFFFFFF)", border: "2px solid var(--l23211D)", fontFamily: "system-ui, sans-serif", color: "#111", minWidth: 700 },
+  sheet: { position: "relative", background: "#FFFFFF", border: "2px solid #23211D", fontFamily: "system-ui, sans-serif", color: "#111", minWidth: 700 },
   sheetInner: { position: "relative", zIndex: 1 },
   sheetWatermark: { position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, opacity: 0.5, overflow: "visible" },
   sheetWatermarkImg: { position: "absolute", left: "50%", top: "46%", transform: "translate(-50%, -50%)", width: "43%", maxWidth: 339, height: "auto", objectFit: "contain" },
-  sheetBannerMain: { background: "var(--b1F3864)", color: "#FFFFFF", textAlign: "center", fontWeight: 800, fontSize: 15, padding: "8px 6px", letterSpacing: 0.3 },
-  sheetBannerSub: { background: "var(--bB4C6E7)", color: "var(--t1F3864)", textAlign: "center", fontWeight: 700, fontSize: 11.5, padding: "5px 6px", borderTop: "1px solid var(--l23211D)" },
-  sheetBannerBold: { background: "var(--bD9E2F3)", color: "var(--t1F3864)", textAlign: "center", fontWeight: 800, fontSize: 12.5, padding: "5px 6px", borderTop: "1px solid var(--l23211D)" },
-  sheetBannerLight: { background: "var(--bEDF1FA)", color: "var(--t1F3864)", textAlign: "center", fontWeight: 600, fontSize: 11.5, padding: "5px 6px", borderTop: "1px solid var(--l23211D)" },
-  sheetSectionHead: { background: "var(--b1F3864)", color: "#FFFFFF", fontWeight: 700, fontSize: 11.5, padding: "5px 10px", letterSpacing: 0.3 },
-  sheetTable: { width: "100%", borderCollapse: "collapse", fontSize: 11.5, borderTop: "1px solid var(--l23211D)" },
-  sheetTh: { textAlign: "left", padding: "5px 8px", background: "var(--b1F3864)", color: "#FFFFFF", fontWeight: 700, fontSize: 10.5, border: "1px solid var(--l23211D)" },
-  sheetTd: { padding: "5px 8px", border: "1px solid var(--lB7BFC9)", verticalAlign: "top" },
-  sheetTdTall: { padding: "13px 10px", border: "1px solid var(--lB7BFC9)", verticalAlign: "top" },
-  sheetBand: { padding: "4px 8px", background: "var(--bB4C6E7)", color: "var(--t1F3864)", fontWeight: 700, fontSize: 11, border: "1px solid var(--l23211D)", textAlign: "center" },
+  sheetBannerMain: { background: "#1F3864", color: "#FFFFFF", textAlign: "center", fontWeight: 800, fontSize: 15, padding: "8px 6px", letterSpacing: 0.3 },
+  sheetBannerSub: { background: "#B4C6E7", color: "#1F3864", textAlign: "center", fontWeight: 700, fontSize: 11.5, padding: "5px 6px", borderTop: "1px solid #23211D" },
+  sheetBannerBold: { background: "#D9E2F3", color: "#1F3864", textAlign: "center", fontWeight: 800, fontSize: 12.5, padding: "5px 6px", borderTop: "1px solid #23211D" },
+  sheetBannerLight: { background: "#EDF1FA", color: "#1F3864", textAlign: "center", fontWeight: 600, fontSize: 11.5, padding: "5px 6px", borderTop: "1px solid #23211D" },
+  sheetSectionHead: { background: "#1F3864", color: "#FFFFFF", fontWeight: 700, fontSize: 11.5, padding: "5px 10px", letterSpacing: 0.3 },
+  sheetTable: { width: "100%", borderCollapse: "collapse", fontSize: 11.5, borderTop: "1px solid #23211D" },
+  sheetTh: { textAlign: "left", padding: "5px 8px", background: "#1F3864", color: "#FFFFFF", fontWeight: 700, fontSize: 10.5, border: "1px solid #23211D" },
+  sheetTd: { padding: "5px 8px", border: "1px solid #B7BFC9", verticalAlign: "top" },
+  sheetTdTall: { padding: "13px 10px", border: "1px solid #B7BFC9", verticalAlign: "top" },
+  sheetBand: { padding: "4px 8px", background: "#B4C6E7", color: "#1F3864", fontWeight: 700, fontSize: 11, border: "1px solid #23211D", textAlign: "center" },
 
   modalOverlay: { position: "fixed", inset: 0, background: "rgba(20,18,14,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000000, padding: 20, boxSizing: "border-box" },
-  modalCard: { background: "var(--bFFFFFF)", borderRadius: 16, maxWidth: 420, width: "100%", padding: "26px 26px 22px", boxShadow: "0 25px 50px -12px rgba(20,18,14,0.5)", fontFamily: "system-ui, sans-serif", animation: "popIn 0.14s ease-out" },
+  modalCard: { background: "#FFFFFF", borderRadius: 16, maxWidth: 420, width: "100%", padding: "26px 26px 22px", boxShadow: "0 25px 50px -12px rgba(20,18,14,0.5)", fontFamily: "system-ui, sans-serif", animation: "popIn 0.14s ease-out" },
   modalIconRow: { display: "flex", alignItems: "center", gap: 12, marginBottom: 12 },
-  modalIconBadge: { width: 34, height: 34, borderRadius: "50%", background: "var(--bE5A430)", color: "#FFFFFF", fontWeight: 800, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  modalTitle: { fontSize: 19, fontWeight: 700, color: "var(--t23211D)", fontFamily: "Georgia, serif" },
-  modalBody: { fontSize: 13.5, color: "var(--t5C5230)", lineHeight: 1.6, marginBottom: 16 },
-  modalHighlight: { background: "var(--bF6F1E4)", border: "1px solid var(--lE4DCC6)", borderLeft: "4px solid var(--l2F4858)", borderRadius: 8, padding: "10px 14px", marginBottom: 14 },
-  modalHighlightTeam: { fontWeight: 700, color: "var(--t23211D)", fontSize: 14, marginBottom: 3 },
-  modalHighlightNote: { fontSize: 12.5, color: "var(--t7A6E4E)", lineHeight: 1.5 },
-  modalWarning: { fontSize: 12.5, color: "var(--tA6402F)", fontWeight: 600, lineHeight: 1.6, marginBottom: 20 },
+  modalIconBadge: { width: 34, height: 34, borderRadius: "50%", background: "#E5A430", color: "#FFFFFF", fontWeight: 800, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  modalTitle: { fontSize: 19, fontWeight: 700, color: "#23211D", fontFamily: "Georgia, serif" },
+  modalBody: { fontSize: 13.5, color: "#5C5230", lineHeight: 1.6, marginBottom: 16 },
+  modalHighlight: { background: "#F6F1E4", border: "1px solid #E4DCC6", borderLeft: "4px solid #2F4858", borderRadius: 8, padding: "10px 14px", marginBottom: 14 },
+  modalHighlightTeam: { fontWeight: 700, color: "#23211D", fontSize: 14, marginBottom: 3 },
+  modalHighlightNote: { fontSize: 12.5, color: "#7A6E4E", lineHeight: 1.5 },
+  modalWarning: { fontSize: 12.5, color: "#A6402F", fontWeight: 600, lineHeight: 1.6, marginBottom: 20 },
   modalActions: { display: "flex", justifyContent: "flex-end", gap: 10 },
-  modalCancelBtn: { padding: "9px 16px", borderRadius: 8, border: "1px solid var(--lD8CFB0)", background: "var(--bFFFFFF)", color: "var(--t4A4230)", cursor: "pointer", fontSize: 13.5, fontFamily: "system-ui, sans-serif", fontWeight: 600 },
-  modalConfirmBtn: { padding: "9px 18px", borderRadius: 8, border: "none", background: "var(--bA6402F)", color: "#FFFFFF", cursor: "pointer", fontSize: 13.5, fontFamily: "system-ui, sans-serif", fontWeight: 700 },
+  modalCancelBtn: { padding: "9px 16px", borderRadius: 8, border: "1px solid #D8CFB0", background: "#FFFFFF", color: "#4A4230", cursor: "pointer", fontSize: 13.5, fontFamily: "system-ui, sans-serif", fontWeight: 600 },
+  modalConfirmBtn: { padding: "9px 18px", borderRadius: 8, border: "none", background: "#A6402F", color: "#FFFFFF", cursor: "pointer", fontSize: 13.5, fontFamily: "system-ui, sans-serif", fontWeight: 700 },
 };
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
