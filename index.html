@@ -39,6 +39,13 @@
   .theme-toggle:active { transform: scale(0.94); }
   :root:not([data-theme="dark"]) .theme-toggle { color: #A9782F; }
   .theme-toggle svg { display: block; }
+
+  @media (max-width: 860px) { .theme-toggle-view { display: none !important; } }
+  @media (max-width: 640px) {
+    .qv-header { flex-wrap: nowrap !important; padding-left: 14px !important; padding-right: 14px !important; gap: 8px !important; }
+    .qv-sub { display: none !important; }
+    .qv-header .qv-title { font-size: 15px !important; line-height: 1.15 !important; }
+  }
   html { background: var(--bF6F1E4); }
   body { overflow-x: clip; }
   input, button, select, textarea, a { touch-action: manipulation; }
@@ -751,7 +758,7 @@ function applyTheme(t) {
   if (m) m.setAttribute("content", t === "dark" ? "#171615" : "#F6F1E4");
   window.dispatchEvent(new Event("themechange"));
 }
-function ThemeToggle({ style }) {
+function ThemeToggle({ style, className }) {
   const [theme, setTheme] = React.useState(getTheme());
   React.useEffect(() => {
     const sync = () => setTheme(getTheme());
@@ -760,7 +767,7 @@ function ThemeToggle({ style }) {
   }, []);
   const dark = theme === "dark";
   return (
-    <button type="button" className="theme-toggle no-print" style={style}
+    <button type="button" className={"theme-toggle no-print" + (className ? " " + className : "")} style={style}
       onClick={() => applyTheme(dark ? "light" : "dark")}
       aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
       title={dark ? "Switch to light mode" : "Switch to dark mode"}>
@@ -1057,12 +1064,12 @@ function QuickView({ config, monthState, year, month, onPrevMonth, onNextMonth, 
     <React.Fragment>
       <Watermark />
       <div className="app-shell" style={styles.quickViewShell}>
-        <header className="no-print" style={styles.quickViewHeader}>
+        <header className="no-print qv-header" style={styles.quickViewHeader}>
           <div style={styles.quickViewBrand}>
             <img src="./icons/victory.png" alt="" style={styles.brandMark} />
             <div>
-              <div style={styles.quickViewBrandTitle}>Victory Alfonso</div>
-              <div style={styles.quickViewBrandSub}>Quick View — no account needed</div>
+              <div className="qv-title" style={styles.quickViewBrandTitle}>Victory Alfonso</div>
+              <div className="qv-sub" style={styles.quickViewBrandSub}>Quick View — no account needed</div>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1567,17 +1574,20 @@ function Sidebar({ config, monthState, week, setWeek, slot, setSlot, tab, setTab
             </nav>
           </React.Fragment>
         )}
-        {(onRenameUser || onChangePassword) && (
-          <div style={{ marginTop: "auto", display: "flex", gap: 6, flexShrink: 0 }}>
-            {onRenameUser && (
-              <button onClick={() => setRenaming(true)} style={{ ...styles.compactEditNickname, marginTop: 0 }} aria-label="Edit your name" title="Edit your name">✎</button>
-            )}
-            {onChangePassword && (
-              <button onClick={() => setChangingPassword(true)} style={{ ...styles.compactEditNickname, marginTop: 0 }} aria-label="Change password" title="Change password">🔒</button>
-            )}
-          </div>
-        )}
-        <button onClick={switchUser} style={styles.compactSwitchUser} aria-label="Switch user" title={`${userName} — tap to switch`}>
+        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          {(onRenameUser || onChangePassword) && (
+            <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+              {onRenameUser && (
+                <button onClick={() => setRenaming(true)} style={{ ...styles.compactEditNickname, marginTop: 0 }} aria-label="Edit your name" title="Edit your name">✎</button>
+              )}
+              {onChangePassword && (
+                <button onClick={() => setChangingPassword(true)} style={{ ...styles.compactEditNickname, marginTop: 0 }} aria-label="Change password" title="Change password">🔒</button>
+              )}
+            </div>
+          )}
+          <ThemeToggle />
+        </div>
+        <button onClick={switchUser} style={{ ...styles.compactSwitchUser, marginTop: 0 }} aria-label="Switch user" title={`${userName} — tap to switch`}>
           <span style={styles.compactSwitchAvatar}>{initials(userName)}</span>
           <span style={styles.compactSwitchLabel}>Switch</span>
         </button>
@@ -2097,7 +2107,7 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
                 Clear all
               </button>
             )}
-            <ThemeToggle />
+            <ThemeToggle className="theme-toggle-view" />
           </div>
         </div>
         <div style={styles.viewMeta}>
@@ -3079,7 +3089,7 @@ function ServiceInfoView({ monthState, updateMonthState, week, slot, year, month
                 Clear all
               </button>
             )}
-            <ThemeToggle />
+            <ThemeToggle className="theme-toggle-view" />
           </div>
         </div>
         <div style={styles.viewMeta}>
@@ -3635,7 +3645,7 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
       <header style={styles.viewHeader}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <h1 style={styles.h1}>Master List</h1>
-          <ThemeToggle />
+          <ThemeToggle className="theme-toggle-view" />
         </div>
         <div style={styles.viewMeta}>
           {dateLabel} · {slot} · {filled} of {rows.length} roles filled
@@ -3798,7 +3808,7 @@ function MyScheduleView({ config, monthState, userName, year, month, partial }) 
       <header style={styles.viewHeader}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <h1 style={styles.h1}>My Schedule</h1>
-          <ThemeToggle />
+          <ThemeToggle className="theme-toggle-view" />
         </div>
         <div style={styles.viewMeta}>
           {monthLabel(year, month)} · {totalAssignments} assignment{totalAssignments === 1 ? "" : "s"}
@@ -4205,7 +4215,7 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
       <header style={styles.viewHeader}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <h1 style={styles.h1}>Manage Teams</h1>
-          <ThemeToggle />
+          <ThemeToggle className="theme-toggle-view" />
         </div>
         <div style={styles.viewMeta}>Edit teams and roles, and decide which teams may share a volunteer at the same service.</div>
       </header>
