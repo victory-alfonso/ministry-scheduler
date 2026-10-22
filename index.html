@@ -278,6 +278,13 @@ function highlightPrefix(name, query) {
   });
 }
 const assignKey = (week, slot, teamId, roleId) => `${week}|${slot}|${teamId}|${roleId}`;
+// Song roles (Song 1, Song 2...) copy the first service to the other services.
+// Can be turned off per role in Manage teams.
+const copiesFirstSlot = (role) => {
+  if (!role) return false;
+  if (typeof role.copyFirstSlot === "boolean") return role.copyFirstSlot;
+  return /^song\s*\d+$/i.test(norm(role.name));
+};
 const roleTag = (teamId, roleId) => `${teamId}::${roleId}`;
 const serviceInfoKey = (week, slot) => `${week}|${slot}`;
 
@@ -1773,10 +1780,23 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
     if (locked) return;
     updateMonthState((prev) => {
       const key = assignKey(week, slotArg, team.id, roleId);
+      const oldValue = norm(prev.assignments[key]);
       const nextAssignments = { ...prev.assignments };
       if (norm(value)) nextAssignments[key] = value;
       else delete nextAssignments[key];
-      const nextEditMeta = withEditMeta({ ...(prev.editMeta || {}) }, key, userName);
+      let nextEditMeta = withEditMeta({ ...(prev.editMeta || {}) }, key, userName);
+      // First service -> copy to the other services, but only where they
+      // are still empty or same as the old value (so edited ones stay as is)
+      const role = team.roles.find((r) => r.id === roleId);
+      if (copiesFirstSlot(role) && slotArg === SLOTS[0]) {
+        SLOTS.slice(1).forEach((otherSlot) => {
+          const otherKey = assignKey(week, otherSlot, team.id, roleId);
+          if (norm(nextAssignments[otherKey]) !== oldValue) return;
+          if (norm(value)) nextAssignments[otherKey] = value;
+          else delete nextAssignments[otherKey];
+          nextEditMeta = withEditMeta(nextEditMeta, otherKey, userName);
+        });
+      }
       return { ...prev, assignments: nextAssignments, editMeta: nextEditMeta };
     });
   };
@@ -4121,6 +4141,10 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
                   <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#8A7F5E", paddingLeft: 2 }}>
                     <input type="checkbox" checked={!!role.hasVerse} onChange={() => toggleRoleVerse(team.id, role.id)} />
                     Add a verse box next to this role
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#8A7F5E", paddingLeft: 2 }}>
+                    <input type="checkbox" checked={copiesFirstSlot(role)} onChange={() => setRoleField(team.id, role.id, "copyFirstSlot", !copiesFirstSlot(role))} />
+                    Copy {SLOTS[0]} to the other services (can still be edited)
                   </label>
                   <div style={{ display: "flex", gap: 4, paddingLeft: 2, flexWrap: "wrap" }}>
                     <input value={role.time || ""} onChange={(e) => setRoleField(team.id, role.id, "time", e.target.value)}
