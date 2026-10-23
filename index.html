@@ -3952,6 +3952,7 @@ function MyScheduleView({ config, monthState, userName, year, month, partial }) 
 }
 
 function ManageView({ config, updateConfig, monthState, updateMonthState, monthLabelText, isMobile }) {
+  const [manageTab, setManageTab] = useState("teams");
   const [newTeamName, setNewTeamName] = useState("");
   const [newRoleName, setNewRoleName] = useState({});
   const [restrictEmail, setRestrictEmail] = useState("");
@@ -4292,6 +4293,15 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
         </div>
         <div style={styles.viewMeta}>Edit teams and roles, and decide which teams may share a volunteer at the same service.</div>
       </header>
+      <div role="tablist" style={{ display: "flex", gap: 6, overflowX: "auto", marginBottom: 20, borderBottom: "1px solid var(--lEFE7D3)", WebkitOverflowScrolling: "touch" }}>
+        {[["teams", "Teams & roles"], ["rules", "Rules"], ["dates", "Dates & header"], ["program", "Print program"], ["editors", "Editors"]].map(([id, label]) => (
+          <button key={id} role="tab" aria-selected={manageTab === id} onClick={() => setManageTab(id)}
+            style={{ flex: "0 0 auto", padding: "9px 14px", border: "none", background: "transparent", cursor: "pointer", fontFamily: "system-ui, sans-serif", fontSize: 13.5, whiteSpace: "nowrap", marginBottom: -1,
+              fontWeight: manageTab === id ? 700 : 500, color: manageTab === id ? "var(--t1F3864)" : "var(--t7A6E4E)",
+              borderBottom: manageTab === id ? "2px solid var(--l1F3864)" : "2px solid transparent" }}>{label}</button>
+        ))}
+      </div>
+      {manageTab === "teams" && (
       <div style={styles.manageGrid}>
         {config.teams.map((team) => (
           <details key={team.id} style={styles.teamCard} open={!isMobile}>
@@ -4387,7 +4397,9 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
           <button onClick={addTeam} style={styles.smallBtn}>Add team</button>
         </div>
       </div>
+      )}
 
+      {manageTab === "rules" && (<>
       {rigidTeams.length > 1 && (
         <div style={{ marginTop: 28 }}>
           <div style={styles.sectionLabel}>Allowed double-bookings (whole teams)</div>
@@ -4441,7 +4453,9 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
           </div>
         )}
       </div>
+      </>)}
 
+      {manageTab === "dates" && (<>
       <div style={{ marginTop: 28 }}>
         <div style={styles.sectionLabel}>Week dates — {monthLabelText}</div>
         <div style={styles.pairNote}>Dates fill in automatically using each Sunday of the month shown above — you don't need to type anything here. Only fill in a week if that service falls on a different date (e.g. moved off Sunday), and it will override the automatic date for that week only. Switch months in the sidebar to set an override for a different month.</div>
@@ -4484,7 +4498,9 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
           ))}
         </div>
       </div>
+      </>)}
 
+      {manageTab === "program" && (
       <div style={{ marginTop: 28 }}>
         <div style={styles.sectionLabel}>Print Program (run sheet layout)</div>
         <div style={styles.pairNote}>
@@ -4762,7 +4778,9 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
           <button onClick={addSoloRow} style={styles.smallBtn}>Add row</button>
         </div>
       </div>
+      )}
 
+      {manageTab === "editors" && (
       <div style={{ marginTop: 28 }}>
         <div style={styles.sectionLabel}>Editors list</div>
         <div style={styles.pairNote}>
@@ -4823,6 +4841,7 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
