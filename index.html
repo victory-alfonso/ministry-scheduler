@@ -1516,7 +1516,8 @@ function App() {
         )}
         {effectiveTab === "assign" && (
           <AssignView config={config} updateConfig={updateConfig} monthState={monthState} updateMonthState={updateMonthState} week={week} setWeek={setWeek} slot={slot} team={activeTeam}
-            year={year} month={month} locked={!activeTeam || !allowedTeamIds.includes(activeTeam.id)} isMobile={isMobile} userName={userName} />
+            year={year} month={month} locked={!activeTeam || !allowedTeamIds.includes(activeTeam.id)} isMobile={isMobile} userName={userName}
+            onPrevMonth={() => shiftMonth(-1)} onNextMonth={() => shiftMonth(1)} />
         )}
         {effectiveTab === "info" && (
           <ServiceInfoView monthState={monthState} updateMonthState={updateMonthState} week={week} slot={slot}
@@ -1730,12 +1731,15 @@ function Sidebar({ config, monthState, week, setWeek, slot, setSlot, tab, setTab
           <ChangePasswordModal onChangePassword={onChangePassword} onDone={() => setChangingPassword(false)} />
         )}
 
+        {/* Ministry tabs have the month picker in the page header, so no picker here. */}
+        {tab !== "assign" && (<>
         <div style={styles.sectionLabel}>Month</div>
         <div style={styles.monthNavRow}>
           <button onClick={onPrevMonth} style={styles.monthNavBtn} aria-label="Previous month">‹</button>
           <div style={styles.monthNavLabel}>{monthLabelText}</div>
           <button onClick={onNextMonth} style={styles.monthNavBtn} aria-label="Next month">›</button>
         </div>
+        </>)}
 
         {/* Ministry tabs have the Sunday dates in the page header, so no picker here. */}
         {tab !== "assign" && (<>
@@ -1834,7 +1838,7 @@ function CompactNavItem({ icon, label, active, onClick, dim, locked, small }) {
   );
 }
 
-function AssignView({ config, updateConfig, monthState, updateMonthState, week, setWeek, slot, team, year, month, locked, isMobile, userName }) {
+function AssignView({ config, updateConfig, monthState, updateMonthState, week, setWeek, slot, team, year, month, locked, isMobile, userName, onPrevMonth, onNextMonth }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [mode, setMode] = useState("edit"); // "edit" | "print"
   const [exporting, setExporting] = useState(null); // null | "image" | "pdf"
@@ -2206,12 +2210,21 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
             <ThemeToggle className="theme-toggle-view" />
           </div>
         </div>
-        <div style={styles.viewMeta}>
+        <div style={{ ...styles.viewMeta, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+          {!isMobile && (
+            <div className="no-print" style={styles.headerMonthNav}>
+              <button onClick={onPrevMonth} style={styles.headerMonthBtn} aria-label="Previous month">‹</button>
+              <div style={styles.headerMonthLabel}>{monthLabel(year, month)}</div>
+              <button onClick={onNextMonth} style={styles.headerMonthBtn} aria-label="Next month">›</button>
+            </div>
+          )}
+          <span>
           {isMobile
             ? weekDisplayLabel(week, monthState.weekLabels, year, month)
             : (norm(monthState.weekLabels && monthState.weekLabels[week])
-                ? `${monthLabel(year, month)} · ${weekDisplayLabel(week, monthState.weekLabels, year, month)}`
-                : monthLabel(year, month))} · All services
+                ? `· ${weekDisplayLabel(week, monthState.weekLabels, year, month)} `
+                : "")}{isMobile ? " · " : "· "}All services
+          </span>
           {team.flexible && <span style={styles.flexTag}>compatible with every team</span>}
           {locked && <span style={styles.flexTag}>view only — you can only edit your ministry</span>}
         </div>
@@ -4967,6 +4980,9 @@ const styles = {
   viewHeader: { marginBottom: 22 },
   h1: { fontSize: 28, margin: 0, fontFamily: "Georgia, serif", color: "var(--t1F3864)", letterSpacing: 0.2 },
   viewMeta: { color: "var(--t7A6E4E)", fontSize: 13, marginTop: 6, fontFamily: "system-ui, sans-serif", fontWeight: 500, textTransform: "uppercase", letterSpacing: 0.5 },
+  headerMonthNav: { display: "inline-flex", alignItems: "center", gap: 2, background: "var(--bFFFFFF)", border: "1px solid var(--lD8CFB0)", borderRadius: 10, padding: "3px 4px", textTransform: "none", letterSpacing: 0 },
+  headerMonthBtn: { background: "transparent", border: "none", color: "var(--t1F3864)", fontSize: 18, cursor: "pointer", padding: "0 9px", lineHeight: 1, borderRadius: 6 },
+  headerMonthLabel: { fontFamily: "system-ui, sans-serif", fontSize: 13.5, fontWeight: 700, color: "var(--t1F3864)", minWidth: 108, textAlign: "center", whiteSpace: "nowrap" },
   flexTag: { marginLeft: 10, background: "var(--bE7DEC2)", color: "var(--t5C5230)", padding: "2px 8px", borderRadius: 20, fontSize: 11.5 },
   rolesCard: { background: "linear-gradient(180deg, var(--bFFFFFF) 0%, var(--bFDFBF4) 100%)", border: "1px solid var(--lEFE7D3)", borderRadius: 16, overflowX: "auto", WebkitOverflowScrolling: "touch", boxShadow: "0 14px 32px -12px rgba(35,33,29,0.16), 0 4px 10px -6px rgba(35,33,29,0.08)" },
   emptyNote: { padding: 20, color: "var(--t8A7F5E)", fontFamily: "system-ui, sans-serif", fontSize: 14 },
