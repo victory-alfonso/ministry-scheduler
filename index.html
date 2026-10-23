@@ -435,6 +435,14 @@ function weekDisplayLabel(week, weekLabels, year, month) {
   return `Week ${week}`;
 }
 
+// Text for the service number buttons: day of the nth Sunday (4, 11, 18...).
+// Returns null if the month has no such Sunday, so the button can be hidden.
+function weekButtonText(week, weekLabels, year, month) {
+  const sunday = year && month ? nthSundayOfMonth(year, month, week) : null;
+  if (sunday) return String(sunday.getDate());
+  return norm(weekLabels && weekLabels[week]) ? String(week) : null;
+}
+
 // Short, human "how long ago" text for the "last changed by" audit caption
 // under each assignment cell. Falls back to a short date once it's more
 // than a week old, since "312h ago" stops being useful at that point.
@@ -1163,12 +1171,16 @@ function QuickView({ config, monthState, year, month, onPrevMonth, onNextMonth, 
             {qtab === "master" && (
               <React.Fragment>
                 <div style={styles.mobileControlsRow}>
-                  {WEEKS.map((w) => (
-                    <button key={w} onClick={() => setWeek(w)}
-                      style={{ ...styles.mobileWeekBtn, ...(w === week ? styles.weekBtnActive : {}) }}>
-                      {w}
-                    </button>
-                  ))}
+                  {WEEKS.map((w) => {
+                    const text = weekButtonText(w, monthState.weekLabels, year, month);
+                    if (!text && w !== week) return null;
+                    return (
+                      <button key={w} onClick={() => setWeek(w)}
+                        style={{ ...styles.mobileWeekBtn, ...(w === week ? styles.weekBtnActive : {}) }}>
+                        {text || "–"}
+                      </button>
+                    );
+                  })}
                   {SLOTS.map((s) => (
                     <button key={s} onClick={() => setSlot(s)}
                       style={{ ...styles.mobileSlotBtn, ...(s === slot ? styles.slotBtnActive : {}) }}>
@@ -1587,12 +1599,16 @@ function MobileControls({ monthState, week, setWeek, slot, setSlot, monthLabelTe
         </div>
       </div>
       <div style={styles.mobileControlsRow}>
-        {WEEKS.map((w) => (
-          <button key={w} onClick={() => setWeek(w)}
-            style={{ ...styles.mobileWeekBtn, ...(w === week ? styles.weekBtnActive : {}) }}>
-            {w}
-          </button>
-        ))}
+        {WEEKS.map((w) => {
+          const text = weekButtonText(w, monthState.weekLabels, year, month);
+          if (!text && w !== week) return null;
+          return (
+            <button key={w} onClick={() => setWeek(w)}
+              style={{ ...styles.mobileWeekBtn, ...(w === week ? styles.weekBtnActive : {}) }}>
+              {text || "–"}
+            </button>
+          );
+        })}
         {!hideSlots && SLOTS.map((s) => (
           <button key={s} onClick={() => setSlot(s)}
             style={{ ...styles.mobileSlotBtn, ...(s === slot ? styles.slotBtnActive : {}) }}>
@@ -1723,12 +1739,16 @@ function Sidebar({ config, monthState, week, setWeek, slot, setSlot, tab, setTab
 
         <div style={styles.sectionLabel}>Service</div>
         <div style={styles.weekRow}>
-          {WEEKS.map((w) => (
-            <button key={w} onClick={() => setWeek(w)}
-              style={{ ...styles.weekBtn, ...(w === week ? styles.weekBtnActive : {}) }}>
-              {w}
-            </button>
-          ))}
+          {WEEKS.map((w) => {
+            const text = weekButtonText(w, monthState.weekLabels, year, month);
+            if (!text && w !== week) return null;
+            return (
+              <button key={w} onClick={() => setWeek(w)}
+                style={{ ...styles.weekBtn, ...(w === week ? styles.weekBtnActive : {}) }}>
+                {text || "–"}
+              </button>
+            );
+          })}
         </div>
         <div style={styles.weekDateLabel}>{weekDisplayLabel(week, monthState.weekLabels, year, month)}</div>
 
