@@ -67,9 +67,10 @@
       --t7A6E4E:#9FB0D3; --t6B5E3E:#9FB0D3; --t8A7F5E:#8EA0C6; --t6B6B6B:#8EA0C6; --t867A5C:#8EA0C6; --tA99B72:#7F93BC; --tB0A582:#7285AE; --t9B8F6C:#8093BA; --t5C5230:#B9C7E6; --tB8AD8C:#A5B5D6;
     }
     /* per-slot accent (9 AM blue, 11 AM teal, 4 PM magenta) and per-role accent */
-    :root[data-theme="dark"] [data-slot="0"] { --sc:#3B82F6; }
-    :root[data-theme="dark"] [data-slot="1"] { --sc:#14B8A6; }
-    :root[data-theme="dark"] [data-slot="2"] { --sc:#D946EF; }
+    /* --cb/--ct = chip fill + text (9 AM dark blue #0B3D82, 11 AM cyan #079FC8, 4 PM light cyan #9AE5EF); --sc = brighter accent used for borders and glow */
+    :root[data-theme="dark"] [data-slot="0"] { --sc:#3B82E0; --cb:#0B3D82; --ct:#FFFFFF; }
+    :root[data-theme="dark"] [data-slot="1"] { --sc:#079FC8; --cb:#079FC8; --ct:#04213A; }
+    :root[data-theme="dark"] [data-slot="2"] { --sc:#9AE5EF; --cb:#9AE5EF; --ct:#0B3D82; }
     :root[data-theme="dark"] .role-row[data-role="0"] { --rc:#F5B301; }
     :root[data-theme="dark"] .role-row[data-role="1"] { --rc:#22B8F0; }
     :root[data-theme="dark"] .role-row[data-role="2"] { --rc:#A855F7; }
@@ -79,7 +80,7 @@
 
     /* slot chips on top: glowing pills */
     :root[data-theme="dark"] .slot-chip {
-      background: linear-gradient(135deg, color-mix(in srgb, var(--sc) 78%, #0B1220), color-mix(in srgb, var(--sc) 52%, #0B1220)) !important;
+      background: var(--cb) !important; color: var(--ct) !important;
       border-radius: 999px !important;
       box-shadow: 0 0 16px -2px color-mix(in srgb, var(--sc) 55%, transparent), inset 0 1px 0 rgba(255,255,255,0.18);
     }
