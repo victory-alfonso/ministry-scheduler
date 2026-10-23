@@ -1515,7 +1515,7 @@ function App() {
           <MyScheduleView config={config} monthState={monthState} userName={userName} year={year} month={month} />
         )}
         {effectiveTab === "assign" && (
-          <AssignView config={config} updateConfig={updateConfig} monthState={monthState} updateMonthState={updateMonthState} week={week} slot={slot} team={activeTeam}
+          <AssignView config={config} updateConfig={updateConfig} monthState={monthState} updateMonthState={updateMonthState} week={week} setWeek={setWeek} slot={slot} team={activeTeam}
             year={year} month={month} locked={!activeTeam || !allowedTeamIds.includes(activeTeam.id)} isMobile={isMobile} userName={userName} />
         )}
         {effectiveTab === "info" && (
@@ -1737,6 +1737,8 @@ function Sidebar({ config, monthState, week, setWeek, slot, setSlot, tab, setTab
           <button onClick={onNextMonth} style={styles.monthNavBtn} aria-label="Next month">›</button>
         </div>
 
+        {/* Ministry tabs have the Sunday dates in the page header, so no picker here. */}
+        {tab !== "assign" && (<>
         <div style={styles.sectionLabel}>Service</div>
         <div style={styles.weekRow}>
           {WEEKS.map((w) => {
@@ -1751,6 +1753,7 @@ function Sidebar({ config, monthState, week, setWeek, slot, setSlot, tab, setTab
           })}
         </div>
         <div style={styles.weekDateLabel}>{weekDisplayLabel(week, monthState.weekLabels, year, month)}</div>
+        </>)}
 
         {/* Ministry tabs show all service times at once, so no time picker there. */}
         {tab !== "assign" && (
@@ -1831,7 +1834,7 @@ function CompactNavItem({ icon, label, active, onClick, dim, locked, small }) {
   );
 }
 
-function AssignView({ config, updateConfig, monthState, updateMonthState, week, slot, team, year, month, locked, isMobile, userName }) {
+function AssignView({ config, updateConfig, monthState, updateMonthState, week, setWeek, slot, team, year, month, locked, isMobile, userName }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [mode, setMode] = useState("edit"); // "edit" | "print"
   const [exporting, setExporting] = useState(null); // null | "image" | "pdf"
@@ -2204,7 +2207,11 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
           </div>
         </div>
         <div style={styles.viewMeta}>
-          {weekDisplayLabel(week, monthState.weekLabels, year, month)} · All services
+          {isMobile
+            ? weekDisplayLabel(week, monthState.weekLabels, year, month)
+            : (norm(monthState.weekLabels && monthState.weekLabels[week])
+                ? `${monthLabel(year, month)} · ${weekDisplayLabel(week, monthState.weekLabels, year, month)}`
+                : monthLabel(year, month))} · All services
           {team.flexible && <span style={styles.flexTag}>compatible with every team</span>}
           {locked && <span style={styles.flexTag}>view only — you can only edit your ministry</span>}
         </div>
@@ -2219,7 +2226,28 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
         background: "var(--bF6F1E4)", display: "flex", alignItems: "center",
         ...(isMobile ? { padding: "6px 0 8px", gap: 0 } : { padding: "8px 23px 10px", gap: 20 }),
       }}>
-        {!isMobile && <div style={{ width: 210, flexShrink: 0 }} />}
+        {!isMobile && (
+          <div style={{ width: 210, flexShrink: 0, display: "flex", gap: 5 }}>
+            {WEEKS.map((w) => {
+              const text = weekButtonText(w, monthState.weekLabels, year, month);
+              if (!text && w !== week) return null;
+              const active = w === week;
+              return (
+                <button key={w} onClick={() => setWeek(w)} aria-label={`Service date ${weekDisplayLabel(w, monthState.weekLabels, year, month)}`}
+                  style={{
+                    flex: 1, minWidth: 0, height: 46, borderRadius: 10, cursor: "pointer", padding: 0,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1,
+                    fontFamily: "system-ui, sans-serif",
+                    border: `1px solid ${active ? "var(--l1F3864)" : "var(--lD8CFB0)"}`,
+                    background: active ? "var(--b1F3864)" : "var(--bFFFFFF)",
+                  }}>
+                  <span style={{ fontSize: 8, fontWeight: 600, letterSpacing: "0.08em", color: active ? "#E3C27A" : "var(--t8A7F5E)" }}>SUN</span>
+                  <span style={{ fontSize: 16, fontWeight: active ? 700 : 600, color: active ? "#FFFFFF" : "var(--t1F3864)" }}>{text || "–"}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
         <div style={{ flex: 1, minWidth: 0, display: "grid", gridTemplateColumns: `repeat(${SLOTS.length}, minmax(0, 1fr))`, gap: isMobile ? 6 : 10 }}>
           {SLOTS.map((s, si) => (
             <div key={s} className="slot-chip" data-slot={si} style={{
