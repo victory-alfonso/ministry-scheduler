@@ -1505,7 +1505,7 @@ function App() {
         onPrevMonth={() => shiftMonth(-1)} onNextMonth={() => shiftMonth(1)} isMobile={isMobile} />
       {/* On the ministry tabs main must not be its own scroll container, or the pinned
           9:00 AM / 11:00 AM / 4:00 PM header can't stick while the page scrolls. */}
-      <main className="app-main" style={{ ...styles.main, ...(isMobile ? styles.mainMobile : {}), ...(effectiveTab === "assign" ? { overflowY: "visible" } : {}) }}>
+      <main className="app-main" style={{ ...styles.main, ...(isMobile ? styles.mainMobile : {}), ...(effectiveTab === "assign" ? { overflowY: "visible", ...(isMobile ? {} : { paddingTop: 0 }) } : {}) }}>
         {isMobile && (
           <MobileControls monthState={monthState} week={week} setWeek={setWeek} slot={slot} setSlot={setSlot}
             monthLabelText={monthLabel(year, month)} year={year} month={month} onPrevMonth={() => shiftMonth(-1)} onNextMonth={() => shiftMonth(1)}
@@ -2196,7 +2196,10 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
 
   return (
     <div style={styles.viewWrap}>
-      <header style={styles.viewHeader}>
+      {/* On desktop the title, month picker, Sunday dates and service-time chips are one
+          frozen block that stays pinned while the roles scroll underneath. */}
+      <div style={isMobile ? undefined : { position: "sticky", top: 0, zIndex: 20, background: "var(--bF6F1E4)", paddingTop: 16 }}>
+      <header style={{ ...styles.viewHeader, ...(isMobile ? {} : { marginBottom: 6 }) }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <h1 style={styles.h1}>{team.name}</h1>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -2235,7 +2238,7 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
           rolesCard (which scrolls horizontally) so it can stay pinned to the
           top while scrolling. */}
       <div className="no-print" style={{
-        position: "sticky", top: isMobile ? "env(safe-area-inset-top, 0px)" : 0, zIndex: 20,
+        ...(isMobile ? { position: "sticky", top: "env(safe-area-inset-top, 0px)", zIndex: 20 } : {}),
         background: "var(--bF6F1E4)", display: "flex", alignItems: "center",
         ...(isMobile ? { padding: "6px 0 8px", gap: 0 } : { padding: "8px 23px 10px", gap: 20 }),
       }}>
@@ -2270,6 +2273,7 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
             }}>{s}</div>
           ))}
         </div>
+      </div>
       </div>
       <div style={styles.rolesCard}>
         {team.roles.length === 0 && <div style={styles.emptyNote}>This team has no roles yet. Add some under Manage teams.</div>}
