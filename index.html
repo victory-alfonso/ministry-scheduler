@@ -203,6 +203,9 @@
     0%, 100% { text-shadow: 0 0 0 rgba(194,74,58,0); }
     50%      { text-shadow: 0 0 6px rgba(194,74,58,0.55); }
   }
+  .app-main > * { transition: opacity 0.18s ease; }
+  .app-main.month-loading > * { opacity: 0.5; pointer-events: none; }
+  .app-main.month-loading .month-nav-keep, .app-main.month-loading .month-nav-keep * { pointer-events: auto; }
   @page { size: letter; margin: 0.35in; }
   @media print {
     .no-print { display: none !important; }
@@ -1242,6 +1245,9 @@ function App() {
   const [month, setMonth] = useState(startSunday.getMonth() + 1);
   const [config, setConfig] = useState(null);
   const [monthState, setMonthState] = useState(null);
+  const [loadedKey, setLoadedKey] = useState(null);
+  const loadedKeyRef = useRef(null);
+  const monthLoading = FIREBASE_CONFIGURED && loadedKey !== periodKey(year, month);
   const [week, setWeek] = useState(Math.ceil(startSunday.getDate() / 7));
   const [slot, setSlot] = useState(SLOTS[0]);
   const [activeTeamId, setActiveTeamId] = useState(DEFAULT_TEAMS[0].id);
@@ -1345,10 +1351,12 @@ function App() {
 
   useEffect(() => {
     if (!FIREBASE_CONFIGURED) return;
-    setMonthState(null);
+    const key = periodKey(year, month);
     const ref = monthRef(year, month);
     const listener = ref.on("value", (snapshot) => {
+      loadedKeyRef.current = key;
       setMonthState({ ...emptyMonthState(), ...(snapshot.val() || {}) });
+      setLoadedKey(key);
     });
     return () => ref.off("value", listener);
   }, [year, month]);
@@ -1398,6 +1406,7 @@ function App() {
   }, []);
 
   const updateMonthState = useCallback((updater) => {
+    if (FIREBASE_CONFIGURED && loadedKeyRef.current !== periodKey(year, month)) return;
     setMonthState((prev) => {
       const base = prev || emptyMonthState();
       const next = typeof updater === "function" ? updater(base) : updater;
@@ -1505,7 +1514,7 @@ function App() {
         onPrevMonth={() => shiftMonth(-1)} onNextMonth={() => shiftMonth(1)} isMobile={isMobile} />
       {/* On the ministry tabs main must not be its own scroll container, or the pinned
           9:00 AM / 11:00 AM / 4:00 PM header can't stick while the page scrolls. */}
-      <main className="app-main" style={{ ...styles.main, ...(isMobile ? styles.mainMobile : {}), ...(effectiveTab === "assign" ? { overflowY: "visible", ...(isMobile ? {} : { paddingTop: 0 }) } : {}) }}>
+      <main className={`app-main${monthLoading ? " month-loading" : ""}`} style={{ ...styles.main, ...(isMobile ? styles.mainMobile : {}), ...(effectiveTab === "assign" ? { overflowY: "visible", ...(isMobile ? {} : { paddingTop: 0 }) } : {}) }}>
         {isMobile && (
           <MobileControls monthState={monthState} week={week} setWeek={setWeek} slot={slot} setSlot={setSlot}
             monthLabelText={monthLabel(year, month)} year={year} month={month} onPrevMonth={() => shiftMonth(-1)} onNextMonth={() => shiftMonth(1)}
@@ -1578,7 +1587,7 @@ function MobileControls({ monthState, week, setWeek, slot, setSlot, monthLabelTe
   return (
     <div className="no-print" style={styles.mobileControls}>
       <div style={styles.mobileControlsRow}>
-        <div style={styles.mobileMonthNav}>
+        <div className="month-nav-keep" style={styles.mobileMonthNav}>
           <button onClick={onPrevMonth} style={styles.monthNavBtn} aria-label="Previous month">‹</button>
           <div style={styles.mobileMonthLabel}>{monthLabelText}</div>
           <button onClick={onNextMonth} style={styles.monthNavBtn} aria-label="Next month">›</button>
@@ -2198,10 +2207,10 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
     <div style={styles.viewWrap}>
       {/* On desktop the title, month picker, Sunday dates and service-time chips are one
           frozen block that stays pinned while the roles scroll underneath. */}
-      <div style={isMobile ? undefined : { position: "sticky", top: 0, zIndex: 20, background: "var(--bF6F1E4)", paddingTop: 16 }}>
-      <header style={{ ...styles.viewHeader, ...(isMobile ? {} : { marginBottom: 6 }) }}>
+      <div style={isMobile ? undefined : { position: "sticky", top: 0, zIndex: 20, background: "var(--bF6F1E4)", paddingTop: 8 }}>
+      <header style={{ ...styles.viewHeader, ...(isMobile ? {} : { marginBottom: 4 }) }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <h1 style={styles.h1}>{team.name}</h1>
+          <h1 style={isMobile ? styles.h1 : { ...styles.h1, lineHeight: 1.1 }}>{team.name}</h1>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button onClick={() => setMode("print")} className="btn-print" style={styles.smallBtn}>🖨 Print month</button>
             {!locked && (
@@ -2213,9 +2222,9 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
             <ThemeToggle className="theme-toggle-view" />
           </div>
         </div>
-        <div style={{ ...styles.viewMeta, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+        <div style={{ ...styles.viewMeta, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, ...(isMobile ? {} : { marginTop: 2 }) }}>
           {!isMobile && (
-            <div className="no-print" style={styles.headerMonthNav}>
+            <div className="no-print month-nav-keep" style={styles.headerMonthNav}>
               <button onClick={onPrevMonth} style={styles.headerMonthBtn} aria-label="Previous month">‹</button>
               <div style={styles.headerMonthLabel}>{monthLabel(year, month)}</div>
               <button onClick={onNextMonth} style={styles.headerMonthBtn} aria-label="Next month">›</button>
@@ -2225,8 +2234,8 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
           {isMobile
             ? weekDisplayLabel(week, monthState.weekLabels, year, month)
             : (norm(monthState.weekLabels && monthState.weekLabels[week])
-                ? `· ${weekDisplayLabel(week, monthState.weekLabels, year, month)} `
-                : "")}{isMobile ? " · " : "· "}All services
+                ? weekDisplayLabel(week, monthState.weekLabels, year, month)
+                : "")}{isMobile ? " · All services" : ""}
           </span>
           {team.flexible && <span style={styles.flexTag}>compatible with every team</span>}
           {locked && <span style={styles.flexTag}>view only — you can only edit your ministry</span>}
@@ -2240,10 +2249,10 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
       <div className="no-print" style={{
         ...(isMobile ? { position: "sticky", top: "env(safe-area-inset-top, 0px)", zIndex: 20 } : {}),
         background: "var(--bF6F1E4)", display: "flex", alignItems: "center",
-        ...(isMobile ? { padding: "6px 0 8px", gap: 0 } : { padding: "8px 23px 10px", gap: 20 }),
+        ...(isMobile ? { padding: "6px 0 8px", gap: 0 } : { padding: "4px 23px 8px 0", gap: 20 }),
       }}>
         {!isMobile && (
-          <div style={{ width: 210, flexShrink: 0, display: "flex", gap: 5 }}>
+          <div style={{ width: 233, flexShrink: 0, display: "flex", gap: 5 }}>
             {WEEKS.map((w) => {
               const text = weekButtonText(w, monthState.weekLabels, year, month);
               if (!text && w !== week) return null;
