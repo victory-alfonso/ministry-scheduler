@@ -116,6 +116,17 @@
 
   }
 
+  /* ---- Light mode: same slot colors (screen only; print/export keep the old colors) ---- */
+  @media screen {
+    :root:not([data-theme="dark"]) [data-slot="0"] { --cb:#0B3D82; --ct:#FFFFFF; --sc:#0B3D82; --sl:#0B3D82; }
+    :root:not([data-theme="dark"]) [data-slot="1"] { --cb:#079FC8; --ct:#04213A; --sc:#079FC8; --sl:#079FC8; }
+    :root:not([data-theme="dark"]) [data-slot="2"] { --cb:#9AE5EF; --ct:#0B3D82; --sc:#9AE5EF; --sl:#5FCFDF; }
+    :root:not([data-theme="dark"]) .slot-chip { background: var(--cb) !important; color: var(--ct) !important; border-radius: 999px !important; box-shadow: 0 3px 10px -3px color-mix(in srgb, var(--cb) 55%, transparent); }
+    :root:not([data-theme="dark"]) .vol-slot > [aria-hidden="true"] { background: var(--sc) !important; }
+    :root:not([data-theme="dark"]) .vol-slot:not(.vol-warn) input,
+    :root:not([data-theme="dark"]) .vol-slot:not(.vol-warn) div[role="button"]:not([tabindex="-1"]) { border-left: 3px solid var(--sl) !important; }
+  }
+
   .sheet-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; }
   .sheet-toolbar button { flex: 0 0 auto; }
   .print-sheet-wrap .print-sheet { margin-top: 4px; }
