@@ -55,7 +55,6 @@
   input:focus, textarea:focus, select:focus { border-color: var(--l1F3864) !important; box-shadow: 0 0 0 3px rgba(31,56,100,0.15) !important; }
 
   /* ---- Dark mode "charcoal (Messenger-style) + slot colors" look. Screen only, so print/export stay paper-white. ---- */
-  .app-watermark .wm-dark { display: none; }
   @media screen {
     :root[data-theme="dark"] {
       /* surfaces */
@@ -114,10 +113,8 @@
     /* sidebar: active item = solid blue bar */
     :root[data-theme="dark"] .nav-item.nav-active { background: linear-gradient(90deg, #2B5BD7, #1E3F8F) !important; border-left-color: #7FB0FF !important; color: #FFFFFF !important; }
 
-    /* watermark in dark mode: white circle + blue V (inline SVG instead of the PNG). Lower the opacity if it covers names too much */
-    :root[data-theme="dark"] .app-watermark { opacity: 0.1 !important; }
-    :root[data-theme="dark"] .app-watermark img { display: none; }
-    :root[data-theme="dark"] .app-watermark .wm-dark { display: block; width: 45%; max-width: 480px; }
+    /* watermark: same strength as before (0.2). Lower this number if it ever covers names too much */
+    :root[data-theme="dark"] .app-watermark { opacity: 0.2 !important; }
   }
 
   .sheet-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; }
@@ -784,10 +781,6 @@ function Watermark() {
   return (
     <div className="no-print app-watermark" style={styles.watermark} aria-hidden="true">
       <img src="./icons/VictoryWatermark.png" alt="" style={styles.watermarkImg} />
-      <svg className="wm-dark" viewBox="0 0 100 100" aria-hidden="true">
-        <circle cx="50" cy="50" r="50" fill="#FFFFFF" />
-        <path d="M20 28 L39 28 L50 55 L61 28 L80 28 L56 78 L44 78 Z" fill="#2D6CE8" />
-      </svg>
     </div>
   );
 }
