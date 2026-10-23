@@ -113,8 +113,8 @@
     /* sidebar: active item = solid blue bar */
     :root[data-theme="dark"] .nav-item.nav-active { background: linear-gradient(90deg, #2B5BD7, #1E3F8F) !important; border-left-color: #7FB0FF !important; color: #FFFFFF !important; }
 
-    /* watermark behind the cards: much quieter so names stay readable */
-    :root[data-theme="dark"] .app-watermark { opacity: 0.06 !important; }
+    /* watermark: same strength as before (0.2). Lower this number if it ever covers names too much */
+    :root[data-theme="dark"] .app-watermark { opacity: 0.2 !important; }
   }
 
   .sheet-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; }
