@@ -2000,6 +2000,29 @@ function repeatDateIn(r, year, month, anchorISO) {
   }
   return iso;
 }
+// The first date on/after `fromISO` that a repeat rule lands on — used when a repeating event is made without picking a date.
+function firstRepeatDate(r, fromISO) {
+  const [fy, fm, fd] = fromISO.split("-").map((n) => parseInt(n, 10));
+  let iso = null;
+  if (r.freq === "daily") iso = fromISO;
+  else if (r.freq === "weekly") {
+    const set = new Set(r.weekdayList);
+    for (let i = 0; i < 14 && !iso; i++) { const t = new Date(fy, fm - 1, fd + i); if (set.has(t.getDay())) iso = isoOf(t); }
+  } else if (r.freq === "monthly") {
+    for (let k = 0; k < 26 && !iso; k++) {
+      const f = new Date(fy, fm - 1 + k, 1);
+      const d = repeatDateIn(r, f.getFullYear(), f.getMonth() + 1, null);
+      if (d && d >= fromISO) iso = d;
+    }
+  } else {
+    for (let k = 0; k < 12 && !iso; k++) {
+      const d = repeatDateIn(r, fy + k, 1, null);
+      if (d && d >= fromISO) iso = d;
+    }
+  }
+  if (iso && r.endType === "date" && r.endDate && iso > r.endDate) return null;
+  return iso;
+}
 // Stable text form of an event (key order, empty values and nulls ignored) so a saved copy can be compared to the one first made.
 function canonJson(v) {
   if (Array.isArray(v)) return v.map(canonJson);
@@ -2404,7 +2427,7 @@ function EventsView({ config, updateConfig, canEdit }) {
 
             {canEdit ? (
               <div>
-                {!resolveRecurrence(ev).repeats && (
+                {!(resolveRecurrence(ev).repeats && ev.date) && (
                   <div>
                     <div style={dLabel}>Date</div>
                     <DateInput3 value={ev.date || ""} onChange={(v) => setField("date", v)} style={{ ...dInput, padding: "6px 4px" }} />
@@ -2801,8 +2824,17 @@ function EventsView({ config, updateConfig, canEdit }) {
     };
 
     let preview = null;
-    if (rec.repeats && ev.date && errors.length === 0) {
-      const dates = recurrenceDates(rec, ev.date, recurrenceHorizon(rec, ev.date));
+    // closing the popup: a repeating event with no date yet gets its first date from the pattern
+    const closeRepeat = (ask) => {
+      setRepeatOptions(false);
+      if (!rec.repeats || errors.length > 0) return;
+      let date = ev.date;
+      if (!date) { date = firstRepeatDate(rec, isoOf(new Date())); if (date) setField("date", date); }
+      if (ask && date) setRepeatConfirm(true);
+    };
+    const startIso = ev.date || (rec.repeats && errors.length === 0 ? firstRepeatDate(rec, isoOf(new Date())) : "");
+    if (rec.repeats && startIso && errors.length === 0) {
+      const dates = recurrenceDates(rec, startIso, recurrenceHorizon(rec, startIso));
       preview = dates.slice(0, 4).map((iso) => {
         const [, m, d] = iso.split("-").map((n) => parseInt(n, 10));
         return `${MONTH_NAMES[m - 1].slice(0, 3)} ${d}`;
@@ -2822,18 +2854,18 @@ function EventsView({ config, updateConfig, canEdit }) {
           <span style={{ fontSize: 20, opacity: 0.8, flexShrink: 0 }}>›</span>
         </button>
         {repeatOptions && ReactDOM.createPortal(
-          <div className="no-print pane-dark" style={{ ...styles.modalOverlay, zIndex: 2000010 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setRepeatOptions(false); }}>
+          <div className="no-print pane-dark" style={{ ...styles.modalOverlay, zIndex: 2000010 }} onMouseDown={(e) => { if (e.target === e.currentTarget) closeRepeat(false); }}>
             <div role="dialog" aria-label="Repeat options" style={{ width: "min(460px, 100%)", maxHeight: "88vh", overflowY: "auto", boxSizing: "border-box", borderRadius: 16, padding: 16,
               background: "#2A1A38", color: "#EAF0FF", border: "1px solid rgba(255,255,255,0.2)", boxShadow: "0 30px 60px -15px rgba(0,0,0,0.6)", fontFamily: "system-ui, sans-serif" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                 <div style={{ fontSize: 16, fontWeight: 700, color: "#FFFFFF" }}>Repeat</div>
-                <button onClick={() => setRepeatOptions(false)} aria-label="Close" style={{ background: "transparent", border: "none", color: "#FFFFFF", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "2px 6px" }}>✕</button>
+                <button onClick={() => closeRepeat(false)} aria-label="Close" style={{ background: "transparent", border: "none", color: "#FFFFFF", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "2px 6px" }}>✕</button>
               </div>
         <div style={{ padding: "0 2px 4px" }}>
           <div style={{ ...title, marginTop: 8 }}>Repeat Schedule</div>
           <RecRadio name="rec-repeats" checked={!rec.repeats} onChange={() => setRec({ repeats: false })} label="Does not repeat" />
-          <RecRadio name="rec-repeats" checked={rec.repeats} disabled={!ev.date} onChange={() => setRec({ repeats: true })} label="Repeats" />
-          {!ev.date && <div style={small}>Set a date first to repeat.</div>}
+          <RecRadio name="rec-repeats" checked={rec.repeats} onChange={() => setRec({ repeats: true })} label="Repeats" />
+          {rec.repeats && !ev.date && <div style={small}>No date needed — the first date is set from the pattern below.</div>}
 
           {rec.repeats && (
             <div>
@@ -2942,7 +2974,7 @@ function EventsView({ config, updateConfig, canEdit }) {
           <div style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF" }}>{recurrenceSummary(rec)}</div>
           {preview && <div style={{ fontSize: 11.5, opacity: 0.8, marginTop: 4 }}>Dates: {preview}</div>}
         </div>
-              <button onClick={() => { setRepeatOptions(false); if (rec.repeats && ev.date) setRepeatConfirm(true); }} disabled={rec.repeats && errors.length > 0}
+              <button onClick={() => closeRepeat(true)} disabled={rec.repeats && errors.length > 0}
                 style={{ ...ghostBtn, width: "100%", marginTop: 12, padding: "9px 12px", fontSize: 13, fontWeight: 700, background: "var(--bA9782F)", opacity: rec.repeats && errors.length ? 0.45 : 1, cursor: rec.repeats && errors.length ? "not-allowed" : "pointer" }}>Done</button>
             </div>
           </div>,
