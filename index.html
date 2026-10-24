@@ -1811,6 +1811,36 @@ function DateInput3({ value, onChange, style }) {
   );
 }
 
+// ---- Repeating events (e.g. every 4th Thursday) ----
+const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const ordinalWord = (n) => ["", "1st", "2nd", "3rd", "4th", "5th"][n] || `${n}th`;
+const isoOf = (dt) => `${dt.getFullYear()}-${padTwo(dt.getMonth() + 1)}-${padTwo(dt.getDate())}`;
+// nth (or last) weekday of a month; month index may overflow (13 = next January). null when that month has no such day.
+function nthWeekdayDate(year, month0, weekday, nth, last) {
+  const first = new Date(year, month0, 1);
+  const y = first.getFullYear(), m = first.getMonth();
+  const dim = new Date(y, m + 1, 0).getDate();
+  if (last) {
+    const lastDow = new Date(y, m, dim).getDay();
+    return new Date(y, m, dim - ((lastDow - weekday + 7) % 7));
+  }
+  const day = 1 + ((weekday - first.getDay() + 7) % 7) + (nth - 1) * 7;
+  return day > dim ? null : new Date(y, m, day);
+}
+function repeatOptions(dateStr) {
+  const none = [{ v: "none", label: "Does not repeat" }];
+  const [y, m, d] = (dateStr || "").split("-").map((n) => parseInt(n, 10));
+  if (isNaN(y) || isNaN(m) || isNaN(d)) return none;
+  const wd = WEEKDAY_NAMES[new Date(y, m - 1, d).getDay()];
+  const nth = Math.ceil(d / 7);
+  return [
+    ...none,
+    ...(nth <= 4 ? [{ v: "nth", label: `Monthly on the ${ordinalWord(nth)} ${wd}` }] : []),
+    { v: "last", label: `Monthly on the last ${wd}` },
+    { v: "weekly", label: `Weekly on ${wd}s` },
+  ];
+}
+
 function EventsView({ config, updateConfig, canEdit }) {
   const [openId, setOpenId] = useState(null);
   const [mode, setMode] = useState("list"); // list | detail | print
@@ -2179,6 +2209,19 @@ function EventsView({ config, updateConfig, canEdit }) {
                     <div style={{ ...dInput, padding: "6px 8px", background: "transparent", border: "1px dashed rgba(255,255,255,0.3)" }}>{clockLabel(eventEndTime(ev)) || "—"}</div>
                   </div>
                 </div>
+                <div style={dLabel}>Repeat</div>
+                <select value={ev.repeat || "none"} onChange={(e) => setField("repeat", e.target.value)} disabled={!ev.date}
+                  style={{ ...dInput, padding: "6px 8px", opacity: ev.date ? 1 : 0.6 }}>
+                  {repeatOptions(ev.date).map((o) => <option key={o.v} value={o.v} style={{ background: "#2A1A38" }}>{o.label}</option>)}
+                </select>
+                {!ev.date && <div style={{ fontSize: 11, opacity: 0.65, marginTop: 3 }}>Set a date first to repeat.</div>}
+                {ev.date && ev.repeat && ev.repeat !== "none" && (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                    <button onClick={() => generateSeries(ev)} style={{ ...ghostBtn, padding: "6px 10px", fontSize: 12 }}>+ Next 3 months</button>
+                    {laterInSeries(ev).length > 0 && <button onClick={() => updateUpcoming(ev)} style={{ ...ghostBtn, padding: "6px 10px", fontSize: 12 }}>Update upcoming</button>}
+                  </div>
+                )}
+                {ev.seriesId && <div style={{ fontSize: 11, opacity: 0.65, marginTop: 4 }}>{events.filter((x) => x.seriesId === ev.seriesId).length} events in this series</div>}
                 <div style={dLabel}>Cover photo (optional)</div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <label style={{ ...ghostBtn, cursor: "pointer", padding: "6px 12px" }}>
@@ -2424,6 +2467,54 @@ function EventsView({ config, updateConfig, canEdit }) {
     updateConfig((prev) => ({ ...prev, events: [...(prev.events || []), copy] }));
     setOpenId(copy.id);
     setMode("detail");
+  };
+  // series: events created from one repeating event share a seriesId
+  const cloneJson = (v) => JSON.parse(JSON.stringify(v));
+  const laterInSeries = (e) => (e.seriesId ? events.filter((x) => x.seriesId === e.seriesId && x.id !== e.id && x.date && x.date > (e.date || "")) : []);
+  const generateSeries = (src) => {
+    const type = src.repeat;
+    if (!type || type === "none" || !src.date) return;
+    const [y, m, d] = src.date.split("-").map((n) => parseInt(n, 10));
+    const weekday = new Date(y, m - 1, d).getDay();
+    const nth = Math.ceil(d / 7);
+    const sid = src.seriesId || uid();
+    const mates = events.filter((x) => x.id === src.id || (x.seriesId && x.seriesId === sid));
+    const dates = mates.map((x) => x.date).filter(Boolean).sort();
+    const latest = dates[dates.length - 1];
+    const [ly, lm, ld] = latest.split("-").map((n) => parseInt(n, 10));
+    const horizon = isoOf(new Date(ly, lm - 1 + 4, 0)); // through the end of the 3rd month after its last event
+    const taken = new Set(dates);
+    const found = [];
+    if (type === "weekly") {
+      for (let t = new Date(ly, lm - 1, ld + 7); isoOf(t) <= horizon; t = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 7)) found.push(isoOf(t));
+    } else {
+      for (let k = 0; k <= 5; k++) {
+        const dt = nthWeekdayDate(ly, lm - 1 + k, weekday, nth, type === "last");
+        if (!dt) continue;
+        const iso = isoOf(dt);
+        if (iso > latest && iso <= horizon) found.push(iso);
+      }
+    }
+    const fresh = found.filter((iso) => !taken.has(iso));
+    if (fresh.length === 0) { window.alert("Nothing new to add — the next 3 months are already there."); return; }
+    const copies = fresh.map((iso) => ({ ...cloneJson(src), id: uid(), date: iso, assignments: {}, verses: {}, announcements: "", seriesId: sid, repeat: type }));
+    updateConfig((prev) => ({
+      ...prev,
+      events: [...(prev.events || []).map((e) => (e.id === src.id ? { ...e, seriesId: sid } : e)), ...copies],
+    }));
+    window.alert(`Added ${fresh.length} event${fresh.length === 1 ? "" : "s"}:\n${fresh.map(eventDateLabel).join("\n")}`);
+  };
+  const updateUpcoming = (src) => {
+    const later = laterInSeries(src);
+    if (later.length === 0) { window.alert("There are no later events in this series."); return; }
+    if (!window.confirm(`Copy this program flow, ministries and start time to ${later.length} upcoming event${later.length === 1 ? "" : "s"}? Names and verses already entered are kept.`)) return;
+    const ids = new Set(later.map((x) => x.id));
+    updateConfig((prev) => ({
+      ...prev,
+      events: (prev.events || []).map((e) => (ids.has(e.id)
+        ? { ...e, title: src.title, subtitle: src.subtitle, startTime: src.startTime, cover: src.cover, showHeadCount: src.showHeadCount, rows: cloneJson(src.rows || []), ministries: cloneJson(src.ministries || []) }
+        : e)),
+    }));
   };
   const deleteEvent = (event) => {
     if (!window.confirm(`Delete "${event.title || "Untitled event"}"?`)) return;
