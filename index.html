@@ -2559,78 +2559,152 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
   }));
 
   const roles = event ? rolesForEvent(event) : [];
+  const filledOf = (e) => {
+    const list = rolesForEvent(e);
+    return { total: list.length, filled: list.filter((r) => norm(eventVolunteer(e, r.key))).length };
+  };
+
+  useEffect(() => {
+    if (!eventId) return;
+    const onKey = (e) => { if (e.key === "Escape") setEventId(null); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [eventId]);
+
+  const renderModal = () => {
+    const narrow = isMobile || (typeof window !== "undefined" && window.innerWidth < 760);
+    const prog = filledOf(event);
+    const pct = prog.total ? prog.filled / prog.total : 0;
+    const R = 46, C = 2 * Math.PI * R;
+    const sectionLabel = { fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.7)", margin: "18px 0 8px" };
+    const timeLine = [clockLabel(event.startTime) && `Start ${clockLabel(event.startTime)}`, clockLabel(eventEndTime(event)) && `End ${clockLabel(eventEndTime(event))}`].filter(Boolean).join(" · ");
+    return ReactDOM.createPortal(
+      <div className="no-print" style={{ ...styles.modalOverlay, zIndex: 1999990 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setEventId(null); }}>
+        <div style={{
+          width: "min(1000px, 100%)", height: narrow ? "92vh" : "min(86vh, 760px)", borderRadius: 18, overflow: narrow ? "auto" : "hidden",
+          display: narrow ? "block" : "grid", gridTemplateColumns: "300px 1fr", boxShadow: "0 30px 60px -15px rgba(0,0,0,0.6)",
+          border: "1px solid rgba(255,255,255,0.18)", fontFamily: "system-ui, sans-serif", color: "#EAF0FF", background: "#1F3864",
+        }}>
+          {/* left: the event */}
+          <div style={{
+            position: "relative", padding: "24px 22px", boxSizing: "border-box", overflowY: narrow ? "visible" : "auto",
+            background: "linear-gradient(180deg, #3B2248 0%, #2A1A38 100%)",
+            ...(event.cover ? { backgroundImage: `linear-gradient(180deg, rgba(42,26,56,0.78) 0%, rgba(42,26,56,0.94) 100%), url("${event.cover}")`, backgroundSize: "cover", backgroundPosition: "center" } : {}),
+          }}>
+            <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 24, lineHeight: 1.2, color: "#FFFFFF" }}>{event.title || "Untitled event"}</div>
+            {norm(event.subtitle) && <div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 4 }}>{event.subtitle}</div>}
+            <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>{team.name}</div>
+
+            <div style={sectionLabel}>Date &amp; time</div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>{eventDateLabel(event.date) || "No date yet"}</div>
+            {timeLine && <div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 2 }}>{timeLine}</div>}
+
+            <div style={sectionLabel}>Your roles filled</div>
+            <div style={{ display: "flex", justifyContent: "center", margin: "6px 0 10px" }}>
+              <svg width="132" height="132" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r={R} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="10" />
+                <circle cx="60" cy="60" r={R} fill="none" stroke="#E5A430" strokeWidth="10" strokeLinecap="round"
+                  strokeDasharray={`${C * pct} ${C}`} transform="rotate(-90 60 60)" />
+                <text x="60" y="58" textAnchor="middle" fill="#FFFFFF" fontSize="22" fontWeight="700" fontFamily="Georgia, serif">{prog.filled}/{prog.total}</text>
+                <text x="60" y="76" textAnchor="middle" fill="rgba(255,255,255,0.75)" fontSize="9.5">roles filled</text>
+              </svg>
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.85, textAlign: "center" }}>
+              {prog.total === 0 ? "No roles for this ministry yet" : prog.filled === prog.total ? "All roles are filled" : `${prog.total - prog.filled} still open`}
+            </div>
+          </div>
+
+          {/* right: this ministry's roles */}
+          <div style={{ display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0, background: "linear-gradient(180deg, #2F4E86 0%, #1F3864 100%)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "16px 18px 10px" }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "rgba(255,255,255,0.8)" }}>
+                {team.name} · Roles ({prog.total})
+              </div>
+              <button onClick={() => setEventId(null)} aria-label="Close"
+                style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.35)", color: "#FFFFFF", fontSize: 17, cursor: "pointer", flexShrink: 0 }}>×</button>
+            </div>
+            <div style={{ flex: 1, minHeight: 0, overflowY: narrow ? "visible" : "auto", padding: "0 18px 18px" }}>
+              {roles.length === 0 && (
+                <div style={{ opacity: 0.85, fontSize: 13.5, padding: "10px 2px" }}>{team.name} has no roles in this event yet. Ask an admin to link one of its roles to a task, or add the ministry, under Events.</div>
+              )}
+              {roles.map((role) => {
+                const [, roleId] = splitRoleKey(role.key);
+                const teamRole = (team.roles || []).find((r) => r.id === roleId);
+                const roleVolunteers = ((teamRole && teamRole.volunteers) || []).slice().sort((a, b) => a.localeCompare(b));
+                return (
+                  <div key={role.key} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "11px 14px", marginBottom: 8 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13.5, color: "#FFFFFF", marginBottom: 6 }}>{role.label}</div>
+                    <VolunteerNameInput
+                      value={eventVolunteer(event, role.key)}
+                      onChange={(val) => setRoleValue(role.key, val)}
+                      volunteers={roleVolunteers}
+                      locked={locked}
+                      placeholder="Volunteer name"
+                      allowAbove={!narrow}
+                      compact={isMobile}
+                      popupTitle={`${role.label} · ${event.title || "Event"}`}
+                      popupMinWidth={220}
+                      style={{ ...styles.input, flex: 1, ...(locked ? { background: "var(--bF3EFE2)", cursor: "default" } : {}) }}
+                    />
+                    {teamRole && teamRole.hasVerse && (
+                      <input value={(event.verses || {})[role.key] || ""} onChange={(ev) => setVerseValue(role.key, ev.target.value)}
+                        placeholder="Verse (John 3:16)" readOnly={locked} autoComplete="off"
+                        style={{ ...styles.input, width: "100%", boxSizing: "border-box", marginTop: 6, ...(locked ? { background: "var(--bF3EFE2)", cursor: "default" } : {}) }} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  };
 
   return (
     <div style={styles.viewWrap}>
       <header style={styles.viewHeader}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <h1 style={styles.h1}>{team.name} · Events</h1>
-          <button onClick={event ? () => setEventId(null) : onBack} style={styles.smallBtn}>
-            {event ? "← All events" : "← Back to schedule"}
-          </button>
+          <button onClick={onBack} style={styles.smallBtn}>← Back to schedule</button>
         </div>
-        {event && (
-          <div style={styles.viewMeta}>
-            {[event.title || "Untitled event", eventDateLabel(event.date), clockLabel(event.startTime)].filter(Boolean).join(" · ")}
-          </div>
-        )}
       </header>
 
-      {!event && (
-        <div>
-          {events.length === 0 && <div style={styles.emptyNote}>No events yet. Events are added in the Events tab.</div>}
-          {events.map((e) => {
-            const count = rolesForEvent(e).length;
-            return (
-              <button key={e.id} onClick={() => setEventId(e.id)}
-                style={{ display: "block", width: "100%", textAlign: "left", cursor: "pointer", border: "1px solid var(--lD8CFB0)", borderRadius: 10, background: "var(--bFFFFFF)", padding: "12px 14px", marginBottom: 8, fontFamily: "system-ui, sans-serif" }}>
-                <div style={{ fontWeight: 700, color: "var(--t1F3864)" }}>{e.title || "Untitled event"}</div>
-                <div style={{ fontSize: 12.5, color: "var(--t6B6B6B)", marginTop: 2 }}>
-                  {[eventDateLabel(e.date) || "No date yet", clockLabel(e.startTime)].filter(Boolean).join(" · ")}
-                  {" — "}{count > 0 ? `${count} role(s) for this ministry` : "this ministry isn't in this event"}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {event && roles.length === 0 && (
-        <div style={styles.emptyNote}>{team.name} has no roles in this event yet. Ask an admin to link one of its roles to a task, or add the ministry, under Events.</div>
-      )}
-      {event && roles.length > 0 && (
-        <div style={styles.rolesCard}>
-          {roles.map((role, i) => {
-            const [, roleId] = splitRoleKey(role.key);
-            const teamRole = (team.roles || []).find((r) => r.id === roleId);
-            const roleVolunteers = ((teamRole && teamRole.volunteers) || []).slice().sort((a, b) => a.localeCompare(b));
-            return (
-              <div key={role.key} className="role-row" style={{ ...styles.roleRow, ...(i % 2 === 1 ? styles.roleRowAlt : {}), borderTop: i === 0 ? "none" : "1px solid var(--lEFE7D3)", ...(isMobile ? { flexDirection: "column", gap: 8 } : {}) }}>
-                <div style={{ ...styles.roleName, ...(isMobile ? { width: "100%", paddingTop: 0 } : {}) }}><span className="role-dot" style={styles.roleNameDot} />{role.label}</div>
-                <div style={{ ...styles.roleInputWrap, ...(isMobile ? { width: "100%" } : {}) }}>
-                  <VolunteerNameInput
-                    value={eventVolunteer(event, role.key)}
-                    onChange={(val) => setRoleValue(role.key, val)}
-                    volunteers={roleVolunteers}
-                    locked={locked}
-                    placeholder="Volunteer name"
-                    allowAbove={!isMobile}
-                    compact={isMobile}
-                    popupTitle={`${role.label} · ${event.title || "Event"}`}
-                    popupMinWidth={220}
-                    style={{ ...styles.input, flex: 1, ...(locked ? { background: "var(--bF3EFE2)", cursor: "default" } : {}) }}
-                  />
-                  {teamRole && teamRole.hasVerse && (
-                    <input value={(event.verses || {})[role.key] || ""} onChange={(ev) => setVerseValue(role.key, ev.target.value)}
-                      placeholder="Verse (John 3:16)" readOnly={locked} autoComplete="off"
-                      style={{ ...styles.input, width: "100%", boxSizing: "border-box", marginTop: 6, ...(locked ? { background: "var(--bF3EFE2)", cursor: "default" } : {}) }} />
-                  )}
-                </div>
+      {events.length === 0 && <div style={styles.emptyNote}>No events yet. Events are added in the Events tab.</div>}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
+        {events.map((e) => {
+          const { total, filled } = filledOf(e);
+          const pct = total ? Math.round((filled / total) * 100) : 0;
+          const when = [eventDateLabel(e.date) || "No date yet", clockLabel(e.startTime)].filter(Boolean).join(" · ");
+          const open = () => setEventId(e.id);
+          return (
+            <div key={e.id} role="button" tabIndex={0} onClick={open} onKeyDown={(ev) => { if (ev.key === "Enter") open(); }}
+              style={{
+                position: "relative", height: 290, borderRadius: 16, overflow: "hidden", cursor: "pointer", color: "#FFFFFF", fontFamily: "system-ui, sans-serif",
+                background: "linear-gradient(160deg, #2B4A86 0%, #16294B 100%)",
+                ...(e.cover ? { backgroundImage: `url("${e.cover}")`, backgroundSize: "cover", backgroundPosition: "center" } : {}),
+                boxShadow: "0 12px 26px -12px rgba(35,33,29,0.55)", opacity: total ? 1 : 0.7,
+              }}>
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.05) 30%, rgba(0,0,0,0.82) 100%)" }} />
+              <div style={{ position: "absolute", top: 12, left: 12, right: 12, background: "rgba(0,0,0,0.55)", borderRadius: 14, padding: "6px 10px", fontSize: 11.5, fontWeight: 700, lineHeight: 1.35 }}>
+                {when}
+                <div style={{ fontWeight: 400, fontSize: 10.5, opacity: 0.85 }}>{total ? `${total} role${total === 1 ? "" : "s"} for ${team.name}` : "Not in this event"}</div>
               </div>
-            );
-          })}
-        </div>
-      )}
+              <div style={{ position: "absolute", left: 14, right: 14, bottom: 14 }}>
+                <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 20, lineHeight: 1.2, marginBottom: 8, textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
+                  {e.title || "Untitled event"}
+                </div>
+                <div style={{ height: 4, borderRadius: 4, background: "rgba(255,255,255,0.3)", overflow: "hidden", marginBottom: 6 }}>
+                  <div style={{ width: `${pct}%`, height: "100%", background: "#E5A430" }} />
+                </div>
+                <div style={{ fontSize: 11.5, opacity: 0.92 }}>{total ? `${filled} of ${total} roles filled` : "No roles yet"}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {event && renderModal()}
     </div>
   );
 }
@@ -3786,7 +3860,7 @@ function LastChangedBadge({ meta, anchorRef, align }) {
       </button>
       {show && coords && ReactDOM.createPortal(
         <div ref={tooltipRef} className="no-print" style={{
-          position: "fixed", top: coords.top, right: coords.right, zIndex: 1000001,
+          position: "fixed", top: coords.top, right: coords.right, zIndex: 2100001,
           background: "#2A2620", color: "#F6F1E4", fontSize: 11.5, fontStyle: "italic",
           fontFamily: "system-ui, sans-serif", padding: "6px 10px", borderRadius: 6,
           whiteSpace: "nowrap", boxShadow: "0 6px 14px rgba(0,0,0,0.25)", pointerEvents: "none",
@@ -3882,7 +3956,7 @@ function MasterEditInfo({ meta, style }) {
       </button>
       {show && coords && ReactDOM.createPortal(
         <div ref={tooltipRef} className="no-print" style={{
-          position: "fixed", top: coords.top, left: coords.left, zIndex: 1000001,
+          position: "fixed", top: coords.top, left: coords.left, zIndex: 2100001,
           background: "#2A2620", color: "#F6F1E4", fontSize: 11.5, fontStyle: "italic",
           fontFamily: "system-ui, sans-serif", padding: "6px 10px", borderRadius: 6,
           whiteSpace: "nowrap", boxShadow: "0 6px 14px rgba(0,0,0,0.25)", pointerEvents: "none",
@@ -4269,7 +4343,7 @@ function WarningIcon({ text, style }) {
       </button>
       {show && coords && ReactDOM.createPortal(
         <div ref={tooltipRef} className="no-print" style={{
-          position: "fixed", top: coords.top, left: coords.left, zIndex: 1000001,
+          position: "fixed", top: coords.top, left: coords.left, zIndex: 2100001,
           background: "#2A2620", color: "#F6F1E4", fontSize: 12, fontStyle: "italic",
           fontFamily: "system-ui, sans-serif", padding: "6px 10px", borderRadius: 6,
           maxWidth: 240, boxShadow: "0 6px 14px rgba(0,0,0,0.25)", pointerEvents: "none",
@@ -6147,7 +6221,7 @@ const styles = {
   nameConflict: { color: "var(--tA6402F)" },
   nameDup: { color: "var(--tA6402F)" },
   suggestDropdown: { position: "absolute", top: "calc(100% + 2px)", left: 0, right: 0, background: "var(--bFFFFFF)", border: "1px solid var(--lB8AD8C)", borderRadius: 6, boxShadow: "0 2px 6px rgba(35,33,29,0.12)", maxHeight: 220, overflowY: "auto", zIndex: 20 },
-  suggestPopup: { position: "fixed", background: "linear-gradient(180deg, var(--b3E5F92) 0%, var(--b1F3864) 55%, var(--b16294B) 100%)", borderRadius: 12, border: "1px solid var(--l16294B)", boxShadow: "0 20px 25px -5px rgba(15,23,42,0.45), 0 8px 10px -6px rgba(15,23,42,0.35), 0 1px 0 rgba(255,255,255,0.12) inset", maxHeight: 240, overflowY: "auto", zIndex: 1000000 },
+  suggestPopup: { position: "fixed", background: "linear-gradient(180deg, var(--b3E5F92) 0%, var(--b1F3864) 55%, var(--b16294B) 100%)", borderRadius: 12, border: "1px solid var(--l16294B)", boxShadow: "0 20px 25px -5px rgba(15,23,42,0.45), 0 8px 10px -6px rgba(15,23,42,0.35), 0 1px 0 rgba(255,255,255,0.12) inset", maxHeight: 240, overflowY: "auto", zIndex: 2100000 },
   suggestItem: { padding: "9px 14px", fontSize: 16, fontFamily: "system-ui, sans-serif", color: "var(--tEDF1FA)", cursor: "pointer", transition: "background 0.1s ease" },
   masterCard: { background: "var(--bFFFFFF)", border: "1px solid var(--lE4DCC6)", borderRadius: 16, overflowX: "auto", WebkitOverflowScrolling: "touch", boxShadow: "0 12px 28px -10px rgba(35,33,29,0.22), 0 4px 10px -6px rgba(35,33,29,0.12)" },
   masterInfoCard: { background: "var(--bFBF8EE)", border: "1px solid var(--lE4DCC6)", borderRadius: 16, padding: "16px 20px", display: "flex", flexDirection: "column" },
