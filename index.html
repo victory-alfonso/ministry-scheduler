@@ -3320,6 +3320,9 @@ function dividerMidRatio(sheetEl) {
   return ((a.bottom + b.top) / 2 - sr.top) / sr.height;
 }
 
+// header text for the new column between Duration and Program (blank for now)
+const PRINT_EXTRA_COL_LABEL = "";
+
 function MasterListView({ config, monthState, updateMonthState, week, slot, year, month }) {
   const [view, setView] = useState("list");
   const [search, setSearch] = useState("");
@@ -3646,12 +3649,23 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
           {(info.topic || info.verse) && <div style={styles.sheetBannerLight}>{[info.topic, info.verse].filter(Boolean).join("   ")}</div>}
           <div style={styles.sheetBannerSub}>{dateLabel}</div>
 
-          <table style={styles.sheetTable}>
+          <table style={{ ...styles.sheetTable, tableLayout: "fixed" }}>
+            {/* fixed widths so the new column matches Program */}
+            <colgroup>
+              <col style={{ width: "9%" }} />
+              <col style={{ width: "8%" }} />
+              <col style={{ width: "17%" }} />
+              <col style={{ width: "17%" }} />
+              <col style={{ width: "25%" }} />
+              <col style={{ width: "20%" }} />
+              <col style={{ width: "4%" }} />
+            </colgroup>
             <thead>
               <tr>
                 <th style={styles.sheetTh}>Time</th>
                 <th style={styles.sheetTh}>Duration</th>
                 <th style={styles.sheetTh}>Program</th>
+                <th style={styles.sheetTh}>{PRINT_EXTRA_COL_LABEL}</th>
                 <th style={styles.sheetTh}>Task</th>
                 <th style={styles.sheetTh}>Volunteer(s)</th>
                 <th style={{ ...styles.sheetTh, width: 26 }}></th>
@@ -3664,7 +3678,7 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                   return (
                     <tr key={section.id} data-divider="1">
                       <td style={styles.sheetTd}>{dividerTiming.time}</td>
-                      <td colSpan={5} style={styles.sheetBand}>{shiftDividerLabel(section.label, slot)}</td>
+                      <td colSpan={6} style={styles.sheetBand}>{shiftDividerLabel(section.label, slot)}</td>
                     </tr>
                   );
                 }
@@ -3689,6 +3703,11 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                               {extraLines.map((v, idx) => <div key={idx}>{v}</div>)}
                             </div>
                           )}
+                        </td>
+                      )}
+                      {i === 0 && (
+                        <td rowSpan={visibleRows.length} style={{ ...styles.sheetTd, verticalAlign: "middle", whiteSpace: "pre-wrap" }}>
+                          {section.extraCol || ""}
                         </td>
                       )}
                       <td style={styles.sheetTd}>
