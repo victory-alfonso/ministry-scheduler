@@ -1795,18 +1795,18 @@ function DateInput3({ value, onChange, style }) {
     if (e.key === "Backspace" && !current && prev.current) { e.preventDefault(); prev.current.focus(); }
   };
   const bad = touched && validate(parts) === null;
-  const box = { ...(style || {}), width: "auto", textAlign: "center", padding: "8px 4px", ...(bad ? { borderColor: "#E07A66" } : {}) };
+  const box = { ...(style || {}), minWidth: 0, boxSizing: "border-box", textAlign: "center", padding: "8px 4px", ...(bad ? { borderColor: "#E07A66" } : {}) };
   const sep = { opacity: 0.6, fontSize: 14 };
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6 }} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setTouched(true); }}>
       <input ref={mRef} value={parts.m} onChange={(e) => onMonth(e.target.value)} onKeyDown={(e) => back(e, parts.m, { current: null })}
-        inputMode="numeric" maxLength={2} placeholder="MM" aria-label="Month" autoComplete="off" style={{ ...box, flex: "0 0 48px" }} />
+        inputMode="numeric" maxLength={2} placeholder="MM" aria-label="Month" autoComplete="off" style={{ ...box, width: 52, flex: "0 0 52px" }} />
       <span style={sep}>/</span>
       <input ref={dRef} value={parts.d} onChange={(e) => onDay(e.target.value)} onKeyDown={(e) => back(e, parts.d, mRef)}
-        inputMode="numeric" maxLength={2} placeholder="DD" aria-label="Day" autoComplete="off" style={{ ...box, flex: "0 0 48px" }} />
+        inputMode="numeric" maxLength={2} placeholder="DD" aria-label="Day" autoComplete="off" style={{ ...box, width: 52, flex: "0 0 52px" }} />
       <span style={sep}>/</span>
       <input ref={yRef} value={parts.y} onChange={(e) => onYear(e.target.value)} onKeyDown={(e) => back(e, parts.y, dRef)}
-        inputMode="numeric" maxLength={4} placeholder="YYYY" aria-label="Year" autoComplete="off" style={{ ...box, flex: "0 0 72px" }} />
+        inputMode="numeric" maxLength={4} placeholder="YYYY" aria-label="Year" autoComplete="off" style={{ ...box, width: 76, flex: "0 0 76px" }} />
     </div>
   );
 }
@@ -2127,11 +2127,11 @@ function EventsView({ config, updateConfig, canEdit }) {
     const phaseBlocks = EVENT_PHASES.map((p) => ({ phase: p, groups: eventGroups(ev, p.id) })).filter((x) => x.groups.length > 0);
     const ministries = (ev.ministries || []).filter((b) => (b.roles || []).length > 0);
     const R = 46, C = 2 * Math.PI * R;
-    const sectionLabel = { fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.7)", margin: "18px 0 8px" };
+    const sectionLabel = { fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.7)", margin: "12px 0 6px" };
     const rightLabel = { fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.6)", margin: "16px 2px 6px" };
     const cardBox = { background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "11px 14px", marginBottom: 8 };
     const dInput = { width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.28)", background: "rgba(255,255,255,0.12)", color: "#FFFFFF", fontSize: 13.5, fontFamily: "system-ui, sans-serif", outline: "none", colorScheme: "dark" };
-    const dLabel = { fontSize: 10.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "rgba(255,255,255,0.7)", margin: "12px 0 4px" };
+    const dLabel = { fontSize: 10.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "rgba(255,255,255,0.7)", margin: "9px 0 3px" };
     const ghostBtn = { ...styles.smallBtn, background: "rgba(255,255,255,0.16)", padding: "8px 12px" };
     const when = [eventDateLabel(ev.date) || "No date yet"].filter(Boolean).join("");
     const timeLine = [clockLabel(ev.startTime) && `Start ${clockLabel(ev.startTime)}`, clockLabel(eventEndTime(ev)) && `End ${clockLabel(eventEndTime(ev))}`].filter(Boolean).join(" · ");
@@ -2145,7 +2145,7 @@ function EventsView({ config, updateConfig, canEdit }) {
         }}>
           {/* left: the event itself (editable right here when the person can edit) */}
           <div style={{
-            position: "relative", padding: "24px 22px", boxSizing: "border-box", overflowY: narrow ? "visible" : "auto",
+            position: "relative", padding: "16px 18px", boxSizing: "border-box", overflowY: narrow ? "visible" : "auto", overflowX: "hidden",
             background: "linear-gradient(180deg, #3B2248 0%, #2A1A38 100%)",
             ...(ev.cover ? { backgroundImage: `linear-gradient(180deg, rgba(42,26,56,0.78) 0%, rgba(42,26,56,0.94) 100%), url("${ev.cover}")`, backgroundSize: "cover", backgroundPosition: "center" } : {}),
           }}>
@@ -2153,67 +2153,73 @@ function EventsView({ config, updateConfig, canEdit }) {
               <div>
                 <div style={{ ...dLabel, marginTop: 0 }}>Event name</div>
                 <input value={ev.title || ""} onChange={(e) => setField("title", e.target.value)} placeholder="Prayer Meeting Night"
-                  style={{ ...dInput, fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 18 }} />
+                  style={{ ...dInput, fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 17, padding: "6px 10px" }} />
                 <div style={dLabel}>Subtitle (optional)</div>
-                <input value={ev.subtitle || ""} onChange={(e) => setField("subtitle", e.target.value)} placeholder="Theme or verse" style={dInput} />
+                <input value={ev.subtitle || ""} onChange={(e) => setField("subtitle", e.target.value)} placeholder="Theme or verse" style={{ ...dInput, padding: "6px 10px" }} />
               </div>
             ) : (
               <div>
-                <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 24, lineHeight: 1.2, color: "#FFFFFF" }}>{ev.title || "Untitled event"}</div>
-                {norm(ev.subtitle) && <div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 4 }}>{ev.subtitle}</div>}
+                <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 22, lineHeight: 1.2, color: "#FFFFFF" }}>{ev.title || "Untitled event"}</div>
+                {norm(ev.subtitle) && <div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 3 }}>{ev.subtitle}</div>}
               </div>
             )}
-            <div style={{ fontSize: 12, opacity: 0.85, marginTop: 8 }}>{prog.programs} program{prog.programs === 1 ? "" : "s"} · {prog.total} role{prog.total === 1 ? "" : "s"}</div>
+            <div style={{ fontSize: 11.5, opacity: 0.85, marginTop: 6 }}>{prog.programs} program{prog.programs === 1 ? "" : "s"} · {prog.total} role{prog.total === 1 ? "" : "s"}</div>
 
-            <div style={sectionLabel}>Date &amp; time</div>
             {canEdit ? (
               <div>
-                <div style={{ ...dLabel, marginTop: 0 }}>Date</div>
-                <DateInput3 value={ev.date || ""} onChange={(v) => setField("date", v)} style={dInput} />
-                <div style={dLabel}>Service start time</div>
-                <input type="time" value={ev.startTime || ""} onChange={(e) => setField("startTime", e.target.value)} style={dInput} />
-                <div style={dLabel}>End time (computed)</div>
-                <div style={{ ...dInput, background: "transparent", border: "1px dashed rgba(255,255,255,0.3)" }}>{clockLabel(eventEndTime(ev)) || "—"}</div>
+                <div style={dLabel}>Date</div>
+                <DateInput3 value={ev.date || ""} onChange={(v) => setField("date", v)} style={{ ...dInput, padding: "6px 4px" }} />
+                <div style={{ display: "flex", gap: 8, marginTop: 0 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={dLabel}>Start time</div>
+                    <input type="time" value={ev.startTime || ""} onChange={(e) => setField("startTime", e.target.value)} style={{ ...dInput, padding: "6px 8px" }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={dLabel}>End (auto)</div>
+                    <div style={{ ...dInput, padding: "6px 8px", background: "transparent", border: "1px dashed rgba(255,255,255,0.3)" }}>{clockLabel(eventEndTime(ev)) || "—"}</div>
+                  </div>
+                </div>
+                <div style={dLabel}>Cover photo (optional)</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <label style={{ ...ghostBtn, cursor: "pointer", padding: "6px 12px" }}>
+                    {ev.cover ? "Change photo" : "Upload photo"}
+                    <input type="file" accept="image/*" style={{ display: "none" }}
+                      onChange={(e) => { uploadCover(e.target.files && e.target.files[0]); e.target.value = ""; }} />
+                  </label>
+                  {ev.cover && <button onClick={() => setField("cover", "")} style={{ ...styles.smallBtn, background: "var(--bA6402F)", padding: "6px 12px" }}>Remove</button>}
+                </div>
               </div>
             ) : (
               <div>
+                <div style={sectionLabel}>Date &amp; time</div>
                 <div style={{ fontSize: 14, fontWeight: 600 }}>{when}</div>
                 {timeLine && <div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 2 }}>{timeLine}</div>}
               </div>
             )}
 
-            {canEdit && (
-              <div>
-                <div style={sectionLabel}>Cover photo (optional)</div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <label style={{ ...ghostBtn, cursor: "pointer" }}>
-                    {ev.cover ? "Change photo" : "Upload photo"}
-                    <input type="file" accept="image/*" style={{ display: "none" }}
-                      onChange={(e) => { uploadCover(e.target.files && e.target.files[0]); e.target.value = ""; }} />
-                  </label>
-                  {ev.cover && <button onClick={() => setField("cover", "")} style={{ ...styles.smallBtn, background: "var(--bA6402F)", padding: "8px 12px" }}>Remove</button>}
-                </div>
-              </div>
-            )}
-
-            <div style={sectionLabel}>Roles filled</div>
-            <div style={{ display: "flex", justifyContent: "center", margin: "6px 0 10px" }}>
-              <svg width="132" height="132" viewBox="0 0 120 120">
+            <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "14px 0 0" }}>
+              <svg width="92" height="92" viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
                 <circle cx="60" cy="60" r={R} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="10" />
                 <circle cx="60" cy="60" r={R} fill="none" stroke="#E5A430" strokeWidth="10" strokeLinecap="round"
                   strokeDasharray={`${C * pct} ${C}`} transform="rotate(-90 60 60)" />
-                <text x="60" y="58" textAnchor="middle" fill="#FFFFFF" fontSize="22" fontWeight="700" fontFamily="Georgia, serif">{prog.filled}/{prog.total}</text>
-                <text x="60" y="76" textAnchor="middle" fill="rgba(255,255,255,0.75)" fontSize="9.5">roles filled</text>
+                <text x="60" y="64" textAnchor="middle" fill="#FFFFFF" fontSize="26" fontWeight="700" fontFamily="Georgia, serif">{prog.filled}/{prog.total}</text>
               </svg>
-            </div>
-            <div style={{ fontSize: 12, opacity: 0.85, textAlign: "center" }}>
-              {prog.total === 0 ? "No ministry roles linked yet" : prog.filled === prog.total ? "All roles are filled" : `${prog.total - prog.filled} still open`}
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.7)" }}>Roles filled</div>
+                <div style={{ fontSize: 12.5, opacity: 0.9, marginTop: 3 }}>
+                  {prog.total === 0 ? "No ministry roles linked yet" : prog.filled === prog.total ? "All roles are filled" : `${prog.total - prog.filled} still open`}
+                </div>
+              </div>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 22 }}>
-              <button onClick={goPrint} style={{ ...styles.smallBtn, background: "var(--bA9782F)", padding: "10px 12px" }}>🖨 Preview / Print</button>
-              {canEdit && <button onClick={() => duplicateEvent(ev)} style={{ ...styles.smallBtn, background: "rgba(255,255,255,0.16)", padding: "10px 12px" }}>Duplicate</button>}
-              {canEdit && <button onClick={() => deleteEvent(ev)} style={{ ...styles.smallBtn, background: "var(--bA6402F)", padding: "10px 12px" }}>Delete</button>}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 14 }}>
+              <button onClick={goPrint} style={{ ...styles.smallBtn, background: "var(--bA9782F)", padding: "9px 12px" }}>🖨 Preview / Print</button>
+              {canEdit && (
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => duplicateEvent(ev)} style={{ ...styles.smallBtn, flex: 1, background: "rgba(255,255,255,0.16)", padding: "8px 10px" }}>Duplicate</button>
+                  <button onClick={() => deleteEvent(ev)} style={{ ...styles.smallBtn, flex: 1, background: "var(--bA6402F)", padding: "8px 10px" }}>Delete</button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -2741,7 +2747,7 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
         }}>
           {/* left: the event */}
           <div style={{
-            position: "relative", padding: "24px 22px", boxSizing: "border-box", overflowY: narrow ? "visible" : "auto",
+            position: "relative", padding: "24px 22px", boxSizing: "border-box", overflowY: narrow ? "visible" : "auto", overflowX: "hidden",
             background: "linear-gradient(180deg, #3B2248 0%, #2A1A38 100%)",
             ...(event.cover ? { backgroundImage: `linear-gradient(180deg, rgba(42,26,56,0.78) 0%, rgba(42,26,56,0.94) 100%), url("${event.cover}")`, backgroundSize: "cover", backgroundPosition: "center" } : {}),
           }}>
