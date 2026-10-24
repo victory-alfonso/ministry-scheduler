@@ -3239,9 +3239,33 @@ function EventsView({ config, updateConfig, canEdit }) {
 // Ministry-side view of the Events: pick an event, fill in this ministry's roles for it.
 // Names are saved on the event (event.assignments), so the event sheet picks them up.
 function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack }) {
-  const [eventId, setEventId] = useState(null);
+  // sel = the open popup: { key (series id or event id), date, year, month }
+  const [sel, setSel] = useState(null);
   const events = (config.events || []).slice().sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
-  const event = events.find((e) => e.id === eventId);
+
+  // One card per event; events made from one repeat share a card (pick the date inside).
+  const todayISO = isoOf(new Date());
+  const groups = [];
+  const groupMap = {};
+  events.forEach((e) => {
+    const k = e.seriesId || e.id;
+    if (!groupMap[k]) { groupMap[k] = { key: k, mates: [] }; groups.push(groupMap[k]); }
+    groupMap[k].mates.push(e);
+  });
+  groups.forEach((g) => {
+    g.rep = g.mates.find((m) => m.date && m.date >= todayISO) || g.mates[g.mates.length - 1];
+    g.rec = resolveRecurrence(g.mates[0]);
+    g.isSeries = g.rec.repeats || g.mates.length > 1;
+  });
+  groups.sort((a, b) => (a.rep.date || "9999").localeCompare(b.rep.date || "9999"));
+  const group = sel ? groups.find((g) => g.key === sel.key) : null;
+  const tmpl = group ? group.mates[0] : null;
+  const byDate = {};
+  if (group) group.mates.forEach((m) => { if (m.date) byDate[m.date] = m; });
+  // for a repeating event the chosen date may not have an event yet: show a blank copy that is created on the first name typed
+  const event = !group ? null
+    : !group.isSeries ? tmpl
+    : (byDate[sel.date] || { ...tmpl, id: null, date: sel.date, assignments: {}, verses: {}, announcements: "" });
 
   // roles this ministry fills in an event: the ones picked for its bottom block,
   // plus any task row linked to one of its roles
@@ -3271,27 +3295,43 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
     return list;
   };
 
-  const setRoleValue = (key, value) => updateConfig((prev) => ({
-    ...prev,
-    events: (prev.events || []).map((e) => {
-      if (e.id !== eventId) return e;
-      const next = { ...(e.assignments || {}) };
-      if (norm(value)) next[key] = value;
-      else delete next[key];
-      return { ...e, assignments: next };
-    }),
-  }));
-
-  const setVerseValue = (key, value) => updateConfig((prev) => ({
-    ...prev,
-    events: (prev.events || []).map((e) => {
-      if (e.id !== eventId) return e;
-      const next = { ...(e.verses || {}) };
-      if (norm(value)) next[key] = value;
-      else delete next[key];
-      return { ...e, verses: next };
-    }),
-  }));
+  // Writes one name/verse. If the picked date has no event yet, the event is created from the series' first event right here.
+  const writeField = (field, key, value) => {
+    const date = event.date;
+    const eventIdNow = event.id;
+    const tmplId = tmpl.id;
+    updateConfig((prev) => {
+      let list = prev.events || [];
+      let targetId = eventIdNow;
+      if (!targetId) {
+        const t = list.find((e) => e.id === tmplId);
+        if (!t) return prev;
+        const sid = t.seriesId || uid();
+        const existing = list.find((e) => e.seriesId === sid && e.date === date);
+        if (existing) targetId = existing.id;
+        else {
+          const copy = {
+            ...JSON.parse(JSON.stringify(t)), id: uid(), date, assignments: {}, verses: {}, announcements: "",
+            seriesId: sid, repeat: null, recurrence: storedRecurrence(resolveRecurrence(t)),
+          };
+          targetId = copy.id;
+          list = [...list.map((e) => (e.id === t.id ? { ...e, seriesId: sid } : e)), copy];
+        }
+      }
+      return {
+        ...prev,
+        events: list.map((e) => {
+          if (e.id !== targetId) return e;
+          const next = { ...(e[field] || {}) };
+          if (norm(value)) next[key] = value;
+          else delete next[key];
+          return { ...e, [field]: next };
+        }),
+      };
+    });
+  };
+  const setRoleValue = (key, value) => writeField("assignments", key, value);
+  const setVerseValue = (key, value) => writeField("verses", key, value);
 
   const roles = event ? rolesForEvent(event) : [];
   const filledOf = (e) => {
@@ -3300,11 +3340,76 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
   };
 
   useEffect(() => {
-    if (!eventId) return;
-    const onKey = (e) => { if (e.key === "Escape") setEventId(null); };
+    if (!sel) return;
+    const onKey = (e) => { if (e.key === "Escape") setSel(null); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [eventId]);
+  }, [!!sel]);
+
+  const openGroup = (g) => {
+    const d = g.rep.date || "";
+    const [y, m] = d.split("-").map((n) => parseInt(n, 10));
+    const now = new Date();
+    setSel({ key: g.key, date: d, year: isNaN(y) ? now.getFullYear() : y, month: isNaN(m) ? now.getMonth() + 1 : m });
+  };
+
+  // month/year switcher + the dates of the repeat (like the date buttons on Assign volunteers)
+  const renderDatePicker = () => {
+    const prefix = `${sel.year}-${padTwo(sel.month)}`;
+    const occ = new Set();
+    if (group.rec.repeats && tmpl.date) recurrenceDates(group.rec, tmpl.date, isoOf(new Date(sel.year, sel.month, 0))).forEach((d) => occ.add(d));
+    group.mates.forEach((m) => { if (m.date) occ.add(m.date); });
+    const monthDates = Array.from(occ).filter((d) => d.startsWith(prefix)).sort();
+    const go = (patch) => setSel((s) => ({ ...s, ...patch }));
+    const shift = (delta) => {
+      let m = sel.month + delta, y = sel.year;
+      while (m > 12) { m -= 12; y += 1; }
+      while (m < 1) { m += 12; y -= 1; }
+      go({ year: y, month: m });
+    };
+    const baseYear = parseInt((tmpl.date || "").slice(0, 4), 10) || new Date().getFullYear();
+    const years = Array.from({ length: 25 }, (_, i) => baseYear - 2 + i);
+    if (!years.includes(sel.year)) { years.push(sel.year); years.sort((a, b) => a - b); }
+    const selS = { padding: "7px 6px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.28)", background: "rgba(255,255,255,0.12)", color: "#FFFFFF", fontSize: 13, fontFamily: "system-ui, sans-serif", colorScheme: "dark", minWidth: 0 };
+    const navB = { width: 32, height: 34, borderRadius: 8, border: "none", background: "rgba(255,255,255,0.16)", color: "#FFFFFF", fontSize: 18, cursor: "pointer", flexShrink: 0 };
+    const opt = { background: "#2A1A38" };
+    return (
+      <div>
+        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.7)", margin: "18px 0 8px" }}>Choose a date</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <button onClick={() => shift(-1)} style={navB} aria-label="Previous month">‹</button>
+          <select value={sel.month} onChange={(e) => go({ month: Number(e.target.value) })} aria-label="Month" style={{ ...selS, flex: 1 }}>
+            {MONTH_NAMES.map((n, i) => <option key={n} value={i + 1} style={opt}>{n}</option>)}
+          </select>
+          <select value={sel.year} onChange={(e) => go({ year: Number(e.target.value) })} aria-label="Year" style={{ ...selS, width: 74 }}>
+            {years.map((y) => <option key={y} value={y} style={opt}>{y}</option>)}
+          </select>
+          <button onClick={() => shift(1)} style={navB} aria-label="Next month">›</button>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+          {monthDates.length === 0 && <div style={{ fontSize: 12.5, opacity: 0.8 }}>No dates in {MONTH_NAMES[sel.month - 1]} {sel.year}.</div>}
+          {monthDates.map((iso) => {
+            const [y, m, d] = iso.split("-").map((n) => parseInt(n, 10));
+            const active = sel.date === iso;
+            const made = !!byDate[iso];
+            return (
+              <button key={iso} onClick={() => go({ date: iso })} aria-label={eventDateLabel(iso)}
+                style={{
+                  width: 52, height: 48, borderRadius: 10, cursor: "pointer", padding: 0, fontFamily: "system-ui, sans-serif",
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1,
+                  border: active ? "2px solid #FFFFFF" : made ? "1px solid rgba(229,164,48,0.8)" : "1.5px dashed rgba(229,164,48,0.8)",
+                  background: active ? "#FFFFFF" : "rgba(255,255,255,0.08)",
+                }}>
+                <span style={{ fontSize: 8.5, fontWeight: 600, letterSpacing: "0.08em", color: active ? "#7A6E4E" : "rgba(255,255,255,0.7)" }}>{WEEKDAY_NAMES[new Date(y, m - 1, d).getDay()].slice(0, 3).toUpperCase()}</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: active ? "#1F3864" : "#FFFFFF" }}>{d}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ fontSize: 11, opacity: 0.7, marginTop: 8, lineHeight: 1.4 }}>Dashed dates have no event yet — it is created when you add the first name.</div>
+      </div>
+    );
+  };
 
   const renderModal = () => {
     const narrow = isMobile || (typeof window !== "undefined" && window.innerWidth < 760);
@@ -3315,7 +3420,7 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
     const darkField = { ...styles.input, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.28)", borderLeft: "3px solid rgba(229,164,48,0.75)", color: "#FFFFFF", colorScheme: "dark" };
     const timeLine = [clockLabel(event.startTime) && `Start ${clockLabel(event.startTime)}`, clockLabel(eventEndTime(event)) && `End ${clockLabel(eventEndTime(event))}`].filter(Boolean).join(" · ");
     return ReactDOM.createPortal(
-      <div className="no-print pane-dark" style={{ ...styles.modalOverlay, zIndex: 1999990 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setEventId(null); }}>
+      <div className="no-print pane-dark" style={{ ...styles.modalOverlay, zIndex: 1999990 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setSel(null); }}>
         <div style={{
           width: "min(1000px, 100%)", height: narrow ? "92vh" : "min(86vh, 760px)", borderRadius: 18, overflow: narrow ? "auto" : "hidden",
           display: narrow ? "block" : "grid", gridTemplateColumns: "300px 1fr", boxShadow: "0 30px 60px -15px rgba(0,0,0,0.6)",
@@ -3331,6 +3436,7 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
             {norm(event.subtitle) && <div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 4 }}>{event.subtitle}</div>}
             <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>{team.name}</div>
 
+            {group.isSeries && renderDatePicker()}
             <div style={sectionLabel}>Date &amp; time</div>
             <div style={{ fontSize: 14, fontWeight: 600 }}>{eventDateLabel(event.date) || "No date yet"}</div>
             {timeLine && <div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 2 }}>{timeLine}</div>}
@@ -3354,9 +3460,9 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
           <div style={{ display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0, background: "linear-gradient(180deg, #2F4E86 0%, #1F3864 100%)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "16px 18px 10px" }}>
               <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "rgba(255,255,255,0.8)" }}>
-                {team.name} · Roles ({prog.total})
+                {team.name} · Roles ({prog.total}){group.isSeries && event.date ? ` · ${eventDateLabel(event.date)}` : ""}
               </div>
-              <button onClick={() => setEventId(null)} aria-label="Close"
+              <button onClick={() => setSel(null)} aria-label="Close"
                 style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.35)", color: "#FFFFFF", fontSize: 17, cursor: "pointer", flexShrink: 0 }}>×</button>
             </div>
             <div style={{ flex: 1, minHeight: 0, overflowY: narrow ? "visible" : "auto", padding: "0 18px 18px" }}>
@@ -3407,15 +3513,17 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
         </div>
       </header>
 
-      {events.length === 0 && <div style={styles.emptyNote}>No events yet. Events are added in the Events tab.</div>}
+      {groups.length === 0 && <div style={styles.emptyNote}>No events yet. Events are added in the Events tab.</div>}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
-        {events.map((e) => {
+        {groups.map((g) => {
+          const e = g.rep;
           const { total, filled } = filledOf(e);
           const pct = total ? Math.round((filled / total) * 100) : 0;
           const when = [eventDateLabel(e.date) || "No date yet", clockLabel(e.startTime)].filter(Boolean).join(" · ");
-          const open = () => setEventId(e.id);
+          const sub = g.isSeries ? `Repeats · ${recurrenceSummary(g.rec)}` : (total ? `${total} role${total === 1 ? "" : "s"} for ${team.name}` : "Not in this event");
+          const open = () => openGroup(g);
           return (
-            <div key={e.id} role="button" tabIndex={0} onClick={open} onKeyDown={(ev) => { if (ev.key === "Enter") open(); }}
+            <div key={g.key} role="button" tabIndex={0} onClick={open} onKeyDown={(ev) => { if (ev.key === "Enter") open(); }}
               style={{
                 position: "relative", height: 290, borderRadius: 16, overflow: "hidden", cursor: "pointer", color: "#FFFFFF", fontFamily: "system-ui, sans-serif",
                 background: "linear-gradient(160deg, #2B4A86 0%, #16294B 100%)",
@@ -3425,7 +3533,7 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.05) 30%, rgba(0,0,0,0.82) 100%)" }} />
               <div style={{ position: "absolute", top: 12, left: 12, right: 12, background: "rgba(0,0,0,0.55)", borderRadius: 14, padding: "6px 10px", fontSize: 11.5, fontWeight: 700, lineHeight: 1.35 }}>
                 {when}
-                <div style={{ fontWeight: 400, fontSize: 10.5, opacity: 0.85 }}>{total ? `${total} role${total === 1 ? "" : "s"} for ${team.name}` : "Not in this event"}</div>
+                <div style={{ fontWeight: 400, fontSize: 10.5, opacity: 0.85 }}>{sub}</div>
               </div>
               <div style={{ position: "absolute", left: 14, right: 14, bottom: 14 }}>
                 <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 20, lineHeight: 1.2, marginBottom: 8, textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
@@ -3434,13 +3542,13 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
                 <div style={{ height: 4, borderRadius: 4, background: "rgba(255,255,255,0.3)", overflow: "hidden", marginBottom: 6 }}>
                   <div style={{ width: `${pct}%`, height: "100%", background: "#E5A430" }} />
                 </div>
-                <div style={{ fontSize: 11.5, opacity: 0.92 }}>{total ? `${filled} of ${total} roles filled` : "No roles yet"}</div>
+                <div style={{ fontSize: 11.5, opacity: 0.92 }}>{total ? `${filled} of ${total} roles filled${g.isSeries ? " · next date" : ""}` : "No roles yet"}</div>
               </div>
             </div>
           );
         })}
       </div>
-      {event && renderModal()}
+      {event && group && renderModal()}
     </div>
   );
 }
