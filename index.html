@@ -1662,6 +1662,13 @@ function EventsView({ config, updateConfig, canEdit }) {
   const [openId, setOpenId] = useState(null);
   const [mode, setMode] = useState("list"); // list | edit | print
   const [eventSearch, setEventSearch] = useState("");
+  const [backMode, setBackMode] = useState("detail"); // where Back goes from the print preview
+  useEffect(() => {
+    if (mode !== "detail" || programModal) return;
+    const onKey = (e) => { if (e.key === "Escape") setMode("list"); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [mode, programModal]);
   const [programModal, setProgramModal] = useState(null); // "+ Program" popup (add / edit one program with its role/task rows)
   const events = (config.events || []).slice().sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
   const openEvent = events.find((e) => e.id === openId);
@@ -1906,6 +1913,163 @@ function EventsView({ config, updateConfig, canEdit }) {
     );
   };
 
+  // ---- Event detail popup (opens when an event card is tapped): everything inside the event ----
+  const renderEventDetail = () => {
+    const ev = openEvent;
+    const narrow = typeof window !== "undefined" && window.innerWidth < 760;
+    const prog = eventProgress(ev);
+    const pct = prog.total ? prog.filled / prog.total : 0;
+    const computed = computeEventRows(ev);
+    const phaseBlocks = EVENT_PHASES.map((p) => ({ phase: p, groups: eventGroups(ev, p.id) })).filter((x) => x.groups.length > 0);
+    const ministries = (ev.ministries || []).filter((b) => (b.roles || []).length > 0);
+    const R = 46, C = 2 * Math.PI * R;
+    const sectionLabel = { fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.7)", margin: "18px 0 8px" };
+    const when = [eventDateLabel(ev.date) || "No date yet"].filter(Boolean).join("");
+    const timeLine = [clockLabel(ev.startTime) && `Start ${clockLabel(ev.startTime)}`, clockLabel(eventEndTime(ev)) && `End ${clockLabel(eventEndTime(ev))}`].filter(Boolean).join(" · ");
+    const goPrint = () => { setBackMode("detail"); setMode("print"); };
+    return ReactDOM.createPortal(
+      <div className="no-print" style={{ ...styles.modalOverlay, zIndex: 1999990 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setMode("list"); }}>
+        <div style={{
+          width: "min(1000px, 100%)", height: narrow ? "92vh" : "min(86vh, 760px)", borderRadius: 18, overflow: narrow ? "auto" : "hidden",
+          display: narrow ? "block" : "grid", gridTemplateColumns: "300px 1fr", boxShadow: "0 30px 60px -15px rgba(0,0,0,0.6)",
+          border: "1px solid rgba(255,255,255,0.18)", fontFamily: "system-ui, sans-serif", color: "#EAF0FF", background: "#1F3864",
+        }}>
+          {/* left: the event itself */}
+          <div style={{
+            position: "relative", padding: "24px 22px", boxSizing: "border-box", overflowY: narrow ? "visible" : "auto",
+            background: "linear-gradient(180deg, #3B2248 0%, #2A1A38 100%)",
+            ...(ev.cover ? { backgroundImage: `linear-gradient(180deg, rgba(42,26,56,0.78) 0%, rgba(42,26,56,0.94) 100%), url("${ev.cover}")`, backgroundSize: "cover", backgroundPosition: "center" } : {}),
+          }}>
+            <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 24, lineHeight: 1.2, color: "#FFFFFF" }}>{ev.title || "Untitled event"}</div>
+            {norm(ev.subtitle) && <div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 4 }}>{ev.subtitle}</div>}
+            <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>{prog.programs} program{prog.programs === 1 ? "" : "s"} · {prog.total} role{prog.total === 1 ? "" : "s"}</div>
+
+            <div style={sectionLabel}>Date &amp; time</div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>{when}</div>
+            {timeLine && <div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 2 }}>{timeLine}</div>}
+
+            <div style={sectionLabel}>Roles filled</div>
+            <div style={{ display: "flex", justifyContent: "center", margin: "6px 0 10px" }}>
+              <svg width="132" height="132" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r={R} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="10" />
+                <circle cx="60" cy="60" r={R} fill="none" stroke="#E5A430" strokeWidth="10" strokeLinecap="round"
+                  strokeDasharray={`${C * pct} ${C}`} transform="rotate(-90 60 60)" />
+                <text x="60" y="58" textAnchor="middle" fill="#FFFFFF" fontSize="22" fontWeight="700" fontFamily="Georgia, serif">{prog.filled}/{prog.total}</text>
+                <text x="60" y="76" textAnchor="middle" fill="rgba(255,255,255,0.75)" fontSize="9.5">roles filled</text>
+              </svg>
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.85, textAlign: "center" }}>
+              {prog.total === 0 ? "No ministry roles linked yet" : prog.filled === prog.total ? "All roles are filled" : `${prog.total - prog.filled} still open`}
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 22 }}>
+              <button onClick={goPrint} style={{ ...styles.smallBtn, background: "var(--bA9782F)", padding: "10px 12px" }}>🖨 Preview / Print</button>
+              {canEdit && <button onClick={() => setMode("edit")} style={{ ...styles.smallBtn, background: "rgba(255,255,255,0.16)", padding: "10px 12px" }}>✎ Edit event</button>}
+            </div>
+          </div>
+
+          {/* right: the inside of the event */}
+          <div style={{ display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0, background: "linear-gradient(180deg, #2F4E86 0%, #1F3864 100%)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "16px 18px 10px" }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "rgba(255,255,255,0.8)" }}>
+                Programs ({prog.programs}) · {ev.title || "Untitled event"}
+              </div>
+              <button onClick={() => setMode("list")} aria-label="Close"
+                style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.35)", color: "#FFFFFF", fontSize: 17, cursor: "pointer", flexShrink: 0 }}>×</button>
+            </div>
+            <div style={{ flex: 1, minHeight: 0, overflowY: narrow ? "visible" : "auto", padding: "0 18px 18px" }}>
+              {phaseBlocks.length === 0 && <div style={{ opacity: 0.8, fontSize: 13.5, padding: "10px 2px" }}>No programs yet.{canEdit ? " Open Edit event and tap + Program." : ""}</div>}
+              {phaseBlocks.map(({ phase, groups }) => (
+                <div key={phase.id}>
+                  <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.6)", margin: "10px 2px 6px" }}>{phase.label}</div>
+                  {groups.map((group) => {
+                    const first = group[0];
+                    const time = (computed.find((c) => c.row.id === first.id) || {}).time;
+                    const keys = [];
+                    group.forEach((r) => { if (r.linkedRole) keys.push(r.linkedRole); });
+                    (first.programSubRoles || []).forEach((k) => keys.push(k));
+                    const filled = keys.filter((k) => norm(eventVolunteer(ev, k))).length;
+                    const complete = keys.length > 0 && filled === keys.length;
+                    const lines = group.map((r) => {
+                      const info = linkedLabel(r.linkedRole);
+                      const label = norm(r.task) || (info && info.role) || "";
+                      const value = r.linkedRole ? eventVolunteer(ev, r.linkedRole) : r.fixedText;
+                      const verse = r.linkedRole ? ((ev.verses || {})[r.linkedRole] || "") : "";
+                      return { id: r.id, label, value, verse };
+                    }).filter((l) => norm(l.label) || norm(l.value));
+                    const subLines = (first.programSubRoles || []).map((k) => ({ k, label: (linkedLabel(k) || {}).role || "", value: eventVolunteer(ev, k) }));
+                    const title = norm(first.program) || norm(first.task) || "Untitled program";
+                    return (
+                      <div key={first.id} onClick={() => { if (canEdit) openProgramModal(phase.id, group); }}
+                        style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "11px 14px", marginBottom: 8, cursor: canEdit ? "pointer" : "default" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14, color: "#FFFFFF" }}>{title}</div>
+                            <div style={{ fontSize: 11.5, opacity: 0.8 }}>{[time, rowMinutes(first) ? `${rowMinutes(first)} mins` : ""].filter(Boolean).join(" · ") || "—"}</div>
+                          </div>
+                          {keys.length > 0 && (
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, whiteSpace: "nowrap",
+                              ...(complete ? { background: "rgba(127,176,122,0.2)", color: "#9BE08F", border: "1px solid rgba(127,176,122,0.6)" } : { background: "rgba(229,164,48,0.18)", color: "#F2C265", border: "1px solid rgba(229,164,48,0.55)" }) }}>
+                              {complete ? "✓ Complete" : `${filled} of ${keys.length}`}
+                            </span>
+                          )}
+                        </div>
+                        {(subLines.length > 0 || lines.length > 0 || norm(first.programNote)) && (
+                          <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.1)", fontSize: 12.5 }}>
+                            {subLines.map((l) => (
+                              <div key={l.k} style={{ opacity: 0.95 }}>
+                                <span style={{ opacity: 0.7 }}>{l.label}: </span>{norm(l.value) ? l.value : <span style={{ opacity: 0.5 }}>— open —</span>}
+                              </div>
+                            ))}
+                            {norm(first.programNote) && <div style={{ whiteSpace: "pre-wrap", opacity: 0.85 }}>{first.programNote}</div>}
+                            {lines.map((l) => (
+                              <div key={l.id}>
+                                <span style={{ opacity: 0.7 }}>{l.label}{l.label ? ": " : ""}</span>
+                                {norm(l.value) ? <b style={{ fontWeight: 600 }}>{l.value}</b> : <span style={{ opacity: 0.5 }}>— open —</span>}
+                                {norm(l.verse) && <span style={{ fontStyle: "italic", opacity: 0.8 }}> · {l.verse}</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+
+              {ministries.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.6)", margin: "16px 2px 6px" }}>Ministries</div>
+                  {ministries.map((b) => (
+                    <div key={b.id} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "11px 14px", marginBottom: 8 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13.5, color: "#FFFFFF", marginBottom: 4 }}>{b.title}</div>
+                      {(b.roles || []).map((r) => {
+                        const v = eventVolunteer(ev, blockRoleKey(b, r));
+                        return (
+                          <div key={r.id} style={{ fontSize: 12.5 }}>
+                            <span style={{ opacity: 0.7 }}>{r.label}: </span>{norm(v) ? <b style={{ fontWeight: 600 }}>{v}</b> : <span style={{ opacity: 0.5 }}>— open —</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {norm(ev.announcements) && (
+                <div>
+                  <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.6)", margin: "16px 2px 6px" }}>Announcements</div>
+                  <div style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "11px 14px", fontSize: 12.5, whiteSpace: "pre-wrap" }}>{ev.announcements}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  };
+
   // ministries: a block per team, with only the roles picked for this event
   const teams = config.teams || [];
   const addMinistry = (teamId) => {
@@ -2020,7 +2184,7 @@ function EventsView({ config, updateConfig, canEdit }) {
     return (
       <div className="print-sheet-wrap" style={styles.viewWrap}>
         <div className="no-print sheet-toolbar">
-          <button onClick={() => setMode(canEdit ? "edit" : "list")} style={{ ...styles.smallBtn, whiteSpace: "normal" }}>← Back</button>
+          <button onClick={() => setMode(backMode === "edit" && canEdit ? "edit" : "detail")} style={{ ...styles.smallBtn, whiteSpace: "normal" }}>← Back</button>
           <button onClick={() => window.print()} style={{ ...styles.smallBtn, background: "var(--bA9782F)", whiteSpace: "normal" }}>🖨 Print</button>
         </div>
         <div className="sheet-scroll">
@@ -2129,7 +2293,7 @@ function EventsView({ config, updateConfig, canEdit }) {
       <div style={styles.viewWrap}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
           <button onClick={() => setMode("list")} style={styles.smallBtn}>← All events</button>
-          <button onClick={() => setMode("print")} style={{ ...styles.smallBtn, background: "var(--bA9782F)" }}>Preview / Print</button>
+          <button onClick={() => { setBackMode("edit"); setMode("print"); }} style={{ ...styles.smallBtn, background: "var(--bA9782F)" }}>Preview / Print</button>
           <button onClick={() => duplicateEvent(openEvent)} style={{ ...styles.smallBtn, background: "var(--b2F4858)" }}>Duplicate</button>
           <button onClick={() => deleteEvent(openEvent)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }}>Delete</button>
         </div>
@@ -2288,8 +2452,8 @@ function EventsView({ config, updateConfig, canEdit }) {
               const when = [eventDateLabel(event.date) || "No date yet", clockLabel(event.startTime)].filter(Boolean).join(" · ");
               return (
                 <div key={event.id} role="button" tabIndex={0}
-                  onClick={() => { setOpenId(event.id); setMode("print"); }}
-                  onKeyDown={(e) => { if (e.key === "Enter") { setOpenId(event.id); setMode("print"); } }}
+                  onClick={() => { setOpenId(event.id); setMode("detail"); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") { setOpenId(event.id); setMode("detail"); } }}
                   style={{
                     position: "relative", height: 290, borderRadius: 16, overflow: "hidden", cursor: "pointer", color: "#FFFFFF", fontFamily: "system-ui, sans-serif",
                     background: "linear-gradient(160deg, #2B4A86 0%, #16294B 100%)",
@@ -2322,6 +2486,8 @@ function EventsView({ config, updateConfig, canEdit }) {
           </div>
         );
       })()}
+      {mode === "detail" && openEvent && renderEventDetail()}
+      {programModal && renderProgramModal()}
     </div>
   );
 }
