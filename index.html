@@ -1670,6 +1670,30 @@ function EventsView({ config, updateConfig, canEdit }) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [mode, programModal]);
+  // Event sheet print: if the sheet is taller/wider than one page, shrink it to fit a single page right
+  // before printing (Print button and Ctrl+P both fire these events), then restore full size afterward.
+  const eventSheetRef = useRef(null);
+  useEffect(() => {
+    if (mode !== "print") return;
+    const PAGE_WIDTH_PX = 740;
+    const PAGE_HEIGHT_PX = 975;
+    const applyPrintScale = () => {
+      const el = eventSheetRef.current;
+      if (!el) return;
+      el.style.zoom = "1";
+      const scale = Math.min(1, PAGE_WIDTH_PX / el.scrollWidth, PAGE_HEIGHT_PX / el.scrollHeight);
+      el.style.zoom = scale < 1 ? String(scale) : "1";
+    };
+    const resetPrintScale = () => {
+      if (eventSheetRef.current) eventSheetRef.current.style.zoom = "1";
+    };
+    window.addEventListener("beforeprint", applyPrintScale);
+    window.addEventListener("afterprint", resetPrintScale);
+    return () => {
+      window.removeEventListener("beforeprint", applyPrintScale);
+      window.removeEventListener("afterprint", resetPrintScale);
+    };
+  }, [mode]);
   const events = (config.events || []).slice().sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
   const openEvent = events.find((e) => e.id === openId);
   const printSettings = config.printSettings || {};
@@ -2319,7 +2343,7 @@ function EventsView({ config, updateConfig, canEdit }) {
           <button onClick={() => window.print()} style={{ ...styles.smallBtn, background: "var(--bA9782F)", whiteSpace: "normal" }}>🖨 Print</button>
         </div>
         <div className="sheet-scroll">
-          <div className="print-sheet paper" style={styles.sheet}>
+          <div className="print-sheet paper" style={styles.sheet} ref={eventSheetRef}>
             <div className="print-sheet-watermark" style={styles.sheetWatermark} aria-hidden="true">
               <img src="./icons/VictoryWatermark.png" alt="" style={styles.sheetWatermarkImg} />
             </div>
