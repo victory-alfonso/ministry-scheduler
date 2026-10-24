@@ -1715,6 +1715,7 @@ function EventsView({ config, updateConfig, canEdit }) {
       program: first ? first.program || "" : "",
       programNote: first ? first.programNote || "" : "",
       afterId: "",
+      programSubRoles: first ? first.programSubRoles || [] : [],
       tasks: group ? group.map((r) => ({ id: r.id, task: r.task || "", linkedRole: r.linkedRole || "", fixedText: r.fixedText || "" })) : [blankTask()],
     });
   };
@@ -1730,6 +1731,7 @@ function EventsView({ config, updateConfig, canEdit }) {
           ...base, id: t.id, phase: m.phase, task: t.task, linkedRole: t.linkedRole, fixedText: t.fixedText,
           duration: i === 0 ? m.duration : "", startAt: i === 0 ? m.startAt : "",
           program: i === 0 ? m.program : "", programNote: i === 0 ? m.programNote : "",
+          programSubRoles: i === 0 ? m.programSubRoles : [],
         };
       });
       const rest = m.rowIds ? old.filter((r) => !m.rowIds.includes(r.id)) : old;
@@ -1832,6 +1834,32 @@ function EventsView({ config, updateConfig, canEdit }) {
             </div>
           ))}
           <button onClick={addTask} style={{ ...styles.smallBtn, background: "var(--b2F4858)", marginBottom: 14 }}>+ Role / Task</button>
+          <div style={lbl}>Extra lines under Program (kusang kinukuha sa ministry role, e.g. 1st Song, 2nd Song, 3rd Song)</div>
+          {m.programSubRoles.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+              {m.programSubRoles.map((key) => {
+                const info = linkedLabel(key);
+                return (
+                  <span key={key} style={{ background: "var(--bEFE7D3)", borderRadius: 20, padding: "3px 6px 3px 10px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                    {info ? `${info.team} — ${info.role}` : key}
+                    <button onClick={() => setM("programSubRoles", m.programSubRoles.filter((k) => k !== key))}
+                      style={{ border: "none", background: "none", color: "var(--tA6402F)", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }} aria-label="Remove">×</button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          <select value="" onChange={(ev) => { if (ev.target.value) setM("programSubRoles", [...m.programSubRoles, ev.target.value]); }}
+            style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box", marginBottom: 14 }}>
+            <option value="">+ Add a ministry role as an extra line…</option>
+            {(config.teams || []).map((tm) => (
+              <optgroup key={tm.id} label={tm.name}>
+                {(tm.roles || []).filter((r) => !m.programSubRoles.includes(eventRoleKey(tm.id, r.id))).map((r) => (
+                  <option key={r.id} value={eventRoleKey(tm.id, r.id)}>{tm.name} — {r.name}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
           <div style={lbl}>Program notes (optional, one per line e.g. songs)</div>
           <textarea value={m.programNote} onChange={(ev) => setM("programNote", ev.target.value)} rows={2}
             style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box", resize: "vertical", fontSize: 12.5, marginBottom: 16 }} />
@@ -1924,7 +1952,16 @@ function EventsView({ config, updateConfig, canEdit }) {
           {programSpans[i] > 0 && (
             <td rowSpan={programSpans[i]} style={{ ...styles.sheetTd, fontWeight: 700, verticalAlign: "middle", whiteSpace: "pre-wrap" }}>
               {row.program}
-              {norm(row.programNote) && <div style={{ fontWeight: 400, fontSize: 10.5, marginTop: 4 }}>{row.programNote}</div>}
+              {(() => {
+                const subLines = (row.programSubRoles || []).map((k) => eventVolunteer(openEvent, k)).filter((v) => norm(v));
+                if (subLines.length === 0 && !norm(row.programNote)) return null;
+                return (
+                  <div style={{ fontWeight: 400, fontSize: 10.5, marginTop: 4 }}>
+                    {subLines.map((v, idx) => <div key={idx}>{v}</div>)}
+                    {norm(row.programNote) && <div>{row.programNote}</div>}
+                  </div>
+                );
+              })()}
             </td>
           )}
           <td style={styles.sheetTd}>{row.task}</td>
@@ -2098,6 +2135,11 @@ function EventsView({ config, updateConfig, canEdit }) {
                         <div style={{ fontSize: 11.5, color: "var(--t6B6B6B)" }}>
                           {[time, rowMinutes(first) ? `${rowMinutes(first)} mins` : "", first.startAt ? `start at ${clockLabel(first.startAt)}` : ""].filter(Boolean).join(" · ") || "—"}
                         </div>
+                        {(first.programSubRoles || []).length > 0 && (
+                          <div style={{ fontSize: 12, marginTop: 2, color: "var(--t6B6B6B)" }}>
+                            Extra lines: {first.programSubRoles.map((k) => { const i2 = linkedLabel(k); return i2 ? i2.role : k; }).join(", ")}
+                          </div>
+                        )}
                         {lines.map((r) => {
                           const info = linkedLabel(r.linkedRole);
                           return (
@@ -2215,6 +2257,13 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
       const teamRole = (team.roles || []).find((r) => r.id === linkedRoleId);
       if (teamRole) add(row.linkedRole, teamRole.name);
     });
+    // roles shown as extra lines under a program (e.g. 1st/2nd/3rd Song) are filled in by their ministry too
+    (e.rows || []).forEach((row) => (row.programSubRoles || []).forEach((key) => {
+      const [subTeamId, subRoleId] = splitRoleKey(key);
+      if (subTeamId !== team.id) return;
+      const subRole = (team.roles || []).find((r) => r.id === subRoleId);
+      if (subRole) add(key, subRole.name);
+    }));
     return list;
   };
 
