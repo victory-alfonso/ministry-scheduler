@@ -2096,6 +2096,61 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
   // Event sheet print: if the sheet is taller/wider than one page, shrink it to fit a single page right
   // before printing (Print button and Ctrl+P both fire these events), then restore full size afterward.
   const eventSheetRef = useRef(null);
+  const [exportingImage, setExportingImage] = useState(false);
+  // Save the event run sheet as a PNG: phones open the share sheet (so it can go to a group chat), desktop downloads it.
+  const saveEventImage = async (label) => {
+    const source = eventSheetRef.current;
+    if (!source || !window.html2canvas || exportingImage) return;
+    setExportingImage(true);
+    let wrapper = null;
+    try {
+      const CAPTURE_SCALE = 2;
+      const clone = source.cloneNode(true);
+      clone.style.zoom = "1";
+      clone.style.width = "740px";
+      clone.style.margin = "0";
+      wrapper = document.createElement("div");
+      wrapper.style.position = "fixed";
+      wrapper.style.top = "0";
+      wrapper.style.left = "-99999px";
+      wrapper.appendChild(clone);
+      document.body.appendChild(wrapper);
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const canvas = await window.html2canvas(clone, { scale: CAPTURE_SCALE, backgroundColor: "#FFFFFF", useCORS: true });
+      document.body.removeChild(wrapper);
+      wrapper = null;
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (blob) {
+        const filename = `${(label || "Event").replace(/[\\/:*?"<>|]/g, "").trim() || "Event"}.png`;
+        const isPhone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.userAgentData && navigator.userAgentData.mobile);
+        let shared = false;
+        try {
+          const file = new File([blob], filename, { type: "image/png" });
+          if (isPhone && navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: filename });
+            shared = true;
+          }
+        } catch (err) {
+          if (err && err.name === "AbortError") shared = true;
+        }
+        if (!shared) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 4000);
+        }
+      }
+    } catch (err) {
+      if (wrapper && wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+      console.error(err);
+      alert("Couldn't save the image. Please try again.");
+    }
+    setExportingImage(false);
+  };
   useEffect(() => {
     if (mode !== "print") return;
     const PAGE_WIDTH_PX = 740;
@@ -3284,6 +3339,10 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
         <div className="no-print sheet-toolbar">
           <button onClick={() => setMode("detail")} style={{ ...styles.smallBtn, whiteSpace: "normal" }}>← Back</button>
           <button onClick={() => window.print()} style={{ ...styles.smallBtn, background: "var(--bA9782F)", whiteSpace: "normal" }}>🖨 Print</button>
+          <button onClick={() => saveEventImage([openEvent.title, openEvent.date && eventDateLabel(openEvent.date)].filter(Boolean).join(" - "))} disabled={exportingImage}
+            style={{ ...styles.smallBtn, background: "var(--b2F4858)", opacity: exportingImage ? 0.6 : 1, whiteSpace: "normal" }}>
+            {exportingImage ? "Working…" : "🖼 Save as Image"}
+          </button>
         </div>
         <div className="sheet-scroll">
           <div className="print-sheet paper" style={styles.sheet} ref={eventSheetRef}>
