@@ -3374,27 +3374,20 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
         const first = all.find((d) => d.startsWith(`${y}-`));
         if (first) setSel((s) => ({ ...s, year: y, month: parseInt(first.slice(5, 7), 10), date: first }));
       };
+      const yearList = years.filter((y) => all.some((d) => d.startsWith(`${y}-`)));
+      const yi = yearList.indexOf(sel.year);
+      const prevY = yi > 0 ? yearList[yi - 1] : null;
+      const nextY = yi >= 0 && yi < yearList.length - 1 ? yearList[yi + 1] : null;
+      const yNav = (disabled) => ({ background: "transparent", border: "none", color: "#1F3864", fontSize: 20, cursor: disabled ? "default" : "pointer", padding: "0 14px", lineHeight: 1, opacity: disabled ? 0.3 : 1 });
       return (
         <div>
           <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.7)", margin: "18px 0 8px" }}>Choose a year</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {years.map((y) => {
-              const iso = all.find((d) => d.startsWith(`${y}-`));
-              if (!iso) return null;
-              const active = sel.date === iso;
-              const made = !!byDate[iso];
-              return (
-                <button key={y} onClick={() => pickYear(y)} aria-label={eventDateLabel(iso)}
-                  style={{
-                    minWidth: 68, height: 40, borderRadius: 10, cursor: "pointer", padding: "0 10px", fontFamily: "system-ui, sans-serif", fontSize: 15, fontWeight: 700,
-                    color: active ? "#1F3864" : "#FFFFFF",
-                    border: active ? "2px solid #FFFFFF" : made ? "1px solid rgba(229,164,48,0.8)" : "1.5px dashed rgba(229,164,48,0.8)",
-                    background: active ? "#FFFFFF" : "rgba(255,255,255,0.08)",
-                  }}>{y}</button>
-              );
-            })}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#F6F1E4", border: "1px solid #E4DCC6", borderRadius: 12, padding: "6px 4px", maxWidth: 260 }}>
+            <button onClick={() => prevY && pickYear(prevY)} disabled={!prevY} style={yNav(!prevY)} aria-label="Previous year">‹</button>
+            <div style={{ flex: 1, textAlign: "center", fontFamily: "system-ui, sans-serif", fontWeight: 700, fontSize: 16, color: "#1F3864" }}>{sel.year}</div>
+            <button onClick={() => nextY && pickYear(nextY)} disabled={!nextY} style={yNav(!nextY)} aria-label="Next year">›</button>
           </div>
-          <div style={{ fontSize: 11, opacity: 0.7, marginTop: 8, lineHeight: 1.4 }}>Dashed years have no event yet — it is created when you add the first name.</div>
+          <div style={{ fontSize: 11, opacity: 0.7, marginTop: 8, lineHeight: 1.4 }}>{byDate[sel.date] ? "" : "This year has no event yet — it is created when you add the first name."}</div>
         </div>
       );
     }
