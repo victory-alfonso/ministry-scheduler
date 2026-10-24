@@ -1603,13 +1603,36 @@ function minutesToClock(total) {
   return `${padTwo(Math.floor(t / 60))}:${padTwo(t % 60)}`;
 }
 
+// A program = a row carrying Start at / Mins / Program name, plus the blank rows under it (its roles/tasks).
+function rawEventGroups(rows, phaseId) {
+  const groups = [];
+  rows.filter((r) => phaseOf(r) === phaseId).forEach((r) => {
+    const startsGroup = groups.length === 0 || norm(r.duration) || norm(r.startAt) || norm(r.program);
+    if (startsGroup) groups.push([r]);
+    else groups[groups.length - 1].push(r);
+  });
+  return groups;
+}
+// Display order of a phase's programs: those with a "Start at" sort by that time (same time keeps the
+// order they were added, so overlaps stay put); a program with no "Start at" stays right after the one above it.
+function eventGroups(event, phaseId) {
+  const chains = [];
+  rawEventGroups(event.rows || [], phaseId).forEach((g) => {
+    const t = clockToMinutes(g[0].startAt);
+    if (t !== null || chains.length === 0) chains.push({ t, groups: [g], i: chains.length });
+    else chains[chains.length - 1].groups.push(g);
+  });
+  chains.sort((a, b) => ((a.t === null ? -1 : a.t) - (b.t === null ? -1 : b.t)) || a.i - b.i);
+  return chains.flatMap((c) => c.groups);
+}
+
 // Rows run one after another. "Before" rows count backwards from the service start.
 // A row with its own "start at" jumps to that time, so rows can overlap (call time + music practice).
 function computeEventRows(event) {
   const rows = event.rows || [];
   const serviceStart = clockToMinutes(event.startTime);
   const beforeTotal = rows.filter((r) => phaseOf(r) === "before").reduce((sum, r) => sum + rowMinutes(r), 0);
-  const ordered = EVENT_PHASES.flatMap((p) => rows.filter((r) => phaseOf(r) === p.id));
+  const ordered = EVENT_PHASES.flatMap((p) => eventGroups(event, p.id).flat());
   let cursor = serviceStart === null ? null : serviceStart - beforeTotal;
   let lastPhase = "before";
   return ordered.map((row) => {
@@ -1674,15 +1697,7 @@ function EventsView({ config, updateConfig, canEdit }) {
   // ---- "+ Program" popup ----
   // A program = one row that carries Start at / Mins / Program name, followed by
   // rows with those left blank (they merge under it on the sheet), one per Role/Task.
-  const groupsForPhase = (e, phaseId) => {
-    const groups = [];
-    (e.rows || []).filter((r) => phaseOf(r) === phaseId).forEach((r) => {
-      const startsGroup = groups.length === 0 || norm(r.duration) || norm(r.startAt) || norm(r.program);
-      if (startsGroup) groups.push([r]);
-      else groups[groups.length - 1].push(r);
-    });
-    return groups;
-  };
+  const groupsForPhase = (e, phaseId) => eventGroups(e, phaseId);
   const linkedLabel = (key) => {
     const [teamId, roleId] = splitRoleKey(key);
     const team = (config.teams || []).find((t) => t.id === teamId);
@@ -1699,6 +1714,7 @@ function EventsView({ config, updateConfig, canEdit }) {
       duration: first ? first.duration || "" : "",
       program: first ? first.program || "" : "",
       programNote: first ? first.programNote || "" : "",
+      afterId: "",
       tasks: group ? group.map((r) => ({ id: r.id, task: r.task || "", linkedRole: r.linkedRole || "", fixedText: r.fixedText || "" })) : [blankTask()],
     });
   };
@@ -1716,22 +1732,21 @@ function EventsView({ config, updateConfig, canEdit }) {
           program: i === 0 ? m.program : "", programNote: i === 0 ? m.programNote : "",
         };
       });
-      if (!m.rowIds) return { ...e, rows: [...old, ...built] };
-      const at = old.findIndex((r) => r.id === m.rowIds[0]);
-      const rest = old.filter((r) => !m.rowIds.includes(r.id));
-      const insertAt = old.slice(0, Math.max(at, 0)).filter((r) => !m.rowIds.includes(r.id)).length;
+      const rest = m.rowIds ? old.filter((r) => !m.rowIds.includes(r.id)) : old;
+      let insertAt = rest.length; // new program: at the end
+      if (m.rowIds) {
+        const at = old.findIndex((r) => r.id === m.rowIds[0]);
+        insertAt = old.slice(0, Math.max(at, 0)).filter((r) => !m.rowIds.includes(r.id)).length; // edit: keep position
+      }
+      // no "Start at": it follows the program picked in "Ilagay pagkatapos ng"
+      if (!norm(m.startAt) && m.afterId) {
+        const target = rawEventGroups(rest, m.phase).find((g) => g[0].id === m.afterId);
+        if (target) insertAt = rest.findIndex((r) => r.id === target[target.length - 1].id) + 1;
+      }
       return { ...e, rows: [...rest.slice(0, insertAt), ...built, ...rest.slice(insertAt)] };
     });
     setProgramModal(null);
   };
-  const moveGroup = (phaseId, idx, dir) => updateEvent(openId, (e) => {
-    const groups = groupsForPhase(e, phaseId);
-    const j = idx + dir;
-    if (j < 0 || j >= groups.length) return e;
-    [groups[idx], groups[j]] = [groups[j], groups[idx]];
-    const others = (e.rows || []).filter((r) => phaseOf(r) !== phaseId);
-    return { ...e, rows: [...others, ...groups.flat()] };
-  });
   const removeGroup = (group) => {
     if (!window.confirm("Remove this program and its roles/tasks?")) return;
     updateEvent(openId, (e) => ({ ...e, rows: e.rows.filter((r) => !group.some((g) => g.id === r.id)) }));
@@ -1775,7 +1790,7 @@ function EventsView({ config, updateConfig, canEdit }) {
             </div>
             <div style={{ flex: "1 1 130px" }}>
               <div style={lbl}>When</div>
-              <select value={m.phase} onChange={(ev) => setM("phase", ev.target.value)}
+              <select value={m.phase} onChange={(ev) => setProgramModal((cur) => ({ ...cur, phase: ev.target.value, afterId: "" }))}
                 style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box" }}>
                 {EVENT_PHASES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
               </select>
@@ -1786,6 +1801,20 @@ function EventsView({ config, updateConfig, canEdit }) {
             <input value={m.program} onChange={(ev) => setM("program", ev.target.value)} placeholder="e.g. PRAISE AND WORSHIP" autoFocus
               style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box", fontWeight: 700 }} />
           </div>
+          {norm(m.startAt) ? (
+            <div style={{ fontSize: 11.5, color: "var(--t6B6B6B)", marginBottom: 14 }}>Awtomatikong ilalagay sa tamang pwesto ayon sa Start at.</div>
+          ) : (
+            <div style={{ marginBottom: 14 }}>
+              <div style={lbl}>Ilagay pagkatapos ng (walang Start at = susunod sa program na ito)</div>
+              <select value={m.afterId} onChange={(ev) => setM("afterId", ev.target.value)}
+                style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box" }}>
+                <option value="">{m.rowIds ? "Keep current position" : "At the end"}</option>
+                {eventGroups(openEvent, m.phase).filter((g) => !m.rowIds || g[0].id !== m.rowIds[0]).map((g) => (
+                  <option key={g[0].id} value={g[0].id}>{norm(g[0].program) || norm(g[0].task) || "Untitled program"}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div style={lbl}>Role / Task (linked to a ministry role)</div>
           {m.tasks.map((t) => (
             <div key={t.id} style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
@@ -2053,7 +2082,8 @@ function EventsView({ config, updateConfig, canEdit }) {
           </div>
         </div>
 
-        <div style={labelStyle}>Program flow (start time = when the service starts; rows follow one another; use “Start at” for rows that overlap)</div>
+        <button onClick={() => openProgramModal("during", null)} style={{ ...styles.smallBtn, marginBottom: 8 }}>+ Program</button>
+        <div style={labelStyle}>Program flow (start time = when the service starts; programs with a “Start at” are sorted by time automatically — the rest follow the program above them)</div>
         {(() => {
           const computed = computeEventRows(openEvent);
           return EVENT_PHASES.map((phase) => {
@@ -2084,14 +2114,11 @@ function EventsView({ config, updateConfig, canEdit }) {
                           );
                         })}
                       </div>
-                      <button onClick={() => moveGroup(phase.id, gi, -1)} style={styles.smallBtn} aria-label="Move up">↑</button>
-                      <button onClick={() => moveGroup(phase.id, gi, 1)} style={styles.smallBtn} aria-label="Move down">↓</button>
                       <button onClick={() => openProgramModal(phase.id, group)} style={{ ...styles.smallBtn, background: "var(--b2F4858)" }}>Edit</button>
                       <button onClick={() => removeGroup(group)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove program">✕</button>
                     </div>
                   );
                 })}
-                <button onClick={() => openProgramModal(phase.id, null)} style={{ ...styles.smallBtn, marginTop: 4 }}>+ Program</button>
               </div>
             );
           });
