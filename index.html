@@ -1660,16 +1660,16 @@ function eventEndTime(event) {
 
 function EventsView({ config, updateConfig, canEdit }) {
   const [openId, setOpenId] = useState(null);
-  const [mode, setMode] = useState("list"); // list | edit | print
+  const [mode, setMode] = useState("list"); // list | detail | print
   const [eventSearch, setEventSearch] = useState("");
   const [backMode, setBackMode] = useState("detail"); // where Back goes from the print preview
+  const [programModal, setProgramModal] = useState(null); // "+ Program" popup (add / edit one program with its role/task rows)
   useEffect(() => {
     if (mode !== "detail" || programModal) return;
     const onKey = (e) => { if (e.key === "Escape") setMode("list"); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [mode, programModal]);
-  const [programModal, setProgramModal] = useState(null); // "+ Program" popup (add / edit one program with its role/task rows)
   const events = (config.events || []).slice().sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
   const openEvent = events.find((e) => e.id === openId);
   const printSettings = config.printSettings || {};
@@ -1924,6 +1924,11 @@ function EventsView({ config, updateConfig, canEdit }) {
     const ministries = (ev.ministries || []).filter((b) => (b.roles || []).length > 0);
     const R = 46, C = 2 * Math.PI * R;
     const sectionLabel = { fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.7)", margin: "18px 0 8px" };
+    const rightLabel = { fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.6)", margin: "16px 2px 6px" };
+    const cardBox = { background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "11px 14px", marginBottom: 8 };
+    const dInput = { width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.28)", background: "rgba(255,255,255,0.12)", color: "#FFFFFF", fontSize: 13.5, fontFamily: "system-ui, sans-serif", outline: "none", colorScheme: "dark" };
+    const dLabel = { fontSize: 10.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "rgba(255,255,255,0.7)", margin: "12px 0 4px" };
+    const ghostBtn = { ...styles.smallBtn, background: "rgba(255,255,255,0.16)", padding: "8px 12px" };
     const when = [eventDateLabel(ev.date) || "No date yet"].filter(Boolean).join("");
     const timeLine = [clockLabel(ev.startTime) && `Start ${clockLabel(ev.startTime)}`, clockLabel(eventEndTime(ev)) && `End ${clockLabel(eventEndTime(ev))}`].filter(Boolean).join(" · ");
     const goPrint = () => { setBackMode("detail"); setMode("print"); };
@@ -1934,19 +1939,58 @@ function EventsView({ config, updateConfig, canEdit }) {
           display: narrow ? "block" : "grid", gridTemplateColumns: "300px 1fr", boxShadow: "0 30px 60px -15px rgba(0,0,0,0.6)",
           border: "1px solid rgba(255,255,255,0.18)", fontFamily: "system-ui, sans-serif", color: "#EAF0FF", background: "#1F3864",
         }}>
-          {/* left: the event itself */}
+          {/* left: the event itself (editable right here when the person can edit) */}
           <div style={{
             position: "relative", padding: "24px 22px", boxSizing: "border-box", overflowY: narrow ? "visible" : "auto",
             background: "linear-gradient(180deg, #3B2248 0%, #2A1A38 100%)",
             ...(ev.cover ? { backgroundImage: `linear-gradient(180deg, rgba(42,26,56,0.78) 0%, rgba(42,26,56,0.94) 100%), url("${ev.cover}")`, backgroundSize: "cover", backgroundPosition: "center" } : {}),
           }}>
-            <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 24, lineHeight: 1.2, color: "#FFFFFF" }}>{ev.title || "Untitled event"}</div>
-            {norm(ev.subtitle) && <div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 4 }}>{ev.subtitle}</div>}
-            <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>{prog.programs} program{prog.programs === 1 ? "" : "s"} · {prog.total} role{prog.total === 1 ? "" : "s"}</div>
+            {canEdit ? (
+              <div>
+                <div style={{ ...dLabel, marginTop: 0 }}>Event name</div>
+                <input value={ev.title || ""} onChange={(e) => setField("title", e.target.value)} placeholder="Prayer Meeting Night"
+                  style={{ ...dInput, fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 18 }} />
+                <div style={dLabel}>Subtitle (optional)</div>
+                <input value={ev.subtitle || ""} onChange={(e) => setField("subtitle", e.target.value)} placeholder="Theme or verse" style={dInput} />
+              </div>
+            ) : (
+              <div>
+                <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 24, lineHeight: 1.2, color: "#FFFFFF" }}>{ev.title || "Untitled event"}</div>
+                {norm(ev.subtitle) && <div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 4 }}>{ev.subtitle}</div>}
+              </div>
+            )}
+            <div style={{ fontSize: 12, opacity: 0.85, marginTop: 8 }}>{prog.programs} program{prog.programs === 1 ? "" : "s"} · {prog.total} role{prog.total === 1 ? "" : "s"}</div>
 
             <div style={sectionLabel}>Date &amp; time</div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>{when}</div>
-            {timeLine && <div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 2 }}>{timeLine}</div>}
+            {canEdit ? (
+              <div>
+                <div style={{ ...dLabel, marginTop: 0 }}>Date</div>
+                <input type="date" value={ev.date || ""} onChange={(e) => setField("date", e.target.value)} style={dInput} />
+                <div style={dLabel}>Service start time</div>
+                <input type="time" value={ev.startTime || ""} onChange={(e) => setField("startTime", e.target.value)} style={dInput} />
+                <div style={dLabel}>End time (computed)</div>
+                <div style={{ ...dInput, background: "transparent", border: "1px dashed rgba(255,255,255,0.3)" }}>{clockLabel(eventEndTime(ev)) || "—"}</div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{when}</div>
+                {timeLine && <div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 2 }}>{timeLine}</div>}
+              </div>
+            )}
+
+            {canEdit && (
+              <div>
+                <div style={sectionLabel}>Cover photo (optional)</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <label style={{ ...ghostBtn, cursor: "pointer" }}>
+                    {ev.cover ? "Change photo" : "Upload photo"}
+                    <input type="file" accept="image/*" style={{ display: "none" }}
+                      onChange={(e) => { uploadCover(e.target.files && e.target.files[0]); e.target.value = ""; }} />
+                  </label>
+                  {ev.cover && <button onClick={() => setField("cover", "")} style={{ ...styles.smallBtn, background: "var(--bA6402F)", padding: "8px 12px" }}>Remove</button>}
+                </div>
+              </div>
+            )}
 
             <div style={sectionLabel}>Roles filled</div>
             <div style={{ display: "flex", justifyContent: "center", margin: "6px 0 10px" }}>
@@ -1964,21 +2008,26 @@ function EventsView({ config, updateConfig, canEdit }) {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 22 }}>
               <button onClick={goPrint} style={{ ...styles.smallBtn, background: "var(--bA9782F)", padding: "10px 12px" }}>🖨 Preview / Print</button>
-              {canEdit && <button onClick={() => setMode("edit")} style={{ ...styles.smallBtn, background: "rgba(255,255,255,0.16)", padding: "10px 12px" }}>✎ Edit event</button>}
+              {canEdit && <button onClick={() => duplicateEvent(ev)} style={{ ...styles.smallBtn, background: "rgba(255,255,255,0.16)", padding: "10px 12px" }}>Duplicate</button>}
+              {canEdit && <button onClick={() => deleteEvent(ev)} style={{ ...styles.smallBtn, background: "var(--bA6402F)", padding: "10px 12px" }}>Delete</button>}
             </div>
           </div>
 
           {/* right: the inside of the event */}
           <div style={{ display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0, background: "linear-gradient(180deg, #2F4E86 0%, #1F3864 100%)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "16px 18px 10px" }}>
-              <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "rgba(255,255,255,0.8)" }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "rgba(255,255,255,0.8)", minWidth: 0 }}>
                 Programs ({prog.programs}) · {ev.title || "Untitled event"}
               </div>
-              <button onClick={() => setMode("list")} aria-label="Close"
-                style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.35)", color: "#FFFFFF", fontSize: 17, cursor: "pointer", flexShrink: 0 }}>×</button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                {canEdit && <button onClick={() => openProgramModal("during", null)} style={{ ...styles.smallBtn, background: "var(--bA9782F)" }}>+ Program</button>}
+                <button onClick={() => setMode("list")} aria-label="Close"
+                  style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.35)", color: "#FFFFFF", fontSize: 17, cursor: "pointer", flexShrink: 0 }}>×</button>
+              </div>
             </div>
             <div style={{ flex: 1, minHeight: 0, overflowY: narrow ? "visible" : "auto", padding: "0 18px 18px" }}>
-              {phaseBlocks.length === 0 && <div style={{ opacity: 0.8, fontSize: 13.5, padding: "10px 2px" }}>No programs yet.{canEdit ? " Open Edit event and tap + Program." : ""}</div>}
+              {phaseBlocks.length === 0 && <div style={{ opacity: 0.8, fontSize: 13.5, padding: "10px 2px" }}>No programs yet.{canEdit ? " Tap + Program to add one." : ""}</div>}
+              {canEdit && phaseBlocks.length > 0 && <div style={{ fontSize: 11.5, opacity: 0.65, padding: "0 2px 2px" }}>Tap a program to edit it.</div>}
               {phaseBlocks.map(({ phase, groups }) => (
                 <div key={phase.id}>
                   <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.6)", margin: "10px 2px 6px" }}>{phase.label}</div>
@@ -2001,7 +2050,7 @@ function EventsView({ config, updateConfig, canEdit }) {
                     const title = norm(first.program) || norm(first.task) || "Untitled program";
                     return (
                       <div key={first.id} onClick={() => { if (canEdit) openProgramModal(phase.id, group); }}
-                        style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "11px 14px", marginBottom: 8, cursor: canEdit ? "pointer" : "default" }}>
+                        style={{ ...cardBox, cursor: canEdit ? "pointer" : "default" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontWeight: 700, fontSize: 14, color: "#FFFFFF" }}>{title}</div>
@@ -2012,6 +2061,10 @@ function EventsView({ config, updateConfig, canEdit }) {
                               ...(complete ? { background: "rgba(127,176,122,0.2)", color: "#9BE08F", border: "1px solid rgba(127,176,122,0.6)" } : { background: "rgba(229,164,48,0.18)", color: "#F2C265", border: "1px solid rgba(229,164,48,0.55)" }) }}>
                               {complete ? "✓ Complete" : `${filled} of ${keys.length}`}
                             </span>
+                          )}
+                          {canEdit && (
+                            <button onClick={(e) => { e.stopPropagation(); removeGroup(group); }} aria-label="Remove program"
+                              style={{ ...styles.smallBtn, background: "var(--bA6402F)", padding: "4px 9px", flexShrink: 0 }}>✕</button>
                           )}
                         </div>
                         {(subLines.length > 0 || lines.length > 0 || norm(first.programNote)) && (
@@ -2037,29 +2090,80 @@ function EventsView({ config, updateConfig, canEdit }) {
                 </div>
               ))}
 
-              {ministries.length > 0 && (
+              {canEdit ? (
                 <div>
-                  <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.6)", margin: "16px 2px 6px" }}>Ministries</div>
-                  {ministries.map((b) => (
-                    <div key={b.id} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "11px 14px", marginBottom: 8 }}>
-                      <div style={{ fontWeight: 700, fontSize: 13.5, color: "#FFFFFF", marginBottom: 4 }}>{b.title}</div>
-                      {(b.roles || []).map((r) => {
-                        const v = eventVolunteer(ev, blockRoleKey(b, r));
-                        return (
-                          <div key={r.id} style={{ fontSize: 12.5 }}>
-                            <span style={{ opacity: 0.7 }}>{r.label}: </span>{norm(v) ? <b style={{ fontWeight: 600 }}>{v}</b> : <span style={{ opacity: 0.5 }}>— open —</span>}
+                  <div style={rightLabel}>Ministries</div>
+                  {(ev.ministries || []).map((block) => {
+                    const team = teams.find((t) => t.id === block.teamId);
+                    return (
+                      <div key={block.id} style={cardBox}>
+                        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                          <input value={block.title || ""} onChange={(e) => updateMinistry(block.id, (b) => ({ ...b, title: e.target.value }))} style={{ ...dInput, fontWeight: 700 }} />
+                          <button onClick={() => removeMinistry(block.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove ministry">✕</button>
+                        </div>
+                        {team && (team.roles || []).length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 8 }}>
+                            {team.roles.map((teamRole) => (
+                              <label key={teamRole.id} style={{ fontSize: 12.5, display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
+                                <input type="checkbox" checked={(block.roles || []).some((r) => r.roleId === teamRole.id)} onChange={() => toggleTeamRole(block, teamRole)} />
+                                {teamRole.name}
+                              </label>
+                            ))}
                           </div>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              )}
+                        )}
+                        {(block.roles || []).map((r) => {
+                          const v = eventVolunteer(ev, blockRoleKey(block, r));
+                          return (
+                            <div key={r.id} style={{ display: "flex", gap: 6, marginBottom: 6, alignItems: "center" }}>
+                              <input value={r.label || ""} onChange={(e) => setMinistryRole(block, r.id, "label", e.target.value)} placeholder="Role" style={{ ...dInput, flex: "1 1 120px", width: "auto" }} />
+                              <div style={{ fontSize: 12, flex: "0 1 120px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", opacity: norm(v) ? 0.95 : 0.5 }}>{norm(v) ? v : "— open —"}</div>
+                              <button onClick={() => removeMinistryRole(block, r.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove role">✕</button>
+                            </div>
+                          );
+                        })}
+                        <button onClick={() => addCustomRole(block)} style={ghostBtn}>+ Custom role</button>
+                      </div>
+                    );
+                  })}
+                  <select value="" onChange={(e) => e.target.value && addMinistry(e.target.value)} style={{ ...dInput, maxWidth: 260 }}>
+                    <option value="" style={{ background: "#1F3864" }}>+ Add ministry…</option>
+                    {teams.filter((t) => !(ev.ministries || []).some((b) => b.teamId === t.id)).map((t) => <option key={t.id} value={t.id} style={{ background: "#1F3864" }}>{t.name}</option>)}
+                  </select>
 
-              {norm(ev.announcements) && (
+                  <div style={rightLabel}>Announcements (optional)</div>
+                  <textarea value={ev.announcements || ""} onChange={(e) => setField("announcements", e.target.value)} rows={3}
+                    style={{ ...dInput, resize: "vertical" }} />
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12, fontSize: 13, cursor: "pointer" }}>
+                    <input type="checkbox" checked={!!ev.showHeadCount} onChange={(e) => setField("showHeadCount", e.target.checked)} />
+                    Include head count box on the sheet
+                  </label>
+                </div>
+              ) : (
                 <div>
-                  <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.6)", margin: "16px 2px 6px" }}>Announcements</div>
-                  <div style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "11px 14px", fontSize: 12.5, whiteSpace: "pre-wrap" }}>{ev.announcements}</div>
+                  {ministries.length > 0 && (
+                    <div>
+                      <div style={rightLabel}>Ministries</div>
+                      {ministries.map((b) => (
+                        <div key={b.id} style={cardBox}>
+                          <div style={{ fontWeight: 700, fontSize: 13.5, color: "#FFFFFF", marginBottom: 4 }}>{b.title}</div>
+                          {(b.roles || []).map((r) => {
+                            const v = eventVolunteer(ev, blockRoleKey(b, r));
+                            return (
+                              <div key={r.id} style={{ fontSize: 12.5 }}>
+                                <span style={{ opacity: 0.7 }}>{r.label}: </span>{norm(v) ? <b style={{ fontWeight: 600 }}>{v}</b> : <span style={{ opacity: 0.5 }}>— open —</span>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {norm(ev.announcements) && (
+                    <div>
+                      <div style={rightLabel}>Announcements</div>
+                      <div style={{ ...cardBox, fontSize: 12.5, whiteSpace: "pre-wrap" }}>{ev.announcements}</div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -2102,14 +2206,14 @@ function EventsView({ config, updateConfig, canEdit }) {
     const created = blankEvent();
     updateConfig((prev) => ({ ...prev, events: [...(prev.events || []), created] }));
     setOpenId(created.id);
-    setMode("edit");
+    setMode("detail");
   };
   const duplicateEvent = (source) => {
     const copy = { ...source, id: uid(), title: `${source.title} (copy)`, date: "", assignments: {}, verses: {}, rows: source.rows.map((r) => ({ ...r, id: uid() })),
       ministries: (source.ministries || []).map((b) => ({ ...b, id: uid(), roles: (b.roles || []).map((r) => ({ ...r, id: uid() })) })) };
     updateConfig((prev) => ({ ...prev, events: [...(prev.events || []), copy] }));
     setOpenId(copy.id);
-    setMode("edit");
+    setMode("detail");
   };
   const deleteEvent = (event) => {
     if (!window.confirm(`Delete "${event.title || "Untitled event"}"?`)) return;
@@ -2184,7 +2288,7 @@ function EventsView({ config, updateConfig, canEdit }) {
     return (
       <div className="print-sheet-wrap" style={styles.viewWrap}>
         <div className="no-print sheet-toolbar">
-          <button onClick={() => setMode(backMode === "edit" && canEdit ? "edit" : "detail")} style={{ ...styles.smallBtn, whiteSpace: "normal" }}>← Back</button>
+          <button onClick={() => setMode("detail")} style={{ ...styles.smallBtn, whiteSpace: "normal" }}>← Back</button>
           <button onClick={() => window.print()} style={{ ...styles.smallBtn, background: "var(--bA9782F)", whiteSpace: "normal" }}>🖨 Print</button>
         </div>
         <div className="sheet-scroll">
@@ -2288,146 +2392,6 @@ function EventsView({ config, updateConfig, canEdit }) {
     );
   }
 
-  if (mode === "edit" && openEvent && canEdit) {
-    return (
-      <div style={styles.viewWrap}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-          <button onClick={() => setMode("list")} style={styles.smallBtn}>← All events</button>
-          <button onClick={() => { setBackMode("edit"); setMode("print"); }} style={{ ...styles.smallBtn, background: "var(--bA9782F)" }}>Preview / Print</button>
-          <button onClick={() => duplicateEvent(openEvent)} style={{ ...styles.smallBtn, background: "var(--b2F4858)" }}>Duplicate</button>
-          <button onClick={() => deleteEvent(openEvent)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }}>Delete</button>
-        </div>
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-          <div style={fieldWrap}>
-            <div style={labelStyle}>Event name</div>
-            <input value={openEvent.title} onChange={(e) => setField("title", e.target.value)} placeholder="Prayer Meeting Night" style={styles.roleEditInput} />
-          </div>
-          <div style={fieldWrap}>
-            <div style={labelStyle}>Subtitle (optional)</div>
-            <input value={openEvent.subtitle} onChange={(e) => setField("subtitle", e.target.value)} placeholder="Theme or verse" style={styles.roleEditInput} />
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-          <div style={fieldWrap}>
-            <div style={labelStyle}>Date</div>
-            <input type="date" value={openEvent.date} onChange={(e) => setField("date", e.target.value)} style={styles.roleEditInput} />
-          </div>
-          <div style={fieldWrap}>
-            <div style={labelStyle}>Service start time</div>
-            <input type="time" value={openEvent.startTime} onChange={(e) => setField("startTime", e.target.value)} style={styles.roleEditInput} />
-          </div>
-          <div style={fieldWrap}>
-            <div style={labelStyle}>End time (computed)</div>
-            <div style={{ ...styles.roleEditInput, background: "transparent", border: "1px dashed var(--lD8CFB0)" }}>{clockLabel(eventEndTime(openEvent)) || "—"}</div>
-          </div>
-        </div>
-
-        <div style={{ marginBottom: 16 }}>
-          <div style={labelStyle}>Cover photo (optional)</div>
-          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            {openEvent.cover && <img src={openEvent.cover} alt="" style={{ width: 64, height: 84, objectFit: "cover", borderRadius: 8, border: "1px solid var(--lD8CFB0)" }} />}
-            <label style={{ ...styles.smallBtn, background: "var(--b2F4858)", cursor: "pointer" }}>
-              {openEvent.cover ? "Change photo" : "Upload photo"}
-              <input type="file" accept="image/*" style={{ display: "none" }}
-                onChange={(ev) => { uploadCover(ev.target.files && ev.target.files[0]); ev.target.value = ""; }} />
-            </label>
-            {openEvent.cover && <button onClick={() => setField("cover", "")} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }}>Remove</button>}
-          </div>
-        </div>
-        <button onClick={() => openProgramModal("during", null)} style={{ ...styles.smallBtn, marginBottom: 8 }}>+ Program</button>
-        <div style={labelStyle}>Program flow (start time = when the service starts; programs with a “Start at” are sorted by time automatically — the rest follow the program above them)</div>
-        {(() => {
-          const computed = computeEventRows(openEvent);
-          return EVENT_PHASES.map((phase) => {
-            const groups = groupsForPhase(openEvent, phase.id);
-            return (
-              <div key={phase.id} style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, margin: "8px 0 6px", color: "var(--t1F3864)" }}>{phase.label}</div>
-                {groups.map((group, gi) => {
-                  const first = group[0];
-                  const time = (computed.find((c) => c.row.id === first.id) || {}).time;
-                  const title = norm(first.program) || norm(first.task) || "Untitled program";
-                  const lines = group.filter((r, i) => !(i === 0 && !norm(first.program)) && (norm(r.task) || r.linkedRole || norm(r.fixedText)));
-                  return (
-                    <div key={first.id} style={{ border: "1px solid var(--lD8CFB0)", borderRadius: 8, padding: "8px 10px", marginBottom: 6, display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
-                      <div style={{ flex: "1 1 220px", minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 13.5 }}>{title}</div>
-                        <div style={{ fontSize: 11.5, color: "var(--t6B6B6B)" }}>
-                          {[time, rowMinutes(first) ? `${rowMinutes(first)} mins` : "", first.startAt ? `start at ${clockLabel(first.startAt)}` : ""].filter(Boolean).join(" · ") || "—"}
-                        </div>
-                        {(first.programSubRoles || []).length > 0 && (
-                          <div style={{ fontSize: 12, marginTop: 2, color: "var(--t6B6B6B)" }}>
-                            Extra lines: {first.programSubRoles.map((k) => { const i2 = linkedLabel(k); return i2 ? i2.role : k; }).join(", ")}
-                          </div>
-                        )}
-                        {lines.map((r) => {
-                          const info = linkedLabel(r.linkedRole);
-                          return (
-                            <div key={r.id} style={{ fontSize: 12, marginTop: 2 }}>
-                              • {r.task || (info && info.role) || r.fixedText}
-                              {info && <span style={{ color: "var(--t6B6B6B)" }}> — {info.team} · {info.role}</span>}
-                              {!info && r.task && norm(r.fixedText) && <span style={{ color: "var(--t6B6B6B)" }}> — {r.fixedText}</span>}
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <button onClick={() => openProgramModal(phase.id, group)} style={{ ...styles.smallBtn, background: "var(--b2F4858)" }}>Edit</button>
-                      <button onClick={() => removeGroup(group)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove program">✕</button>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          });
-        })()}
-
-        <div style={{ fontSize: 13, fontWeight: 800, margin: "18px 0 6px", color: "var(--t1F3864)" }}>Ministries</div>
-        {(openEvent.ministries || []).map((block) => {
-          const team = teams.find((t) => t.id === block.teamId);
-          return (
-            <div key={block.id} style={{ border: "1px solid var(--lD8CFB0)", borderRadius: 8, padding: 10, marginBottom: 10 }}>
-              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                <input value={block.title} onChange={(e) => updateMinistry(block.id, (b) => ({ ...b, title: e.target.value }))} style={{ ...styles.roleEditInput, fontWeight: 700 }} />
-                <button onClick={() => removeMinistry(block.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove ministry">✕</button>
-              </div>
-              {team && (team.roles || []).length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 8 }}>
-                  {team.roles.map((teamRole) => (
-                    <label key={teamRole.id} style={{ fontSize: 12.5, display: "flex", alignItems: "center", gap: 4 }}>
-                      <input type="checkbox" checked={(block.roles || []).some((r) => r.roleId === teamRole.id)} onChange={() => toggleTeamRole(block, teamRole)} />
-                      {teamRole.name}
-                    </label>
-                  ))}
-                </div>
-              )}
-              {(block.roles || []).map((r) => (
-                <div key={r.id} style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-                  <input value={r.label} onChange={(e) => setMinistryRole(block, r.id, "label", e.target.value)} placeholder="Role" style={{ ...styles.roleEditInput, flex: "1 1 120px" }} />
-                  <button onClick={() => removeMinistryRole(block, r.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove role">✕</button>
-                </div>
-              ))}
-              <button onClick={() => addCustomRole(block)} style={{ ...styles.smallBtn, background: "var(--b2F4858)" }}>+ Custom role</button>
-            </div>
-          );
-        })}
-        <select value="" onChange={(e) => e.target.value && addMinistry(e.target.value)} style={{ ...styles.roleEditInput, maxWidth: 260 }}>
-          <option value="">+ Add ministry…</option>
-          {teams.filter((t) => !(openEvent.ministries || []).some((b) => b.teamId === t.id)).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
-
-        <div style={{ ...labelStyle, marginTop: 18 }}>Announcements (optional)</div>
-        <textarea value={openEvent.announcements} onChange={(e) => setField("announcements", e.target.value)} rows={3}
-          style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box", resize: "vertical" }} />
-        <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 14, fontSize: 13.5 }}>
-          <input type="checkbox" checked={!!openEvent.showHeadCount} onChange={(e) => setField("showHeadCount", e.target.checked)} />
-          Include head count box on the sheet
-        </label>
-        {programModal && renderProgramModal()}
-      </div>
-    );
-  }
-
   return (
     <div style={styles.viewWrap}>
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 18, flexWrap: "wrap" }}>
@@ -2461,16 +2425,10 @@ function EventsView({ config, updateConfig, canEdit }) {
                     boxShadow: "0 12px 26px -12px rgba(35,33,29,0.55)",
                   }}>
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.05) 30%, rgba(0,0,0,0.82) 100%)" }} />
-                  <div style={{ position: "absolute", top: 12, left: 12, right: canEdit ? 64 : 12, background: "rgba(0,0,0,0.55)", borderRadius: 14, padding: "6px 10px", fontSize: 11.5, fontWeight: 700, lineHeight: 1.35 }}>
+                  <div style={{ position: "absolute", top: 12, left: 12, right: 12, background: "rgba(0,0,0,0.55)", borderRadius: 14, padding: "6px 10px", fontSize: 11.5, fontWeight: 700, lineHeight: 1.35 }}>
                     {when}
                     <div style={{ fontWeight: 400, fontSize: 10.5, opacity: 0.85 }}>{prog.programs} program{prog.programs === 1 ? "" : "s"}</div>
                   </div>
-                  {canEdit && (
-                    <button onClick={(e) => { e.stopPropagation(); setOpenId(event.id); setMode("edit"); }}
-                      style={{ position: "absolute", top: 12, right: 12, border: "none", borderRadius: 14, padding: "6px 12px", background: "rgba(255,255,255,0.92)", color: "#1F3864", fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "system-ui, sans-serif" }}>
-                      Edit
-                    </button>
-                  )}
                   <div style={{ position: "absolute", left: 14, right: 14, bottom: 14 }}>
                     <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 20, lineHeight: 1.2, marginBottom: 8, textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
                       {event.title || "Untitled event"}
