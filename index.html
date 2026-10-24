@@ -1759,9 +1759,26 @@ function EventsView({ config, updateConfig, canEdit }) {
       tasks: group ? group.map((r) => ({ id: r.id, task: r.task || "", linkedRole: r.linkedRole || "", fixedText: r.fixedText || "" })) : [blankTask()],
     });
   };
+  // "Start at" has to agree with "When": Before = earlier than the service start, During = from the start on, After = once the service has ended
+  const programPhaseIssue = (m) => {
+    if (!m || !openEvent) return null;
+    const t = clockToMinutes(m.startAt);
+    const s = clockToMinutes(openEvent.startTime);
+    if (t === null || s === null) return null;
+    const e = clockToMinutes(eventEndTime(openEvent));
+    const phaseLabel = (id) => (EVENT_PHASES.find((p) => p.id === id) || {}).label;
+    const fit = t < s ? "before" : (e !== null && t >= e ? "after" : "during");
+    const at = clockLabel(m.startAt);
+    if (m.phase === "before" && t >= s) return { fit, text: `${at} is not before the service start (${clockLabel(openEvent.startTime)}).`, fixLabel: phaseLabel(fit) };
+    if (m.phase === "during" && t < s) return { fit, text: `${at} is earlier than the service start (${clockLabel(openEvent.startTime)}).`, fixLabel: phaseLabel(fit) };
+    if (m.phase === "during" && e !== null && t >= e && fit === "after") return null;
+    if (m.phase === "after" && t < (e !== null ? e : s)) return { fit, text: `${at} is before the service ends${e !== null ? ` (${clockLabel(eventEndTime(openEvent))})` : ""}.`, fixLabel: phaseLabel(fit) };
+    return null;
+  };
   const saveProgramModal = () => {
     const m = programModal;
     if (!m) return;
+    if (programPhaseIssue(m)) return;
     updateEvent(openId, (e) => {
       const old = e.rows || [];
       const tasks = m.tasks.length ? m.tasks : [blankTask()];
@@ -1833,6 +1850,16 @@ function EventsView({ config, updateConfig, canEdit }) {
               </select>
             </div>
           </div>
+          {(() => {
+            const issue = programPhaseIssue(m);
+            if (!issue) return null;
+            return (
+              <div style={{ background: "var(--bFBE9E5)", border: "1px solid var(--bA6402F)", color: "var(--tA6402F)", borderRadius: 8, padding: "8px 10px", fontSize: 12.5, marginBottom: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <span style={{ flex: "1 1 200px" }}>{issue.text} It doesn’t match “{(EVENT_PHASES.find((p) => p.id === m.phase) || {}).label}”.</span>
+                <button onClick={() => setProgramModal((cur) => ({ ...cur, phase: issue.fit, afterId: "" }))} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }}>Switch to {issue.fixLabel}</button>
+              </div>
+            );
+          })()}
           <div style={{ marginBottom: 14 }}>
             <div style={lbl}>Program</div>
             <input value={m.program} onChange={(ev) => setM("program", ev.target.value)} placeholder="e.g. PRAISE AND WORSHIP" autoFocus
@@ -1905,7 +1932,7 @@ function EventsView({ config, updateConfig, canEdit }) {
             style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box", resize: "vertical", fontSize: 12.5, marginBottom: 16 }} />
           <div style={styles.modalActions}>
             <button onClick={() => setProgramModal(null)} style={styles.modalCancelBtn}>Cancel</button>
-            <button onClick={saveProgramModal} style={{ ...styles.smallBtn, padding: "9px 18px" }}>Save</button>
+            <button onClick={saveProgramModal} disabled={!!programPhaseIssue(m)} style={{ ...styles.smallBtn, padding: "9px 18px", ...(programPhaseIssue(m) ? { opacity: 0.45, cursor: "not-allowed" } : {}) }}>Save</button>
           </div>
         </div>
       </div>,
