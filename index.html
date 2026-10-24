@@ -1735,7 +1735,10 @@ function EventsView({ config, updateConfig, canEdit }) {
           {lineIndex === 0 && timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={styles.sheetTd}>{durationText}</td>}
           {lineIndex === 0 && programSpans[i] > 0 && <td rowSpan={programSpans[i]} style={styles.sheetTd}></td>}
           {lineIndex === 0 && programSpans[i] > 0 && (
-            <td rowSpan={programSpans[i]} style={{ ...styles.sheetTd, fontWeight: 700, verticalAlign: "middle", whiteSpace: "pre-wrap" }}>{row.program}</td>
+            <td rowSpan={programSpans[i]} style={{ ...styles.sheetTd, fontWeight: 700, verticalAlign: "middle", whiteSpace: "pre-wrap" }}>
+              {row.program}
+              {norm(row.programNote) && <div style={{ fontWeight: 400, fontSize: 10.5, marginTop: 4 }}>{row.programNote}</div>}
+            </td>
           )}
           <td style={styles.sheetTd}>{line.task}</td>
           <td style={styles.sheetTd}>{line.volunteer}</td>
@@ -1914,6 +1917,9 @@ function EventsView({ config, updateConfig, canEdit }) {
                 <button onClick={() => moveRow(row.id, -1)} style={styles.smallBtn} aria-label="Move up">↑</button>
                 <button onClick={() => moveRow(row.id, 1)} style={styles.smallBtn} aria-label="Move down">↓</button>
                 <button onClick={() => removeRow(row.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove row">✕</button>
+                <textarea value={row.programNote || ""} onChange={(e) => setRowField(row.id, "programNote", e.target.value)} rows={2}
+                  placeholder="Program notes under the program name, one per line (e.g. songs)"
+                  style={{ ...styles.roleEditInput, flex: "1 1 100%", resize: "vertical", fontSize: 12.5 }} />
               </div>
             ))}
             <button onClick={() => addRow(phase.id)} style={{ ...styles.smallBtn, marginTop: 4 }}>+ Add row</button>
