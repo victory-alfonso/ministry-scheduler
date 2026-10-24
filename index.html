@@ -2007,6 +2007,96 @@ function EventsView({ config, updateConfig, canEdit }) {
   );
 }
 
+// Ministry-side view of the Events: pick an event, fill in this ministry's roles for it.
+// Names go straight into that event's ministry block (config.events), so the event sheet picks them up.
+function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack }) {
+  const [eventId, setEventId] = useState(null);
+  const events = (config.events || []).slice().sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
+  const event = events.find((e) => e.id === eventId);
+  const block = event ? (event.ministries || []).find((b) => b.teamId === team.id) : null;
+
+  const setRoleValue = (rowId, value) => updateConfig((prev) => ({
+    ...prev,
+    events: (prev.events || []).map((e) => (e.id !== eventId ? e : {
+      ...e,
+      ministries: (e.ministries || []).map((b) => (b.teamId !== team.id ? b : {
+        ...b, roles: (b.roles || []).map((r) => (r.id === rowId ? { ...r, value } : r)),
+      })),
+    })),
+  }));
+
+  return (
+    <div style={styles.viewWrap}>
+      <header style={styles.viewHeader}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <h1 style={styles.h1}>{team.name} · Events</h1>
+          <button onClick={event ? () => setEventId(null) : onBack} style={styles.smallBtn}>
+            {event ? "← All events" : "← Back to schedule"}
+          </button>
+        </div>
+        {event && (
+          <div style={styles.viewMeta}>
+            {[event.title || "Untitled event", eventDateLabel(event.date), clockLabel(event.startTime)].filter(Boolean).join(" · ")}
+          </div>
+        )}
+      </header>
+
+      {!event && (
+        <div>
+          {events.length === 0 && <div style={styles.emptyNote}>No events yet. Events are added in the Events tab.</div>}
+          {events.map((e) => {
+            const eventBlock = (e.ministries || []).find((b) => b.teamId === team.id);
+            return (
+              <button key={e.id} onClick={() => setEventId(e.id)}
+                style={{ display: "block", width: "100%", textAlign: "left", cursor: "pointer", border: "1px solid var(--lD8CFB0)", borderRadius: 10, background: "var(--bFFFFFF)", padding: "12px 14px", marginBottom: 8, fontFamily: "system-ui, sans-serif" }}>
+                <div style={{ fontWeight: 700, color: "var(--t1F3864)" }}>{e.title || "Untitled event"}</div>
+                <div style={{ fontSize: 12.5, color: "var(--t6B6B6B)", marginTop: 2 }}>
+                  {[eventDateLabel(e.date) || "No date yet", clockLabel(e.startTime)].filter(Boolean).join(" · ")}
+                  {" — "}{eventBlock ? `${(eventBlock.roles || []).length} role(s) for this ministry` : "this ministry isn't in this event"}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {event && !block && (
+        <div style={styles.emptyNote}>{team.name} isn't part of this event yet. Ask an admin to add it under Events.</div>
+      )}
+      {event && block && (block.roles || []).length === 0 && (
+        <div style={styles.emptyNote}>No roles were picked for {team.name} in this event.</div>
+      )}
+      {event && block && (block.roles || []).length > 0 && (
+        <div style={styles.rolesCard}>
+          {(block.roles || []).map((row, i) => {
+            const teamRole = (team.roles || []).find((r) => r.id === row.roleId);
+            const roleVolunteers = ((teamRole && teamRole.volunteers) || []).slice().sort((a, b) => a.localeCompare(b));
+            return (
+              <div key={row.id} className="role-row" style={{ ...styles.roleRow, ...(i % 2 === 1 ? styles.roleRowAlt : {}), borderTop: i === 0 ? "none" : "1px solid var(--lEFE7D3)", ...(isMobile ? { flexDirection: "column", gap: 8 } : {}) }}>
+                <div style={{ ...styles.roleName, ...(isMobile ? { width: "100%", paddingTop: 0 } : {}) }}><span className="role-dot" style={styles.roleNameDot} />{row.label}</div>
+                <div style={{ ...styles.roleInputWrap, ...(isMobile ? { width: "100%" } : {}) }}>
+                  <VolunteerNameInput
+                    value={row.value || ""}
+                    onChange={(val) => setRoleValue(row.id, val)}
+                    volunteers={roleVolunteers}
+                    locked={locked}
+                    placeholder="Volunteer name"
+                    allowAbove={!isMobile}
+                    compact={isMobile}
+                    popupTitle={`${row.label} · ${event.title || "Event"}`}
+                    popupMinWidth={220}
+                    style={{ ...styles.input, flex: 1, ...(locked ? { background: "var(--bF3EFE2)", cursor: "default" } : {}) }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MobileControls({ monthState, week, setWeek, slot, setSlot, monthLabelText, year, month, onPrevMonth, onNextMonth, onlineUsers, userName, hideSlots }) {
   const others = (onlineUsers || []).filter((u) => norm(u.name).toLowerCase() !== norm(userName).toLowerCase());
   const [showPresence, setShowPresence] = useState(false);
@@ -2315,6 +2405,7 @@ function CompactNavItem({ icon, label, active, onClick, dim, locked, small }) {
 function AssignView({ config, updateConfig, monthState, updateMonthState, week, setWeek, slot, team, year, month, locked, isMobile, userName, onPrevMonth, onNextMonth }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [mode, setMode] = useState("edit"); // "edit" | "print"
+  const [showEvents, setShowEvents] = useState(false); // this ministry's view of the Events tab
   const [exporting, setExporting] = useState(null); // null | "image" | "pdf"
   const sheetRef = useRef(null);
 
@@ -2668,6 +2759,10 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
     );
   }
 
+  if (showEvents) {
+    return <TeamEventsAssign config={config} updateConfig={updateConfig} team={team} locked={locked} isMobile={isMobile} onBack={() => setShowEvents(false)} />;
+  }
+
   return (
     <div style={styles.viewWrap}>
       {/* On desktop the title, month picker, Sunday dates and service-time chips are one
@@ -2677,6 +2772,7 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <h1 style={isMobile ? styles.h1 : { ...styles.h1, lineHeight: 1.1 }}>{team.name}</h1>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button onClick={() => setShowEvents(true)} style={{ ...styles.smallBtn, background: "var(--b2F4858)" }}>📅 Events</button>
             <button onClick={() => setMode("print")} className="btn-print" style={styles.smallBtn}>🖨 Print month</button>
             {!locked && (
               <button onClick={() => hasAnyValue && setConfirmOpen(true)} disabled={!hasAnyValue} className="btn-clear"
