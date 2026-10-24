@@ -1827,18 +1827,170 @@ function nthWeekdayDate(year, month0, weekday, nth, last) {
   const day = 1 + ((weekday - first.getDay() + 7) % 7) + (nth - 1) * 7;
   return day > dim ? null : new Date(y, m, day);
 }
-function repeatOptions(dateStr) {
-  const none = [{ v: "none", label: "Does not repeat" }];
-  const [y, m, d] = (dateStr || "").split("-").map((n) => parseInt(n, 10));
-  if (isNaN(y) || isNaN(m) || isNaN(d)) return none;
-  const wd = WEEKDAY_NAMES[new Date(y, m - 1, d).getDay()];
-  const nth = Math.ceil(d / 7);
-  return [
-    ...none,
-    ...(nth <= 4 ? [{ v: "nth", label: `Monthly on the ${ordinalWord(nth)} ${wd}` }] : []),
-    { v: "last", label: `Monthly on the last ${wd}` },
-    { v: "weekly", label: `Weekly on ${wd}s` },
-  ];
+// ---- Recurrence rules (Repeat Schedule / Frequency / Pattern / Ends / Preview) ----
+// Saved on the event as event.recurrence. Fields left unset follow the event's own date
+// (e.g. the weekday ticked by default is the weekday of the event date).
+const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Monday first, like the picker
+const ordinalNum = (n) => {
+  const t = n % 100;
+  if (t >= 11 && t <= 13) return `${n}th`;
+  return `${n}${({ 1: "st", 2: "nd", 3: "rd" })[n % 10] || "th"}`;
+};
+const REC_FREQS = [["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"], ["yearly", "Yearly"]];
+// how far ahead the "+ Next …" button creates events
+const REC_HORIZON = {
+  daily: { months: 1, label: "Next month" },
+  weekly: { months: 3, label: "Next 3 months" },
+  monthly: { months: 3, label: "Next 3 months" },
+  yearly: { months: 24, label: "Next 2 years" },
+};
+const REC_DEFAULT = {
+  repeats: false, freq: "weekly", interval: "1", weekdays: null,
+  monthMode: "date", monthDay: null, occurrence: null, weekday: null,
+  yearMode: "date", yearMonth: null, yearDay: null,
+  endType: "never", endDate: "", endCount: "10",
+};
+// events saved with the old single "Repeat" dropdown (ev.repeat = nth | last | weekly)
+function legacyRecurrence(ev) {
+  if (ev.repeat === "weekly") return { repeats: true, freq: "weekly" };
+  if (ev.repeat === "nth") return { repeats: true, freq: "monthly", monthMode: "weekday" };
+  if (ev.repeat === "last") return { repeats: true, freq: "monthly", monthMode: "weekday", occurrence: "last" };
+  return {};
+}
+// Turns the stored settings into concrete values (filling blanks from the event date).
+function resolveRecurrence(ev) {
+  const r = { ...REC_DEFAULT, ...(ev.recurrence || legacyRecurrence(ev)) };
+  const [y, m, d] = (ev.date || "").split("-").map((n) => parseInt(n, 10));
+  const hasDate = !isNaN(y) && !isNaN(m) && !isNaN(d);
+  const dow = hasDate ? new Date(y, m - 1, d).getDay() : 0;
+  const nth = hasDate ? Math.ceil(d / 7) : 1;
+  r.hasDate = hasDate;
+  r.repeats = !!r.repeats;
+  r.intervalN = /^\d+$/.test(String(r.interval)) ? parseInt(r.interval, 10) : NaN;
+  r.weekdayList = typeof r.weekdays === "string"
+    ? r.weekdays.split(",").filter((x) => x !== "").map(Number).filter((n) => n >= 0 && n <= 6)
+    : [dow];
+  r.monthDayN = parseInt(r.monthDay, 10) || (hasDate ? d : 1);
+  // a 5th weekday of a month is always that month's last one
+  r.occ = r.occurrence != null && r.occurrence !== "" ? (r.occurrence === "last" ? "last" : Number(r.occurrence)) : (nth >= 5 ? "last" : nth);
+  r.wd = r.weekday != null && r.weekday !== "" ? Number(r.weekday) : dow;
+  r.ym = parseInt(r.yearMonth, 10) || (hasDate ? m : 1);
+  r.yd = parseInt(r.yearDay, 10) || (hasDate ? d : 1);
+  return r;
+}
+// Plain, fully filled-in copy to save on a generated event (its own date differs from the source's).
+function storedRecurrence(r) {
+  return {
+    repeats: true, freq: r.freq, interval: String(r.intervalN), weekdays: r.weekdayList.join(","),
+    monthMode: r.monthMode, monthDay: r.monthDayN, occurrence: r.occ, weekday: r.wd,
+    yearMode: r.yearMode, yearMonth: r.ym, yearDay: r.yd,
+    endType: r.endType, endDate: r.endDate || "", endCount: String(r.endCount),
+  };
+}
+function recurrenceErrors(r, dateISO) {
+  const errs = [];
+  if (!r.repeats) return errs;
+  if (r.freq === "daily" && !(r.intervalN >= 1 && r.intervalN <= 365)) errs.push("Interval must be a whole number from 1 to 365.");
+  if (r.freq === "weekly" && r.weekdayList.length === 0) errs.push("Pick at least one day of the week.");
+  if (r.freq === "yearly" && r.yearMode === "date" && r.yd > new Date(2024, r.ym, 0).getDate()) {
+    errs.push(`${MONTH_NAMES[r.ym - 1]} never has ${r.yd} days.`);
+  }
+  if (r.endType === "date") {
+    if (!r.endDate) errs.push("Choose an end date.");
+    else if (dateISO && r.endDate < dateISO) errs.push(`End date must be on or after the event date (${eventDateLabel(dateISO)}).`);
+  }
+  if (r.endType === "count" && !(/^\d+$/.test(String(r.endCount)) && parseInt(r.endCount, 10) >= 1 && parseInt(r.endCount, 10) <= 500)) {
+    errs.push("Number of occurrences must be a whole number from 1 to 500.");
+  }
+  return errs;
+}
+function recurrenceSummary(r) {
+  if (!r.repeats) return "One-time event";
+  let s = "";
+  if (r.freq === "daily") {
+    s = r.intervalN === 1 ? "Every day" : `Every ${isNaN(r.intervalN) ? "…" : r.intervalN} days`;
+  } else if (r.freq === "weekly") {
+    const names = WEEKDAY_ORDER.filter((d) => r.weekdayList.includes(d)).map((d) => WEEKDAY_NAMES[d]);
+    if (names.length === 0) s = "Select at least one day";
+    else if (names.length === 7) s = "Every day";
+    else s = "Every " + (names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`);
+  } else if (r.freq === "monthly") {
+    if (r.monthMode === "weekday") s = `Every ${r.occ === "last" ? "last" : ordinalNum(r.occ)} ${WEEKDAY_NAMES[r.wd]} of the month`;
+    else s = `Every month on the ${ordinalNum(r.monthDayN)}${r.monthDayN > 28 ? " (last day in shorter months)" : ""}`;
+  } else {
+    if (r.yearMode === "weekday") s = `Every ${r.occ === "last" ? "last" : ordinalNum(r.occ)} ${WEEKDAY_NAMES[r.wd]} of ${MONTH_NAMES[r.ym - 1]}`;
+    else s = `Every year on ${MONTH_NAMES[r.ym - 1]} ${r.yd}${r.ym === 2 && r.yd === 29 ? " (Feb 28 in non-leap years)" : ""}`;
+  }
+  if (r.endType === "date" && r.endDate) s += `, until ${eventDateLabel(r.endDate)}`;
+  if (r.endType === "count" && /^\d+$/.test(String(r.endCount)) && parseInt(r.endCount, 10) >= 1) {
+    const n = parseInt(r.endCount, 10);
+    s += `, ${n} time${n === 1 ? "" : "s"}`;
+  }
+  return s;
+}
+// The event's own date counts as occurrence #1; later ones follow the rule, up to `untilISO`
+// and whatever the Ends setting allows. "Last" weekdays use the real last one of each month.
+function recurrenceDates(r, anchorISO, untilISO) {
+  const [ay, am, ad] = anchorISO.split("-").map((n) => parseInt(n, 10));
+  let until = untilISO;
+  if (r.endType === "date" && r.endDate && r.endDate < until) until = r.endDate;
+  const cap = r.endType === "count" ? Math.max(1, parseInt(r.endCount, 10) || 1) : Infinity;
+  const out = [anchorISO];
+  const full = () => out.length >= cap;
+  const push = (iso) => { if (iso > anchorISO && iso <= until && !full()) out.push(iso); };
+  if (r.freq === "daily") {
+    const step = Math.max(1, r.intervalN || 1);
+    for (let i = 1; i < 4000 && !full(); i++) {
+      const iso = isoOf(new Date(ay, am - 1, ad + i * step));
+      if (iso > until) break;
+      push(iso);
+    }
+  } else if (r.freq === "weekly") {
+    const set = new Set(r.weekdayList);
+    for (let i = 1; i < 4000 && !full(); i++) {
+      const t = new Date(ay, am - 1, ad + i);
+      const iso = isoOf(t);
+      if (iso > until) break;
+      if (set.has(t.getDay())) push(iso);
+    }
+  } else if (r.freq === "monthly") {
+    for (let k = 0; k < 1200 && !full(); k++) {
+      const first = new Date(ay, am - 1 + k, 1);
+      if (isoOf(first) > until) break;
+      const y = first.getFullYear(), m0 = first.getMonth();
+      const dim = new Date(y, m0 + 1, 0).getDate();
+      const dt = r.monthMode === "weekday"
+        ? nthWeekdayDate(y, m0, r.wd, r.occ === "last" ? 0 : r.occ, r.occ === "last")
+        : new Date(y, m0, Math.min(r.monthDayN, dim));
+      if (dt) push(isoOf(dt));
+    }
+  } else {
+    for (let k = 0; k < 300 && !full(); k++) {
+      const y = ay + k;
+      if (`${y}-01-01` > until) break;
+      const m0 = r.ym - 1;
+      const dim = new Date(y, m0 + 1, 0).getDate();
+      const dt = r.yearMode === "weekday"
+        ? nthWeekdayDate(y, m0, r.wd, r.occ === "last" ? 0 : r.occ, r.occ === "last")
+        : new Date(y, m0, Math.min(r.yd, dim));
+      if (dt) push(isoOf(dt));
+    }
+  }
+  return out;
+}
+// last day of the month that is `months` months after the month of `fromISO`
+function recurrenceHorizon(r, fromISO) {
+  const [y, m] = fromISO.split("-").map((n) => parseInt(n, 10));
+  return isoOf(new Date(y, m - 1 + REC_HORIZON[r.freq].months + 1, 0));
+}
+
+function RecRadio({ name, checked, onChange, label, disabled }) {
+  return (
+    <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.5 : 1, padding: "3px 0" }}>
+      <input type="radio" name={name} checked={checked} onChange={onChange} disabled={disabled} style={{ accentColor: "#E5A430", margin: 0, flexShrink: 0 }} />
+      {label}
+    </label>
+  );
 }
 
 function EventsView({ config, updateConfig, canEdit }) {
@@ -2209,19 +2361,7 @@ function EventsView({ config, updateConfig, canEdit }) {
                     <div style={{ ...dInput, padding: "6px 8px", background: "transparent", border: "1px dashed rgba(255,255,255,0.3)" }}>{clockLabel(eventEndTime(ev)) || "—"}</div>
                   </div>
                 </div>
-                <div style={dLabel}>Repeat</div>
-                <select value={ev.repeat || "none"} onChange={(e) => setField("repeat", e.target.value)} disabled={!ev.date}
-                  style={{ ...dInput, padding: "6px 8px", opacity: ev.date ? 1 : 0.6 }}>
-                  {repeatOptions(ev.date).map((o) => <option key={o.v} value={o.v} style={{ background: "#2A1A38" }}>{o.label}</option>)}
-                </select>
-                {!ev.date && <div style={{ fontSize: 11, opacity: 0.65, marginTop: 3 }}>Set a date first to repeat.</div>}
-                {ev.date && ev.repeat && ev.repeat !== "none" && (
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
-                    <button onClick={() => generateSeries(ev)} style={{ ...ghostBtn, padding: "6px 10px", fontSize: 12 }}>+ Next 3 months</button>
-                    {laterInSeries(ev).length > 0 && <button onClick={() => updateUpcoming(ev)} style={{ ...ghostBtn, padding: "6px 10px", fontSize: 12 }}>Update upcoming</button>}
-                  </div>
-                )}
-                {ev.seriesId && <div style={{ fontSize: 11, opacity: 0.65, marginTop: 4 }}>{events.filter((x) => x.seriesId === ev.seriesId).length} events in this series</div>}
+                {renderRepeatSection(ev, dInput, dLabel, ghostBtn)}
                 <div style={dLabel}>Cover photo (optional)</div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <label style={{ ...ghostBtn, cursor: "pointer", padding: "6px 12px" }}>
@@ -2471,33 +2611,200 @@ function EventsView({ config, updateConfig, canEdit }) {
   // series: events created from one repeating event share a seriesId
   const cloneJson = (v) => JSON.parse(JSON.stringify(v));
   const laterInSeries = (e) => (e.seriesId ? events.filter((x) => x.seriesId === e.seriesId && x.id !== e.id && x.date && x.date > (e.date || "")) : []);
+  // ---- Repeat settings panel (left side of the event popup) ----
+  const renderRepeatSection = (ev, dInput, dLabel, ghostBtn) => {
+    const raw = { ...REC_DEFAULT, ...(ev.recurrence || legacyRecurrence(ev)) };
+    const rec = resolveRecurrence(ev);
+    const errors = recurrenceErrors(rec, ev.date);
+    const setRec = (patch) => updateEvent(openId, (e) => ({
+      ...e, recurrence: { ...(e.recurrence || legacyRecurrence(e)), ...patch }, repeat: null,
+    }));
+    const sel = { ...dInput, padding: "6px 8px" };
+    const optStyle = { background: "#2A1A38" };
+    const title = { fontSize: 13, fontWeight: 700, color: "#FFFFFF", margin: "10px 0 4px" };
+    const section = { borderTop: "1px solid rgba(255,255,255,0.14)", marginTop: 10, paddingTop: 0 };
+    const small = { fontSize: 11.5, opacity: 0.75, margin: "2px 0 6px", lineHeight: 1.4 };
+    const subLabel = { fontSize: 11, opacity: 0.75, margin: "6px 0 2px" };
+    const occSelect = (value, onChange) => (
+      <select value={String(value)} onChange={(e) => onChange(e.target.value === "last" ? "last" : Number(e.target.value))} style={sel}>
+        {[1, 2, 3, 4].map((n) => <option key={n} value={n} style={optStyle}>{["", "First", "Second", "Third", "Fourth"][n]}</option>)}
+        <option value="last" style={optStyle}>Last</option>
+      </select>
+    );
+    const weekdaySelect = (value, onChange) => (
+      <select value={value} onChange={(e) => onChange(Number(e.target.value))} style={sel}>
+        {WEEKDAY_ORDER.map((d) => <option key={d} value={d} style={optStyle}>{WEEKDAY_NAMES[d]}</option>)}
+      </select>
+    );
+    const monthSelect = (value, onChange) => (
+      <select value={value} onChange={(e) => onChange(Number(e.target.value))} style={sel}>
+        {MONTH_NAMES.map((n, i) => <option key={n} value={i + 1} style={optStyle}>{n}</option>)}
+      </select>
+    );
+    const daySelect = (value, onChange) => (
+      <select value={value} onChange={(e) => onChange(Number(e.target.value))} style={sel}>
+        {Array.from({ length: 31 }, (_, i) => i + 1).map((n) => <option key={n} value={n} style={optStyle}>{ordinalNum(n)}</option>)}
+      </select>
+    );
+    const toggleWeekday = (d) => {
+      const list = rec.weekdayList.includes(d) ? rec.weekdayList.filter((x) => x !== d) : [...rec.weekdayList, d];
+      setRec({ weekdays: list.sort((a, b) => a - b).join(",") });
+    };
+
+    let preview = null;
+    if (rec.repeats && ev.date && errors.length === 0) {
+      const dates = recurrenceDates(rec, ev.date, recurrenceHorizon(rec, ev.date));
+      preview = dates.slice(0, 4).map((iso) => {
+        const [, m, d] = iso.split("-").map((n) => parseInt(n, 10));
+        return `${MONTH_NAMES[m - 1].slice(0, 3)} ${d}`;
+      }).join(", ") + (dates.length > 4 ? "…" : "");
+    }
+
+    return (
+      <div>
+        <div style={dLabel}>Repeat</div>
+        <div style={{ border: "1px solid rgba(255,255,255,0.2)", borderRadius: 10, padding: "2px 12px 12px", background: "rgba(255,255,255,0.05)" }}>
+          <div style={{ ...title, marginTop: 8 }}>Repeat Schedule</div>
+          <RecRadio name="rec-repeats" checked={!rec.repeats} onChange={() => setRec({ repeats: false })} label="Does not repeat" />
+          <RecRadio name="rec-repeats" checked={rec.repeats} disabled={!ev.date} onChange={() => setRec({ repeats: true })} label="Repeats" />
+          {!ev.date && <div style={small}>Set a date first to repeat.</div>}
+
+          {rec.repeats && (
+            <div>
+              <div style={section} />
+              <div style={title}>Repeat Frequency</div>
+              {REC_FREQS.map(([v, label]) => (
+                <RecRadio key={v} name="rec-freq" checked={rec.freq === v} onChange={() => setRec({ freq: v })} label={label} />
+              ))}
+
+              <div style={section} />
+              <div style={title}>Repeat Pattern</div>
+              {rec.freq === "daily" && (
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                    Every
+                    <input value={raw.interval} onChange={(e) => setRec({ interval: e.target.value.replace(/\D/g, "").slice(0, 3) })}
+                      inputMode="numeric" aria-label="Days between repeats" style={{ ...sel, width: 64, flex: "0 0 64px", textAlign: "center" }} />
+                    {rec.intervalN === 1 ? "day" : "days"}
+                  </div>
+                  <div style={small}>Repeat every day, or set an interval such as every 2 days.</div>
+                </div>
+              )}
+              {rec.freq === "weekly" && (
+                <div>
+                  <div style={small}>Repeat every week on:</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 8px" }}>
+                    {WEEKDAY_ORDER.map((d) => (
+                      <label key={d} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer", padding: "2px 0" }}>
+                        <input type="checkbox" checked={rec.weekdayList.includes(d)} onChange={() => toggleWeekday(d)} style={{ accentColor: "#E5A430", margin: 0 }} />
+                        {WEEKDAY_NAMES[d]}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {rec.freq === "monthly" && (
+                <div>
+                  <RecRadio name="rec-month-mode" checked={rec.monthMode === "date"} onChange={() => setRec({ monthMode: "date" })} label="On a specific date (e.g. every 15th)" />
+                  {rec.monthMode === "date" && (
+                    <div>
+                      <div style={{ maxWidth: 140, margin: "4px 0 2px 24px" }}>{daySelect(rec.monthDayN, (n) => setRec({ monthDay: n }))}</div>
+                      {rec.monthDayN > 28 && <div style={{ ...small, marginLeft: 24 }}>Months with fewer days use their last day instead.</div>}
+                    </div>
+                  )}
+                  <RecRadio name="rec-month-mode" checked={rec.monthMode === "weekday"} onChange={() => setRec({ monthMode: "weekday" })} label="On a specific weekday occurrence (e.g. 4th Sunday)" />
+                  {rec.monthMode === "weekday" && (
+                    <div style={{ display: "flex", gap: 8, margin: "2px 0 2px 24px" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}><div style={subLabel}>Occurrence</div>{occSelect(rec.occ, (v) => setRec({ occurrence: v }))}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}><div style={subLabel}>Day</div>{weekdaySelect(rec.wd, (v) => setRec({ weekday: v }))}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {rec.freq === "yearly" && (
+                <div>
+                  <RecRadio name="rec-year-mode" checked={rec.yearMode === "date"} onChange={() => setRec({ yearMode: "date" })} label="On a specific date (e.g. every December 25)" />
+                  {rec.yearMode === "date" && (
+                    <div style={{ display: "flex", gap: 8, margin: "4px 0 2px 24px" }}>
+                      <div style={{ flex: 2, minWidth: 0 }}><div style={subLabel}>Month</div>{monthSelect(rec.ym, (v) => setRec({ yearMonth: v }))}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}><div style={subLabel}>Day</div>{daySelect(rec.yd, (v) => setRec({ yearDay: v }))}</div>
+                    </div>
+                  )}
+                  <RecRadio name="rec-year-mode" checked={rec.yearMode === "weekday"} onChange={() => setRec({ yearMode: "weekday" })} label="On a weekday occurrence within a month (e.g. 4th Thursday of November)" />
+                  {rec.yearMode === "weekday" && (
+                    <div style={{ margin: "2px 0 2px 24px" }}>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}><div style={subLabel}>Occurrence</div>{occSelect(rec.occ, (v) => setRec({ occurrence: v }))}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}><div style={subLabel}>Day</div>{weekdaySelect(rec.wd, (v) => setRec({ weekday: v }))}</div>
+                      </div>
+                      <div style={subLabel}>Month</div>
+                      {monthSelect(rec.ym, (v) => setRec({ yearMonth: v }))}
+                    </div>
+                  )}
+                  {rec.yearMode === "date" && rec.ym === 2 && rec.yd === 29 && <div style={{ ...small, marginLeft: 24 }}>In non-leap years this uses February 28.</div>}
+                </div>
+              )}
+
+              <div style={section} />
+              <div style={title}>Ends</div>
+              <RecRadio name="rec-ends" checked={rec.endType === "never"} onChange={() => setRec({ endType: "never" })} label="Never" />
+              <RecRadio name="rec-ends" checked={rec.endType === "date"} onChange={() => setRec({ endType: "date" })} label="On a specific date" />
+              {rec.endType === "date" && (
+                <div style={{ margin: "4px 0 4px 24px" }}>
+                  <DateInput3 value={raw.endDate || ""} onChange={(v) => setRec({ endDate: v })} style={{ ...dInput, padding: "6px 4px" }} />
+                </div>
+              )}
+              <RecRadio name="rec-ends" checked={rec.endType === "count"} onChange={() => setRec({ endType: "count" })} label="After a number of occurrences" />
+              {rec.endType === "count" && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 0 4px 24px", fontSize: 13 }}>
+                  <input value={raw.endCount} onChange={(e) => setRec({ endCount: e.target.value.replace(/\D/g, "").slice(0, 3) })}
+                    inputMode="numeric" aria-label="Number of occurrences" style={{ ...sel, width: 72, flex: "0 0 72px", textAlign: "center" }} />
+                  occurrences (including this event)
+                </div>
+              )}
+            </div>
+          )}
+
+          {errors.length > 0 && (
+            <div style={{ marginTop: 10, fontSize: 12, color: "#FFB4A6", lineHeight: 1.45 }}>
+              {errors.map((msg) => <div key={msg}>⚠ {msg}</div>)}
+            </div>
+          )}
+
+          <div style={section} />
+          <div style={{ fontSize: 11, opacity: 0.7, margin: "10px 0 2px" }}>Schedule preview</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF" }}>{recurrenceSummary(rec)}</div>
+          {preview && <div style={{ fontSize: 11.5, opacity: 0.8, marginTop: 4 }}>Dates: {preview}</div>}
+        </div>
+
+        {rec.repeats && ev.date && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+            <button onClick={() => generateSeries(ev)} disabled={errors.length > 0}
+              style={{ ...ghostBtn, padding: "6px 10px", fontSize: 12, opacity: errors.length ? 0.45 : 1, cursor: errors.length ? "not-allowed" : "pointer" }}>
+              + {REC_HORIZON[rec.freq].label}
+            </button>
+            {laterInSeries(ev).length > 0 && <button onClick={() => updateUpcoming(ev)} style={{ ...ghostBtn, padding: "6px 10px", fontSize: 12 }}>Update upcoming</button>}
+          </div>
+        )}
+        {ev.seriesId && <div style={{ fontSize: 11, opacity: 0.65, marginTop: 4 }}>{events.filter((x) => x.seriesId === ev.seriesId).length} events in this series</div>}
+      </div>
+    );
+  };
   const generateSeries = (src) => {
-    const type = src.repeat;
-    if (!type || type === "none" || !src.date) return;
-    const [y, m, d] = src.date.split("-").map((n) => parseInt(n, 10));
-    const weekday = new Date(y, m - 1, d).getDay();
-    const nth = Math.ceil(d / 7);
+    const rec = resolveRecurrence(src);
+    if (!rec.repeats || !src.date || recurrenceErrors(rec, src.date).length > 0) return;
     const sid = src.seriesId || uid();
     const mates = events.filter((x) => x.id === src.id || (x.seriesId && x.seriesId === sid));
     const dates = mates.map((x) => x.date).filter(Boolean).sort();
+    const anchor = dates[0];
     const latest = dates[dates.length - 1];
-    const [ly, lm, ld] = latest.split("-").map((n) => parseInt(n, 10));
-    const horizon = isoOf(new Date(ly, lm - 1 + 4, 0)); // through the end of the 3rd month after its last event
     const taken = new Set(dates);
-    const found = [];
-    if (type === "weekly") {
-      for (let t = new Date(ly, lm - 1, ld + 7); isoOf(t) <= horizon; t = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 7)) found.push(isoOf(t));
-    } else {
-      for (let k = 0; k <= 5; k++) {
-        const dt = nthWeekdayDate(ly, lm - 1 + k, weekday, nth, type === "last");
-        if (!dt) continue;
-        const iso = isoOf(dt);
-        if (iso > latest && iso <= horizon) found.push(iso);
-      }
-    }
-    const fresh = found.filter((iso) => !taken.has(iso));
-    if (fresh.length === 0) { window.alert("Nothing new to add — the next 3 months are already there."); return; }
-    const copies = fresh.map((iso) => ({ ...cloneJson(src), id: uid(), date: iso, assignments: {}, verses: {}, announcements: "", seriesId: sid, repeat: type }));
+    const all = recurrenceDates(rec, anchor, recurrenceHorizon(rec, latest));
+    const fresh = all.filter((iso) => iso > latest && !taken.has(iso));
+    if (fresh.length === 0) { window.alert("Nothing new to add — this series is already up to date (or it has reached its end)."); return; }
+    if (fresh.length > 31 && !window.confirm(`This will add ${fresh.length} events. Continue?`)) return;
+    const copyRec = storedRecurrence(rec);
+    const copies = fresh.map((iso) => ({ ...cloneJson(src), id: uid(), date: iso, assignments: {}, verses: {}, announcements: "", seriesId: sid, repeat: null, recurrence: copyRec }));
     updateConfig((prev) => ({
       ...prev,
       events: [...(prev.events || []).map((e) => (e.id === src.id ? { ...e, seriesId: sid } : e)), ...copies],
