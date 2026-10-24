@@ -1559,8 +1559,8 @@ const blankEvent = () => ({
 function addMinutesToClock(startTime, minutes) {
   const [h, m] = (startTime || "").split(":").map((n) => parseInt(n, 10));
   if (isNaN(h) || isNaN(m)) return "";
-  const total = h * 60 + m + minutes;
-  return `${padTwo(Math.floor(total / 60) % 24)}:${padTwo(total % 60)}`;
+  const total = (((h * 60 + m + minutes) % 1440) + 1440) % 1440;
+  return `${padTwo(Math.floor(total / 60))}:${padTwo(total % 60)}`;
 }
 
 function clockLabel(time) {
@@ -1575,23 +1575,36 @@ function eventDateLabel(dateStr) {
   return `${MONTH_NAMES[m - 1]} ${d}, ${y}`;
 }
 
-// Time column = start time + the minutes of every row above it
+// Rows can sit before the service starts, during it, or after it ends
+const EVENT_PHASES = [
+  { id: "before", label: "Before service", short: "Before" },
+  { id: "during", label: "During service", short: "During" },
+  { id: "after", label: "After service", short: "After" },
+];
+const phaseOf = (row) => row.phase || "during";
+const rowMinutes = (row) => (parseInt(row.duration, 10) > 0 ? parseInt(row.duration, 10) : 0);
+
+// Start time is when the service starts, so "before" rows are counted backwards from it
 function computeEventRows(event) {
-  let elapsed = 0;
-  return (event.rows || []).map((row) => {
-    const mins = parseInt(row.duration, 10);
-    if (isNaN(mins) || mins <= 0) return { row, time: "", durationText: "" };
+  const rows = event.rows || [];
+  const beforeTotal = rows.filter((r) => phaseOf(r) === "before").reduce((sum, r) => sum + rowMinutes(r), 0);
+  let elapsed = -beforeTotal;
+  const ordered = EVENT_PHASES.flatMap((p) => rows.filter((r) => phaseOf(r) === p.id));
+  return ordered.map((row) => {
+    const mins = rowMinutes(row);
+    const phase = phaseOf(row);
+    if (!mins) return { row, phase, time: "", durationText: "" };
     const from = addMinutesToClock(event.startTime, elapsed);
     elapsed += mins;
     const to = addMinutesToClock(event.startTime, elapsed);
-    return { row, time: from ? `${from} – ${to}` : "", durationText: mins === 60 ? "1 HR" : `${mins} MINS` };
+    return { row, phase, time: from ? `${from} – ${to}` : "", durationText: mins === 60 ? "1 HR" : `${mins} MINS` };
   });
 }
 
-// end time = start time + total minutes of all rows
+// end time = start time + the "during" rows
 function eventEndTime(event) {
-  const totalMins = (event.rows || []).reduce((sum, r) => sum + (parseInt(r.duration, 10) > 0 ? parseInt(r.duration, 10) : 0), 0);
-  return totalMins > 0 ? addMinutesToClock(event.startTime, totalMins) : "";
+  const duringTotal = (event.rows || []).filter((r) => phaseOf(r) === "during").reduce((sum, r) => sum + rowMinutes(r), 0);
+  return duringTotal > 0 ? addMinutesToClock(event.startTime, duringTotal) : "";
 }
 
 function EventsView({ config, updateConfig, canEdit }) {
@@ -1608,13 +1621,17 @@ function EventsView({ config, updateConfig, canEdit }) {
   const setRowField = (rowId, field, value) => updateEvent(openId, (e) => ({
     ...e, rows: e.rows.map((r) => (r.id === rowId ? { ...r, [field]: value } : r)),
   }));
-  const addRow = () => updateEvent(openId, (e) => ({ ...e, rows: [...e.rows, { id: uid(), duration: "", program: "", volunteer: "" }] }));
+  const addRow = (phase) => updateEvent(openId, (e) => ({ ...e, rows: [...e.rows, { id: uid(), phase, duration: "", program: "", task: "", volunteer: "" }] }));
   const removeRow = (rowId) => updateEvent(openId, (e) => ({ ...e, rows: e.rows.filter((r) => r.id !== rowId) }));
-  const moveRow = (index, direction) => updateEvent(openId, (e) => {
-    const target = index + direction;
-    if (target < 0 || target >= e.rows.length) return e;
+  const moveRow = (rowId, direction) => updateEvent(openId, (e) => {
+    const row = e.rows.find((r) => r.id === rowId);
+    const samePhase = e.rows.filter((r) => phaseOf(r) === phaseOf(row));
+    const neighbor = samePhase[samePhase.findIndex((r) => r.id === rowId) + direction];
+    if (!neighbor) return e;
     const rows = e.rows.slice();
-    [rows[index], rows[target]] = [rows[target], rows[index]];
+    const a = rows.findIndex((r) => r.id === rowId);
+    const b = rows.findIndex((r) => r.id === neighbor.id);
+    [rows[a], rows[b]] = [rows[b], rows[a]];
     return { ...e, rows };
   });
 
@@ -1649,8 +1666,28 @@ function EventsView({ config, updateConfig, canEdit }) {
       while (i + span < starts.length && !starts[i + span]) span++;
       return span;
     });
-    const timeSpans = spanList(computed.map((c, i) => i === 0 || !!c.time));
-    const programSpans = spanList(computed.map((c, i) => i === 0 || !!norm(c.row.program)));
+    const serviceLabel = clockLabel(openEvent.startTime);
+    const bandText = (word) => `${word} OF ${serviceLabel ? `${serviceLabel} ` : ""}SERVICE`;
+    const renderPhaseRows = (phaseId) => {
+      const group = computed.filter((c) => c.phase === phaseId);
+      const timeSpans = spanList(group.map((c, i) => i === 0 || !!c.time));
+      const programSpans = spanList(group.map((c, i) => i === 0 || !!norm(c.row.program)));
+      return group.map(({ row, time, durationText }, i) => (
+        <tr key={row.id}>
+          {timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={styles.sheetTd}>{time}</td>}
+          {timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={styles.sheetTd}>{durationText}</td>}
+          {programSpans[i] > 0 && <td rowSpan={programSpans[i]} style={styles.sheetTd}></td>}
+          {programSpans[i] > 0 && (
+            <td rowSpan={programSpans[i]} style={{ ...styles.sheetTd, fontWeight: 700, verticalAlign: "middle", whiteSpace: "pre-wrap" }}>{row.program}</td>
+          )}
+          <td style={styles.sheetTd}>{row.task}</td>
+          <td style={styles.sheetTd}>{row.volunteer}</td>
+          <td style={{ ...styles.sheetTd, textAlign: "center" }}>
+            <span style={{ display: "inline-block", width: 12, height: 12, border: "1px solid var(--l23211D)", borderRadius: 3 }} />
+          </td>
+        </tr>
+      ));
+    };
     return (
       <div className="print-sheet-wrap" style={styles.viewWrap}>
         <div className="no-print sheet-toolbar">
@@ -1691,21 +1728,11 @@ function EventsView({ config, updateConfig, canEdit }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {computed.map(({ row, time, durationText }, i) => (
-                    <tr key={row.id}>
-                      {timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={styles.sheetTd}>{time}</td>}
-                      {timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={styles.sheetTd}>{durationText}</td>}
-                      {programSpans[i] > 0 && <td rowSpan={programSpans[i]} style={styles.sheetTd}></td>}
-                      {programSpans[i] > 0 && (
-                        <td rowSpan={programSpans[i]} style={{ ...styles.sheetTd, fontWeight: 700, verticalAlign: "middle", whiteSpace: "pre-wrap" }}>{row.program}</td>
-                      )}
-                      <td style={styles.sheetTd}>{row.task}</td>
-                      <td style={styles.sheetTd}>{row.volunteer}</td>
-                      <td style={{ ...styles.sheetTd, textAlign: "center" }}>
-                        <span style={{ display: "inline-block", width: 12, height: 12, border: "1px solid var(--l23211D)", borderRadius: 3 }} />
-                      </td>
-                    </tr>
-                  ))}
+                  {renderPhaseRows("before")}
+                  <tr data-divider="1"><td colSpan={7} style={styles.sheetBand}>{bandText("START")}</td></tr>
+                  {renderPhaseRows("during")}
+                  <tr data-divider="1"><td colSpan={7} style={styles.sheetBand}>{bandText("END")}</td></tr>
+                  {renderPhaseRows("after")}
                 </tbody>
               </table>
               {norm(openEvent.announcements) && (
@@ -1747,7 +1774,7 @@ function EventsView({ config, updateConfig, canEdit }) {
             <input type="date" value={openEvent.date} onChange={(e) => setField("date", e.target.value)} style={styles.roleEditInput} />
           </div>
           <div style={fieldWrap}>
-            <div style={labelStyle}>Start time</div>
+            <div style={labelStyle}>Service start time</div>
             <input type="time" value={openEvent.startTime} onChange={(e) => setField("startTime", e.target.value)} style={styles.roleEditInput} />
           </div>
           <div style={fieldWrap}>
@@ -1756,24 +1783,33 @@ function EventsView({ config, updateConfig, canEdit }) {
           </div>
         </div>
 
-        <div style={labelStyle}>Program flow (times are computed from the start time and each row's minutes)</div>
-        {computeEventRows(openEvent).map(({ row, time }, index) => (
-          <div key={row.id} style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 6 }}>
-            <input value={row.duration} onChange={(e) => setRowField(row.id, "duration", e.target.value)} placeholder="Mins" inputMode="numeric"
-              style={{ ...styles.roleEditInput, flex: "0 0 64px" }} />
-            <input value={row.program} onChange={(e) => setRowField(row.id, "program", e.target.value)} placeholder="Program (e.g. Worship)"
-              style={{ ...styles.roleEditInput, flex: "1 1 130px" }} />
-            <input value={row.task || ""} onChange={(e) => setRowField(row.id, "task", e.target.value)} placeholder="Task"
-              style={{ ...styles.roleEditInput, flex: "2 1 150px" }} />
-            <input value={row.volunteer} onChange={(e) => setRowField(row.id, "volunteer", e.target.value)} placeholder="Volunteer(s)"
-              style={{ ...styles.roleEditInput, flex: "1 1 130px" }} />
-            <span style={{ fontSize: 11.5, color: "var(--t6B6B6B)", flex: "0 0 105px" }}>{time}</span>
-            <button onClick={() => moveRow(index, -1)} style={styles.smallBtn} aria-label="Move up">↑</button>
-            <button onClick={() => moveRow(index, 1)} style={styles.smallBtn} aria-label="Move down">↓</button>
-            <button onClick={() => removeRow(row.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove row">✕</button>
+        <div style={labelStyle}>Program flow (start time = when the service starts; times are computed from each row's minutes)</div>
+        {EVENT_PHASES.map((phase) => (
+          <div key={phase.id} style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, margin: "8px 0 6px", color: "var(--t1F3864)" }}>{phase.label}</div>
+            {computeEventRows(openEvent).filter((c) => c.phase === phase.id).map(({ row, time }) => (
+              <div key={row.id} style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 6 }}>
+                <input value={row.duration} onChange={(e) => setRowField(row.id, "duration", e.target.value)} placeholder="Mins" inputMode="numeric"
+                  style={{ ...styles.roleEditInput, flex: "0 0 64px" }} />
+                <input value={row.program} onChange={(e) => setRowField(row.id, "program", e.target.value)} placeholder="Program (e.g. Worship)"
+                  style={{ ...styles.roleEditInput, flex: "1 1 130px" }} />
+                <input value={row.task || ""} onChange={(e) => setRowField(row.id, "task", e.target.value)} placeholder="Task"
+                  style={{ ...styles.roleEditInput, flex: "2 1 150px" }} />
+                <input value={row.volunteer} onChange={(e) => setRowField(row.id, "volunteer", e.target.value)} placeholder="Volunteer(s)"
+                  style={{ ...styles.roleEditInput, flex: "1 1 130px" }} />
+                <select value={phaseOf(row)} onChange={(e) => setRowField(row.id, "phase", e.target.value)}
+                  style={{ ...styles.roleEditInput, flex: "0 0 96px" }}>
+                  {EVENT_PHASES.map((p) => <option key={p.id} value={p.id}>{p.short}</option>)}
+                </select>
+                <span style={{ fontSize: 11.5, color: "var(--t6B6B6B)", flex: "0 0 105px" }}>{time}</span>
+                <button onClick={() => moveRow(row.id, -1)} style={styles.smallBtn} aria-label="Move up">↑</button>
+                <button onClick={() => moveRow(row.id, 1)} style={styles.smallBtn} aria-label="Move down">↓</button>
+                <button onClick={() => removeRow(row.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove row">✕</button>
+              </div>
+            ))}
+            <button onClick={() => addRow(phase.id)} style={{ ...styles.smallBtn, marginTop: 4 }}>+ Add row</button>
           </div>
         ))}
-        <button onClick={addRow} style={{ ...styles.smallBtn, marginTop: 6 }}>+ Add row</button>
 
         <div style={{ ...labelStyle, marginTop: 18 }}>Announcements (optional)</div>
         <textarea value={openEvent.announcements} onChange={(e) => setField("announcements", e.target.value)} rows={3}
