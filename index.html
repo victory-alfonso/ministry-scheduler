@@ -1584,20 +1584,38 @@ const EVENT_PHASES = [
 const phaseOf = (row) => row.phase || "during";
 const rowMinutes = (row) => (parseInt(row.duration, 10) > 0 ? parseInt(row.duration, 10) : 0);
 
-// Start time is when the service starts, so "before" rows are counted backwards from it
+function clockToMinutes(time) {
+  const [h, m] = (time || "").split(":").map((n) => parseInt(n, 10));
+  return isNaN(h) || isNaN(m) ? null : h * 60 + m;
+}
+function minutesToClock(total) {
+  const t = ((total % 1440) + 1440) % 1440;
+  return `${padTwo(Math.floor(t / 60))}:${padTwo(t % 60)}`;
+}
+
+// Rows run one after another. "Before" rows count backwards from the service start.
+// A row with its own "start at" jumps to that time, so rows can overlap (call time + music practice).
 function computeEventRows(event) {
   const rows = event.rows || [];
+  const serviceStart = clockToMinutes(event.startTime);
   const beforeTotal = rows.filter((r) => phaseOf(r) === "before").reduce((sum, r) => sum + rowMinutes(r), 0);
-  let elapsed = -beforeTotal;
   const ordered = EVENT_PHASES.flatMap((p) => rows.filter((r) => phaseOf(r) === p.id));
+  let cursor = serviceStart === null ? null : serviceStart - beforeTotal;
+  let lastPhase = "before";
   return ordered.map((row) => {
-    const mins = rowMinutes(row);
     const phase = phaseOf(row);
-    if (!mins) return { row, phase, time: "", durationText: "" };
-    const from = addMinutesToClock(event.startTime, elapsed);
-    elapsed += mins;
-    const to = addMinutesToClock(event.startTime, elapsed);
-    return { row, phase, time: from ? `${from} – ${to}` : "", durationText: mins === 60 ? "1 HR" : `${mins} MINS` };
+    if (phase !== lastPhase) {
+      if (phase === "during" && serviceStart !== null) cursor = serviceStart;
+      lastPhase = phase;
+    }
+    const fixedStart = clockToMinutes(row.startAt);
+    if (fixedStart !== null) cursor = fixedStart;
+    const mins = rowMinutes(row);
+    if (cursor === null) return { row, phase, time: "", durationText: "" };
+    if (!mins) return { row, phase, time: fixedStart !== null ? minutesToClock(cursor) : "", durationText: "" };
+    const from = cursor;
+    cursor += mins;
+    return { row, phase, time: `${minutesToClock(from)} – ${minutesToClock(cursor)}`, durationText: mins === 60 ? "1 HR" : `${mins} MINS` };
   });
 }
 
@@ -1783,7 +1801,7 @@ function EventsView({ config, updateConfig, canEdit }) {
           </div>
         </div>
 
-        <div style={labelStyle}>Program flow (start time = when the service starts; times are computed from each row's minutes)</div>
+        <div style={labelStyle}>Program flow (start time = when the service starts; rows follow one another; use “Start at” for rows that overlap)</div>
         {EVENT_PHASES.map((phase) => (
           <div key={phase.id} style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 13, fontWeight: 800, margin: "8px 0 6px", color: "var(--t1F3864)" }}>{phase.label}</div>
@@ -1791,6 +1809,11 @@ function EventsView({ config, updateConfig, canEdit }) {
               <div key={row.id} style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 6 }}>
                 <input value={row.duration} onChange={(e) => setRowField(row.id, "duration", e.target.value)} placeholder="Mins" inputMode="numeric"
                   style={{ ...styles.roleEditInput, flex: "0 0 64px" }} />
+                <div style={{ flex: "0 0 118px" }}>
+                  <div style={{ fontSize: 10, color: "var(--t6B6B6B)" }}>Start at (optional)</div>
+                  <input type="time" value={row.startAt || ""} onChange={(e) => setRowField(row.id, "startAt", e.target.value)}
+                    style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box", padding: "4px 6px" }} />
+                </div>
                 <input value={row.program} onChange={(e) => setRowField(row.id, "program", e.target.value)} placeholder="Program (e.g. Worship)"
                   style={{ ...styles.roleEditInput, flex: "1 1 130px" }} />
                 <input value={row.task || ""} onChange={(e) => setRowField(row.id, "task", e.target.value)} placeholder="Task"
