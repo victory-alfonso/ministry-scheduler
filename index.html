@@ -1940,14 +1940,14 @@ function recurrenceDates(r, anchorISO, untilISO) {
   const push = (iso) => { if (iso > anchorISO && iso <= until && !full()) out.push(iso); };
   if (r.freq === "daily") {
     const step = Math.max(1, r.intervalN || 1);
-    for (let i = 1; i < 4000 && !full(); i++) {
+    for (let i = 1; i < 40000 && !full(); i++) {
       const iso = isoOf(new Date(ay, am - 1, ad + i * step));
       if (iso > until) break;
       push(iso);
     }
   } else if (r.freq === "weekly") {
     const set = new Set(r.weekdayList);
-    for (let i = 1; i < 4000 && !full(); i++) {
+    for (let i = 1; i < 40000 && !full(); i++) {
       const t = new Date(ay, am - 1, ad + i);
       const iso = isoOf(t);
       if (iso > until) break;
@@ -1998,6 +1998,8 @@ function EventsView({ config, updateConfig, canEdit }) {
   const [mode, setMode] = useState("list"); // list | detail | print
   const [eventSearch, setEventSearch] = useState("");
   const [backMode, setBackMode] = useState("detail"); // where Back goes from the print preview
+  const [repeatConfirm, setRepeatConfirm] = useState(false); // "Apply repeat" confirmation
+  const [seriesCal, setSeriesCal] = useState(null); // repeat calendar: { srcId, year, month, selected }
   const [programModal, setProgramModal] = useState(null); // "+ Program" popup (add / edit one program with its role/task rows)
   useEffect(() => {
     if (mode !== "detail" || programModal) return;
@@ -2779,37 +2781,211 @@ function EventsView({ config, updateConfig, canEdit }) {
 
         {rec.repeats && ev.date && (
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-            <button onClick={() => generateSeries(ev)} disabled={errors.length > 0}
-              style={{ ...ghostBtn, padding: "6px 10px", fontSize: 12, opacity: errors.length ? 0.45 : 1, cursor: errors.length ? "not-allowed" : "pointer" }}>
-              + {REC_HORIZON[rec.freq].label}
+            <button onClick={() => setRepeatConfirm(true)} disabled={errors.length > 0}
+              style={{ ...ghostBtn, padding: "7px 12px", fontSize: 12.5, fontWeight: 700, background: "var(--bA9782F)", opacity: errors.length ? 0.45 : 1, cursor: errors.length ? "not-allowed" : "pointer" }}>
+              📅 Apply repeat…
             </button>
-            {laterInSeries(ev).length > 0 && <button onClick={() => updateUpcoming(ev)} style={{ ...ghostBtn, padding: "6px 10px", fontSize: 12 }}>Update upcoming</button>}
+            {laterInSeries(ev).length > 0 && <button onClick={() => updateUpcoming(ev)} style={{ ...ghostBtn, padding: "7px 12px", fontSize: 12.5 }}>Update upcoming</button>}
           </div>
         )}
-        {ev.seriesId && <div style={{ fontSize: 11, opacity: 0.65, marginTop: 4 }}>{events.filter((x) => x.seriesId === ev.seriesId).length} events in this series</div>}
+        {ev.seriesId && <div style={{ fontSize: 11, opacity: 0.65, marginTop: 4 }}>{events.filter((x) => x.seriesId === ev.seriesId).length} event{events.filter((x) => x.seriesId === ev.seriesId).length === 1 ? "" : "s"} in this series</div>}
       </div>
     );
   };
-  const generateSeries = (src) => {
+  // ---- Apply repeat: confirm, then a year/month calendar of the occurrences ----
+  const proceedRepeat = () => {
+    const src = openEvent;
+    setRepeatConfirm(false);
+    if (!src) return;
+    if (!src.seriesId) setField("seriesId", uid());
+    const [y, m, d] = (src.date || "").split("-").map((n) => parseInt(n, 10));
+    setSeriesCal({ srcId: src.id, year: y, month: m, selected: src.date || null });
+  };
+  // makes real events (copy of the source: programs, ministries, start time) on the given dates
+  const createOccurrences = (src, isoList) => {
     const rec = resolveRecurrence(src);
-    if (!rec.repeats || !src.date || recurrenceErrors(rec, src.date).length > 0) return;
     const sid = src.seriesId || uid();
-    const mates = events.filter((x) => x.id === src.id || (x.seriesId && x.seriesId === sid));
-    const dates = mates.map((x) => x.date).filter(Boolean).sort();
-    const anchor = dates[0];
-    const latest = dates[dates.length - 1];
-    const taken = new Set(dates);
-    const all = recurrenceDates(rec, anchor, recurrenceHorizon(rec, latest));
-    const fresh = all.filter((iso) => iso > latest && !taken.has(iso));
-    if (fresh.length === 0) { window.alert("Nothing new to add — this series is already up to date (or it has reached its end)."); return; }
-    if (fresh.length > 31 && !window.confirm(`This will add ${fresh.length} events. Continue?`)) return;
+    const taken = new Set(events.filter((x) => x.id === src.id || (x.seriesId && x.seriesId === sid)).map((x) => x.date));
+    const fresh = isoList.filter((iso) => !taken.has(iso));
+    if (fresh.length === 0) return;
     const copyRec = storedRecurrence(rec);
     const copies = fresh.map((iso) => ({ ...cloneJson(src), id: uid(), date: iso, assignments: {}, verses: {}, announcements: "", seriesId: sid, repeat: null, recurrence: copyRec }));
     updateConfig((prev) => ({
       ...prev,
       events: [...(prev.events || []).map((e) => (e.id === src.id ? { ...e, seriesId: sid } : e)), ...copies],
     }));
-    window.alert(`Added ${fresh.length} event${fresh.length === 1 ? "" : "s"}:\n${fresh.map(eventDateLabel).join("\n")}`);
+  };
+  const renderRepeatConfirm = () => {
+    const src = openEvent;
+    if (!src) return null;
+    const rec = resolveRecurrence(src);
+    return (
+      <ClearNamesModal
+        teamName={recurrenceSummary(rec)}
+        title="Proceed with this repeat?"
+        body={`“${src.title || "Untitled event"}” will repeat using the schedule below. Next you can pick a year and month to see each date, and create the event for any date.`}
+        note="No events are created until you choose a date."
+        warning="You can still change the repeat settings afterwards."
+        confirmLabel="Yes, proceed"
+        onCancel={() => setRepeatConfirm(false)}
+        onConfirm={proceedRepeat}
+      />
+    );
+  };
+  const renderSeriesCalendar = () => {
+    const cal = seriesCal;
+    const src = events.find((e) => e.id === cal.srcId);
+    if (!src) return null;
+    const rec = resolveRecurrence(src);
+    const mates = events.filter((x) => x.id === src.id || (x.seriesId && x.seriesId === src.seriesId));
+    const byDate = {};
+    mates.forEach((x) => { if (x.date) byDate[x.date] = x; });
+    const anchor = Object.keys(byDate).sort()[0] || src.date;
+    const monthPrefix = `${cal.year}-${padTwo(cal.month)}`;
+    const occ = new Set(anchor ? recurrenceDates(rec, anchor, isoOf(new Date(cal.year, cal.month, 0))) : []);
+    const dim = new Date(cal.year, cal.month, 0).getDate();
+    const lead = new Date(cal.year, cal.month - 1, 1).getDay();
+    const cells = [...Array(lead).fill(null), ...Array.from({ length: dim }, (_, i) => i + 1)];
+    const missing = Array.from(occ).filter((iso) => iso.startsWith(monthPrefix) && !byDate[iso]);
+    const narrow = typeof window !== "undefined" && window.innerWidth < 760;
+    const go = (patch) => setSeriesCal((c) => ({ ...c, ...patch, selected: null }));
+    const shift = (delta) => {
+      let m = cal.month + delta, y = cal.year;
+      while (m > 12) { m -= 12; y += 1; }
+      while (m < 1) { m += 12; y -= 1; }
+      go({ year: y, month: m });
+    };
+    const baseYear = parseInt((src.date || "").slice(0, 4), 10) || new Date().getFullYear();
+    const years = Array.from({ length: 25 }, (_, i) => baseYear - 2 + i);
+    if (!years.includes(cal.year)) years.push(cal.year);
+    years.sort((a, b) => a - b);
+    const sel = { padding: "7px 8px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.28)", background: "rgba(255,255,255,0.12)", color: "#FFFFFF", fontSize: 13.5, fontFamily: "system-ui, sans-serif", colorScheme: "dark" };
+    const navBtn = { width: 34, height: 34, borderRadius: 8, border: "none", background: "rgba(255,255,255,0.16)", color: "#FFFFFF", fontSize: 18, cursor: "pointer", flexShrink: 0 };
+    const opt = { background: "#1F3864" };
+    const selEvent = cal.selected ? byDate[cal.selected] : null;
+    const selIsOcc = cal.selected ? occ.has(cal.selected) : false;
+
+    const renderInfo = () => {
+      if (!cal.selected) return <div style={{ opacity: 0.8, fontSize: 13.5 }}>Pick a date on the calendar to see its details.</div>;
+      const heading = <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 17, color: "#FFFFFF", marginBottom: 6 }}>{eventDateLabel(cal.selected)}</div>;
+      if (!selEvent) {
+        return (
+          <div>
+            {heading}
+            {selIsOcc ? (
+              <div>
+                <div style={{ fontSize: 13.5, opacity: 0.9, marginBottom: 10 }}>This date follows the repeat, but no event has been created for it yet.</div>
+                {canEdit && <button onClick={() => createOccurrences(src, [cal.selected])} style={{ ...styles.smallBtn, background: "var(--bA9782F)", padding: "9px 14px" }}>+ Create event for this date</button>}
+              </div>
+            ) : (
+              <div style={{ fontSize: 13.5, opacity: 0.85 }}>The repeat does not land on this date.</div>
+            )}
+          </div>
+        );
+      }
+      const prog = eventProgress(selEvent);
+      const computed = computeEventRows(selEvent);
+      const phaseBlocks = EVENT_PHASES.map((p) => ({ phase: p, groups: eventGroups(selEvent, p.id) })).filter((x) => x.groups.length > 0);
+      const timeLine = [clockLabel(selEvent.startTime) && `Start ${clockLabel(selEvent.startTime)}`, clockLabel(eventEndTime(selEvent)) && `End ${clockLabel(eventEndTime(selEvent))}`].filter(Boolean).join(" · ");
+      return (
+        <div>
+          {heading}
+          <div style={{ fontWeight: 700, fontSize: 14, color: "#FFFFFF" }}>{selEvent.title || "Untitled event"}</div>
+          {norm(selEvent.subtitle) && <div style={{ fontSize: 12.5, opacity: 0.85 }}>{selEvent.subtitle}</div>}
+          <div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 3 }}>{[timeLine, `${prog.programs} program${prog.programs === 1 ? "" : "s"}`, prog.total ? `${prog.filled} of ${prog.total} roles filled` : "no ministry roles yet"].filter(Boolean).join(" · ")}</div>
+          <button onClick={() => { setSeriesCal(null); setOpenId(selEvent.id); setMode("detail"); }}
+            style={{ ...styles.smallBtn, background: "var(--bA9782F)", padding: "8px 14px", margin: "10px 0" }}>Open this event</button>
+          {phaseBlocks.map(({ phase, groups }) => (
+            <div key={phase.id}>
+              <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.6)", margin: "8px 0 4px" }}>{phase.label}</div>
+              {groups.map((group) => {
+                const first = group[0];
+                const time = (computed.find((c) => c.row.id === first.id) || {}).time;
+                const lines = group.map((r) => {
+                  const info = linkedLabel(r.linkedRole);
+                  return { id: r.id, label: norm(r.task) || (info && info.role) || "", value: r.linkedRole ? eventVolunteer(selEvent, r.linkedRole) : r.fixedText };
+                }).filter((l) => norm(l.label) || norm(l.value));
+                return (
+                  <div key={first.id} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "8px 11px", marginBottom: 6 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: "#FFFFFF" }}>{norm(first.program) || norm(first.task) || "Untitled program"}</div>
+                    <div style={{ fontSize: 11.5, opacity: 0.8 }}>{[time, rowMinutes(first) ? `${rowMinutes(first)} mins` : ""].filter(Boolean).join(" · ") || "—"}</div>
+                    {lines.length > 0 && (
+                      <div style={{ marginTop: 4, fontSize: 12.5 }}>
+                        {lines.map((l) => (
+                          <div key={l.id}><span style={{ opacity: 0.7 }}>{l.label}{l.label ? ": " : ""}</span>{norm(l.value) ? <b style={{ fontWeight: 600 }}>{l.value}</b> : <span style={{ opacity: 0.5 }}>— open —</span>}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    return ReactDOM.createPortal(
+      <div className="no-print pane-dark" style={{ ...styles.modalOverlay, zIndex: 2000001 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setSeriesCal(null); }}>
+        <div style={{ width: "min(860px, 100%)", maxHeight: "92vh", overflowY: "auto", borderRadius: 18, border: "1px solid rgba(255,255,255,0.18)", boxShadow: "0 30px 60px -15px rgba(0,0,0,0.6)", fontFamily: "system-ui, sans-serif", color: "#EAF0FF", background: "linear-gradient(180deg, #2F4E86 0%, #1F3864 100%)", padding: "16px 18px 18px", boxSizing: "border-box" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 12 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "rgba(255,255,255,0.8)" }}>Repeat calendar · {src.title || "Untitled event"}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", marginTop: 3 }}>{recurrenceSummary(rec)}</div>
+            </div>
+            <button onClick={() => setSeriesCal(null)} aria-label="Close" style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.35)", color: "#FFFFFF", fontSize: 17, cursor: "pointer", flexShrink: 0 }}>×</button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: narrow ? "1fr" : "minmax(0, 1fr) minmax(0, 1fr)", gap: 18, alignItems: "start" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                <button onClick={() => shift(-1)} style={navBtn} aria-label="Previous month">‹</button>
+                <select value={cal.month} onChange={(e) => go({ month: Number(e.target.value) })} aria-label="Month" style={{ ...sel, flex: 1, minWidth: 0 }}>
+                  {MONTH_NAMES.map((n, i) => <option key={n} value={i + 1} style={opt}>{n}</option>)}
+                </select>
+                <select value={cal.year} onChange={(e) => go({ year: Number(e.target.value) })} aria-label="Year" style={{ ...sel, width: 84 }}>
+                  {years.map((y) => <option key={y} value={y} style={opt}>{y}</option>)}
+                </select>
+                <button onClick={() => shift(1)} style={navBtn} aria-label="Next month">›</button>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+                  <div key={d} style={{ textAlign: "center", fontSize: 10.5, fontWeight: 700, opacity: 0.7, padding: "2px 0" }}>{d}</div>
+                ))}
+                {cells.map((day, i) => {
+                  if (!day) return <div key={`b${i}`} />;
+                  const iso = `${monthPrefix}-${padTwo(day)}`;
+                  const hasEvent = !!byDate[iso];
+                  const isOcc = occ.has(iso);
+                  const active = cal.selected === iso;
+                  return (
+                    <button key={iso} onClick={() => setSeriesCal((c) => ({ ...c, selected: iso }))}
+                      style={{
+                        height: 40, borderRadius: 8, cursor: "pointer", fontSize: 13.5, fontWeight: hasEvent || isOcc ? 700 : 400, fontFamily: "system-ui, sans-serif", padding: 0,
+                        color: hasEvent ? "#2A1A38" : "#FFFFFF",
+                        background: hasEvent ? "#E5A430" : isOcc ? "rgba(229,164,48,0.12)" : "rgba(255,255,255,0.06)",
+                        border: active ? "2px solid #FFFFFF" : isOcc && !hasEvent ? "1.5px dashed #E5A430" : "1px solid rgba(255,255,255,0.12)",
+                      }}>{day}</button>
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 11.5, opacity: 0.85, marginTop: 10 }}>
+                <span><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background: "#E5A430", marginRight: 5 }} />Event created</span>
+                <span><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, border: "1.5px dashed #E5A430", marginRight: 5, boxSizing: "border-box" }} />Repeat date, not created</span>
+              </div>
+              {canEdit && missing.length > 0 && (
+                <button onClick={() => createOccurrences(src, missing)} style={{ ...styles.smallBtn, background: "rgba(255,255,255,0.16)", padding: "8px 12px", marginTop: 10 }}>
+                  + Create all {missing.length} event{missing.length === 1 ? "" : "s"} in {MONTH_NAMES[cal.month - 1]}
+                </button>
+              )}
+            </div>
+            <div style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "12px 14px", minWidth: 0 }}>
+              {renderInfo()}
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
   };
   const updateUpcoming = (src) => {
     const later = laterInSeries(src);
@@ -3054,6 +3230,8 @@ function EventsView({ config, updateConfig, canEdit }) {
       })()}
       {mode === "detail" && openEvent && renderEventDetail()}
       {programModal && renderProgramModal()}
+      {repeatConfirm && mode === "detail" && openEvent && renderRepeatConfirm()}
+      {seriesCal && renderSeriesCalendar()}
     </div>
   );
 }
