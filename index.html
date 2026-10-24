@@ -3544,6 +3544,35 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
   const setVerseValue = (key, value) => writeField("verses", key, value);
 
   const roles = event ? rolesForEvent(event) : [];
+
+  // Same double-booking check as Assign volunteers, but for one event: the same name used in another
+  // role of this event is a "duplicate" (same ministry) or a "Schedule Conflict" (different ministry,
+  // unless the pair/combination is allowed in Manage Teams).
+  const findEventIssues = (ev, selfKey, name) => {
+    const target = normKey(name);
+    if (!target || !ev) return [];
+    const issues = [];
+    const [selfTeamId, selfRoleId] = splitRoleKey(selfKey);
+    const selfTag = roleTag(selfTeamId, selfRoleId);
+    Object.entries(ev.assignments || {}).forEach(([key, val]) => {
+      if (key === selfKey || normKey(val) !== target) return;
+      const [tId, rId] = splitRoleKey(key);
+      const otherTeam = (config.teams || []).find((t) => t.id === tId);
+      if (!otherTeam) return;
+      let roleName = ((otherTeam.roles || []).find((r) => r.id === rId) || {}).name;
+      if (!roleName) {
+        const block = (ev.ministries || []).find((b) => b.teamId === tId);
+        const custom = block && (block.roles || []).find((r) => `c:${r.id}` === rId);
+        roleName = custom ? custom.label : "";
+      }
+      if (!roleName) return;
+      const otherTag = roleTag(tId, rId);
+      if ((config.compatibleGroups || []).some((g) => g.includes(selfTag) && g.includes(otherTag))) return;
+      if (tId === selfTeamId) issues.push({ type: "duplicate", team: otherTeam, role: { name: roleName } });
+      else if (!isCompatible(selfTeamId, tId, config.teams, config.compatiblePairs || [])) issues.push({ type: "Schedule Conflict", team: otherTeam, role: { name: roleName } });
+    });
+    return issues;
+  };
   const filledOf = (e) => {
     const list = rolesForEvent(e);
     return { total: list.length, filled: list.filter((r) => norm(eventVolunteer(e, r.key))).length };
@@ -3730,6 +3759,13 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
                 const [, roleId] = splitRoleKey(role.key);
                 const teamRole = (team.roles || []).find((r) => r.id === roleId);
                 const roleVolunteers = ((teamRole && teamRole.volunteers) || []).slice().sort((a, b) => a.localeCompare(b));
+                const issues = findEventIssues(event, role.key, eventVolunteer(event, role.key));
+                const dupIssues = issues.filter((x) => x.type === "duplicate");
+                const conflictIssues = issues.filter((x) => x.type === "Schedule Conflict");
+                const warnParts = [];
+                if (dupIssues.length > 0) warnParts.push(`Also serving as ${dupIssues.map((i) => i.role.name).join(" & ")} on this team`);
+                if (conflictIssues.length > 0) warnParts.push(`Also scheduled for ${conflictIssues.map((i) => `${i.team.name} — ${i.role.name}`).join(" & ")}`);
+                const warnText = warnParts.length ? warnParts.join(" | ") : null;
                 return (
                   <div key={role.key} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "11px 14px", marginBottom: 8 }}>
                     <div style={{ fontWeight: 700, fontSize: 13.5, color: "#FFFFFF", marginBottom: 6 }}>{role.label}</div>
@@ -3743,7 +3779,8 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
                       compact={isMobile}
                       popupTitle={`${role.label} · ${event.title || "Event"}`}
                       popupMinWidth={220}
-                      style={{ ...darkField, flex: 1, ...(locked ? { background: "rgba(255,255,255,0.05)", cursor: "default" } : {}) }}
+                      warningText={warnText}
+                      style={{ ...darkField, flex: 1, ...(issues.length ? { borderColor: "#C24A3A", borderLeftColor: "#C24A3A", animation: "warnGlow 0.9s ease-in-out infinite" } : {}), ...(locked ? { background: "rgba(255,255,255,0.05)", cursor: "default" } : {}) }}
                     />
                     {teamRole && teamRole.hasVerse && (
                       <input value={(event.verses || {})[role.key] || ""} onChange={(ev) => setVerseValue(role.key, ev.target.value)}
