@@ -206,6 +206,10 @@
   .app-main > * { transition: opacity 0.18s ease; }
   .app-main.month-loading > * { opacity: 0.5; pointer-events: none; }
   .app-main.month-loading .month-nav-keep, .app-main.month-loading .month-nav-keep * { pointer-events: auto; }
+  .pane-dark { color-scheme: dark; scrollbar-color: rgba(255,255,255,0.35) transparent; }
+  .pane-dark * { scrollbar-color: rgba(255,255,255,0.35) transparent; }
+  .pane-dark input::placeholder, .pane-dark textarea::placeholder { color: rgba(255,255,255,0.5); opacity: 1; }
+  .pane-dark input:focus, .pane-dark textarea:focus, .pane-dark select:focus { border-color: #E5A430 !important; box-shadow: 0 0 0 2px rgba(229,164,48,0.25); }
   @page { size: letter; margin: 0.35in; }
   @media print {
     .no-print { display: none !important; }
@@ -2050,7 +2054,7 @@ function EventsView({ config, updateConfig, canEdit }) {
     const timeLine = [clockLabel(ev.startTime) && `Start ${clockLabel(ev.startTime)}`, clockLabel(eventEndTime(ev)) && `End ${clockLabel(eventEndTime(ev))}`].filter(Boolean).join(" · ");
     const goPrint = () => { setBackMode("detail"); setMode("print"); };
     return ReactDOM.createPortal(
-      <div className="no-print" style={{ ...styles.modalOverlay, zIndex: 1999990 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setMode("list"); }}>
+      <div className="no-print pane-dark" style={{ ...styles.modalOverlay, zIndex: 1999990 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setMode("list"); }}>
         <div style={{
           width: "min(1000px, 100%)", height: narrow ? "92vh" : "min(86vh, 760px)", borderRadius: 18, overflow: narrow ? "auto" : "hidden",
           display: narrow ? "block" : "grid", gridTemplateColumns: "300px 1fr", boxShadow: "0 30px 60px -15px rgba(0,0,0,0.6)",
@@ -2643,9 +2647,10 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
     const pct = prog.total ? prog.filled / prog.total : 0;
     const R = 46, C = 2 * Math.PI * R;
     const sectionLabel = { fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.7)", margin: "18px 0 8px" };
+    const darkField = { ...styles.input, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.28)", borderLeft: "3px solid rgba(229,164,48,0.75)", color: "#FFFFFF", colorScheme: "dark" };
     const timeLine = [clockLabel(event.startTime) && `Start ${clockLabel(event.startTime)}`, clockLabel(eventEndTime(event)) && `End ${clockLabel(eventEndTime(event))}`].filter(Boolean).join(" · ");
     return ReactDOM.createPortal(
-      <div className="no-print" style={{ ...styles.modalOverlay, zIndex: 1999990 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setEventId(null); }}>
+      <div className="no-print pane-dark" style={{ ...styles.modalOverlay, zIndex: 1999990 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setEventId(null); }}>
         <div style={{
           width: "min(1000px, 100%)", height: narrow ? "92vh" : "min(86vh, 760px)", borderRadius: 18, overflow: narrow ? "auto" : "hidden",
           display: narrow ? "block" : "grid", gridTemplateColumns: "300px 1fr", boxShadow: "0 30px 60px -15px rgba(0,0,0,0.6)",
@@ -2710,12 +2715,12 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
                       compact={isMobile}
                       popupTitle={`${role.label} · ${event.title || "Event"}`}
                       popupMinWidth={220}
-                      style={{ ...styles.input, flex: 1, ...(locked ? { background: "var(--bF3EFE2)", cursor: "default" } : {}) }}
+                      style={{ ...darkField, flex: 1, ...(locked ? { background: "rgba(255,255,255,0.05)", cursor: "default" } : {}) }}
                     />
                     {teamRole && teamRole.hasVerse && (
                       <input value={(event.verses || {})[role.key] || ""} onChange={(ev) => setVerseValue(role.key, ev.target.value)}
                         placeholder="Verse (John 3:16)" readOnly={locked} autoComplete="off"
-                        style={{ ...styles.input, width: "100%", boxSizing: "border-box", marginTop: 6, ...(locked ? { background: "var(--bF3EFE2)", cursor: "default" } : {}) }} />
+                        style={{ ...darkField, width: "100%", boxSizing: "border-box", marginTop: 6, ...(locked ? { background: "rgba(255,255,255,0.05)", cursor: "default" } : {}) }} />
                     )}
                   </div>
                 );
