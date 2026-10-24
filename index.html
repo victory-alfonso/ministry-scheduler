@@ -1658,6 +1658,72 @@ function eventEndTime(event) {
   return duringTotal > 0 ? addMinutesToClock(event.startTime, duringTotal) : "";
 }
 
+// Date as three plain boxes (MM / DD / YYYY) instead of the browser's calendar popup.
+// value / onChange use "YYYY-MM-DD" (or "" when cleared). onChange fires only for a real, complete date.
+function DateInput3({ value, onChange, style }) {
+  const parse = (v) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || "");
+    return m ? { m: m[2], d: m[3], y: m[1] } : { m: "", d: "", y: "" };
+  };
+  const [parts, setParts] = useState(() => parse(value));
+  const [touched, setTouched] = useState(false);
+  const mRef = useRef(null), dRef = useRef(null), yRef = useRef(null);
+  const committed = useRef(value || "");
+  useEffect(() => {
+    if ((value || "") !== committed.current) {
+      committed.current = value || "";
+      setParts(parse(value));
+    }
+  }, [value]);
+  // "" = empty, null = incomplete/invalid, otherwise the ISO date
+  const validate = (p) => {
+    if (!p.m && !p.d && !p.y) return "";
+    if (p.y.length !== 4 || !p.m || !p.d) return null;
+    const y = parseInt(p.y, 10), m = parseInt(p.m, 10), d = parseInt(p.d, 10);
+    if (m < 1 || m > 12 || d < 1 || d > new Date(y, m, 0).getDate()) return null;
+    return `${p.y}-${padTwo(m)}-${padTwo(d)}`;
+  };
+  const apply = (next) => {
+    setParts(next);
+    const res = validate(next);
+    if (res !== null && res !== committed.current) {
+      committed.current = res;
+      onChange(res);
+    }
+  };
+  const onMonth = (raw) => {
+    let v = raw.replace(/\D/g, "").slice(0, 2);
+    if (v.length === 1 && parseInt(v, 10) > 1) v = "0" + v;
+    apply({ ...parts, m: v });
+    if (v.length === 2 && dRef.current) dRef.current.focus();
+  };
+  const onDay = (raw) => {
+    let v = raw.replace(/\D/g, "").slice(0, 2);
+    if (v.length === 1 && parseInt(v, 10) > 3) v = "0" + v;
+    apply({ ...parts, d: v });
+    if (v.length === 2 && yRef.current) yRef.current.focus();
+  };
+  const onYear = (raw) => apply({ ...parts, y: raw.replace(/\D/g, "").slice(0, 4) });
+  const back = (e, current, prev) => {
+    if (e.key === "Backspace" && !current && prev.current) { e.preventDefault(); prev.current.focus(); }
+  };
+  const bad = touched && validate(parts) === null;
+  const box = { ...(style || {}), width: "auto", textAlign: "center", padding: "8px 4px", ...(bad ? { borderColor: "#E07A66" } : {}) };
+  const sep = { opacity: 0.6, fontSize: 14 };
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setTouched(true); }}>
+      <input ref={mRef} value={parts.m} onChange={(e) => onMonth(e.target.value)} onKeyDown={(e) => back(e, parts.m, { current: null })}
+        inputMode="numeric" maxLength={2} placeholder="MM" aria-label="Month" autoComplete="off" style={{ ...box, flex: "0 0 48px" }} />
+      <span style={sep}>/</span>
+      <input ref={dRef} value={parts.d} onChange={(e) => onDay(e.target.value)} onKeyDown={(e) => back(e, parts.d, mRef)}
+        inputMode="numeric" maxLength={2} placeholder="DD" aria-label="Day" autoComplete="off" style={{ ...box, flex: "0 0 48px" }} />
+      <span style={sep}>/</span>
+      <input ref={yRef} value={parts.y} onChange={(e) => onYear(e.target.value)} onKeyDown={(e) => back(e, parts.y, dRef)}
+        inputMode="numeric" maxLength={4} placeholder="YYYY" aria-label="Year" autoComplete="off" style={{ ...box, flex: "0 0 72px" }} />
+    </div>
+  );
+}
+
 function EventsView({ config, updateConfig, canEdit }) {
   const [openId, setOpenId] = useState(null);
   const [mode, setMode] = useState("list"); // list | detail | print
@@ -2016,7 +2082,7 @@ function EventsView({ config, updateConfig, canEdit }) {
             {canEdit ? (
               <div>
                 <div style={{ ...dLabel, marginTop: 0 }}>Date</div>
-                <input type="date" value={ev.date || ""} onChange={(e) => setField("date", e.target.value)} style={dInput} />
+                <DateInput3 value={ev.date || ""} onChange={(v) => setField("date", v)} style={dInput} />
                 <div style={dLabel}>Service start time</div>
                 <input type="time" value={ev.startTime || ""} onChange={(e) => setField("startTime", e.target.value)} style={dInput} />
                 <div style={dLabel}>End time (computed)</div>
