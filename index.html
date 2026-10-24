@@ -2352,8 +2352,12 @@ function EventsView({ config, updateConfig, canEdit }) {
 
             {canEdit ? (
               <div>
-                <div style={dLabel}>Date</div>
-                <DateInput3 value={ev.date || ""} onChange={(v) => setField("date", v)} style={{ ...dInput, padding: "6px 4px" }} />
+                {!resolveRecurrence(ev).repeats && (
+                  <div>
+                    <div style={dLabel}>Date</div>
+                    <DateInput3 value={ev.date || ""} onChange={(v) => setField("date", v)} style={{ ...dInput, padding: "6px 4px" }} />
+                  </div>
+                )}
                 <div style={{ display: "flex", gap: 8, marginTop: 0 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={dLabel}>Start time</div>
