@@ -3664,8 +3664,8 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
               <tr>
                 <th style={styles.sheetTh}>Time</th>
                 <th style={styles.sheetTh}>Duration</th>
-                <th style={styles.sheetTh}>Program</th>
                 <th style={styles.sheetTh}>{PRINT_EXTRA_COL_LABEL}</th>
+                <th style={styles.sheetTh}>Program</th>
                 <th style={styles.sheetTh}>Task</th>
                 <th style={styles.sheetTh}>Volunteer(s)</th>
                 <th style={{ ...styles.sheetTh, width: 26 }}></th>
@@ -3696,6 +3696,11 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                       <td style={styles.sheetTd}>{timing.time}</td>
                       <td style={styles.sheetTd}>{timing.duration}</td>
                       {i === 0 && (
+                        <td rowSpan={visibleRows.length} style={{ ...styles.sheetTd, verticalAlign: "middle", whiteSpace: "pre-wrap" }}>
+                          {section.extraCol || ""}
+                        </td>
+                      )}
+                      {i === 0 && (
                         <td rowSpan={visibleRows.length} style={{ ...styles.sheetTd, fontWeight: 700, verticalAlign: "middle", whiteSpace: "pre-wrap" }}>
                           {section.program || ""}
                           {extraLines.length > 0 && (
@@ -3703,11 +3708,6 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                               {extraLines.map((v, idx) => <div key={idx}>{v}</div>)}
                             </div>
                           )}
-                        </td>
-                      )}
-                      {i === 0 && (
-                        <td rowSpan={visibleRows.length} style={{ ...styles.sheetTd, verticalAlign: "middle", whiteSpace: "pre-wrap" }}>
-                          {section.extraCol || ""}
                         </td>
                       )}
                       <td style={styles.sheetTd}>
