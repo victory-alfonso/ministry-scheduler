@@ -1582,6 +1582,16 @@ const EVENT_PHASES = [
   { id: "after", label: "After service", short: "After" },
 ];
 const phaseOf = (row) => row.phase || "during";
+
+// Names for an event live in event.assignments, keyed by "teamId|roleId" (same idea as the Sunday assignKey).
+// Task rows link to a role, ministry blocks list roles, and both read the same key.
+const eventRoleKey = (teamId, roleId) => `${teamId}|${roleId}`;
+const blockRoleKey = (block, role) => eventRoleKey(block.teamId, role.roleId ? role.roleId : `c:${role.id}`);
+const eventVolunteer = (event, key) => (key && (event.assignments || {})[key]) || "";
+const splitRoleKey = (key) => {
+  const at = (key || "").indexOf("|");
+  return at < 0 ? ["", ""] : [key.slice(0, at), key.slice(at + 1)];
+};
 const rowMinutes = (row) => (parseInt(row.duration, 10) > 0 ? parseInt(row.duration, 10) : 0);
 
 function clockToMinutes(time) {
@@ -1688,7 +1698,7 @@ function EventsView({ config, updateConfig, canEdit }) {
     setMode("edit");
   };
   const duplicateEvent = (source) => {
-    const copy = { ...source, id: uid(), title: `${source.title} (copy)`, date: "", rows: source.rows.map((r) => ({ ...r, id: uid() })),
+    const copy = { ...source, id: uid(), title: `${source.title} (copy)`, date: "", assignments: {}, rows: source.rows.map((r) => ({ ...r, id: uid() })),
       ministries: (source.ministries || []).map((b) => ({ ...b, id: uid(), roles: (b.roles || []).map((r) => ({ ...r, id: uid() })) })) };
     updateConfig((prev) => ({ ...prev, events: [...(prev.events || []), copy] }));
     setOpenId(copy.id);
@@ -1714,39 +1724,34 @@ function EventsView({ config, updateConfig, canEdit }) {
       return span;
     });
     const bandText = (word) => `${word} OF ${(openEvent.title || "EVENT").toUpperCase()}`;
-    // ministries set to "show next to a program row" turn into task/volunteer lines of that row
-    const isPlacedInRow = (block) => !!block.placeInRowId && (openEvent.rows || []).some((r) => r.id === block.placeInRowId);
-    const placedMinistries = (openEvent.ministries || []).filter(isPlacedInRow);
+    const roleNameFor = (key) => {
+      const [teamId, roleId] = splitRoleKey(key);
+      const team = (config.teams || []).find((t) => t.id === teamId);
+      const role = team && (team.roles || []).find((r) => r.id === roleId);
+      return role ? role.name : "";
+    };
     const renderPhaseRows = (phaseId) => {
       const group = computed.filter((c) => c.phase === phaseId);
-      const lines = group.map(({ row }) => {
-        const linkedRoles = placedMinistries.filter((b) => b.placeInRowId === row.id).flatMap((b) => b.roles || []);
-        return linkedRoles.length > 0
-          ? linkedRoles.map((r) => ({ id: r.id, task: r.label, volunteer: r.value }))
-          : [{ id: row.id, task: row.task, volunteer: row.volunteer }];
-      });
-      // spans are counted in rows, so convert them to printed lines
-      const toLineSpans = (spans) => spans.map((span, i) => (span === 0 ? 0 : lines.slice(i, i + span).reduce((sum, l) => sum + l.length, 0)));
-      const timeSpans = toLineSpans(spanList(group.map((c, i) => i === 0 || !!c.time)));
-      const programSpans = toLineSpans(spanList(group.map((c, i) => i === 0 || !!norm(c.row.program))));
-      return group.flatMap(({ row, time, durationText }, i) => lines[i].map((line, lineIndex) => (
-        <tr key={line.id}>
-          {lineIndex === 0 && timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={styles.sheetTd}>{time}</td>}
-          {lineIndex === 0 && timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={styles.sheetTd}>{durationText}</td>}
-          {lineIndex === 0 && programSpans[i] > 0 && <td rowSpan={programSpans[i]} style={styles.sheetTd}></td>}
-          {lineIndex === 0 && programSpans[i] > 0 && (
+      const timeSpans = spanList(group.map((c, i) => i === 0 || !!c.time));
+      const programSpans = spanList(group.map((c, i) => i === 0 || !!norm(c.row.program)));
+      return group.map(({ row, time, durationText }, i) => (
+        <tr key={row.id}>
+          {timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={styles.sheetTd}>{time}</td>}
+          {timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={styles.sheetTd}>{durationText}</td>}
+          {programSpans[i] > 0 && <td rowSpan={programSpans[i]} style={styles.sheetTd}></td>}
+          {programSpans[i] > 0 && (
             <td rowSpan={programSpans[i]} style={{ ...styles.sheetTd, fontWeight: 700, verticalAlign: "middle", whiteSpace: "pre-wrap" }}>
               {row.program}
               {norm(row.programNote) && <div style={{ fontWeight: 400, fontSize: 10.5, marginTop: 4 }}>{row.programNote}</div>}
             </td>
           )}
-          <td style={styles.sheetTd}>{line.task}</td>
-          <td style={styles.sheetTd}>{line.volunteer}</td>
+          <td style={styles.sheetTd}>{row.task || roleNameFor(row.linkedRole)}</td>
+          <td style={styles.sheetTd}>{row.fixedText || eventVolunteer(openEvent, row.linkedRole)}</td>
           <td style={{ ...styles.sheetTd, textAlign: "center" }}>
             <span style={{ display: "inline-block", width: 12, height: 12, border: "1px solid var(--l23211D)", borderRadius: 3 }} />
           </td>
         </tr>
-      )));
+      ));
     };
     return (
       <div className="print-sheet-wrap" style={styles.viewWrap}>
@@ -1799,7 +1804,7 @@ function EventsView({ config, updateConfig, canEdit }) {
                 </tbody>
               </table>
               {(() => {
-                const ministries = (openEvent.ministries || []).filter((b) => !isPlacedInRow(b));
+                const ministries = openEvent.ministries || [];
                 const renderMinistry = (block) => (
                   <div key={block.id} style={{ marginBottom: 14 }}>
                     <div style={styles.sheetSectionHead}>{(block.title || "").toUpperCase()}</div>
@@ -1812,7 +1817,7 @@ function EventsView({ config, updateConfig, canEdit }) {
                         {(block.roles || []).map((r) => (
                           <tr key={r.id}>
                             <td style={styles.sheetTd}>{r.label}</td>
-                            <td style={styles.sheetTd}>{r.value}</td>
+                            <td style={styles.sheetTd}>{eventVolunteer(openEvent, blockRoleKey(block, r))}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1907,7 +1912,16 @@ function EventsView({ config, updateConfig, canEdit }) {
                   style={{ ...styles.roleEditInput, flex: "1 1 130px" }} />
                 <input value={row.task || ""} onChange={(e) => setRowField(row.id, "task", e.target.value)} placeholder="Task"
                   style={{ ...styles.roleEditInput, flex: "2 1 150px" }} />
-                <input value={row.volunteer} onChange={(e) => setRowField(row.id, "volunteer", e.target.value)} placeholder="Volunteer(s)"
+                <select value={row.linkedRole || ""} onChange={(e) => setRowField(row.id, "linkedRole", e.target.value)}
+                  style={{ ...styles.roleEditInput, flex: "1 1 170px" }}>
+                  <option value="">Linked role: none</option>
+                  {teams.map((t) => (
+                    <optgroup key={t.id} label={t.name}>
+                      {(t.roles || []).map((r) => <option key={r.id} value={eventRoleKey(t.id, r.id)}>{t.name} — {r.name}</option>)}
+                    </optgroup>
+                  ))}
+                </select>
+                <input value={row.fixedText || ""} onChange={(e) => setRowField(row.id, "fixedText", e.target.value)} placeholder="Fixed text (optional)"
                   style={{ ...styles.roleEditInput, flex: "1 1 130px" }} />
                 <select value={phaseOf(row)} onChange={(e) => setRowField(row.id, "phase", e.target.value)}
                   style={{ ...styles.roleEditInput, flex: "0 0 96px" }}>
@@ -1935,16 +1949,6 @@ function EventsView({ config, updateConfig, canEdit }) {
                 <input value={block.title} onChange={(e) => updateMinistry(block.id, (b) => ({ ...b, title: e.target.value }))} style={{ ...styles.roleEditInput, fontWeight: 700 }} />
                 <button onClick={() => removeMinistry(block.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove ministry">✕</button>
               </div>
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 10, color: "var(--t6B6B6B)" }}>Show in</div>
-                <select value={block.placeInRowId || ""} onChange={(e) => updateMinistry(block.id, (b) => ({ ...b, placeInRowId: e.target.value }))}
-                  style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box" }}>
-                  <option value="">Bottom section of the sheet</option>
-                  {computeEventRows(openEvent).map(({ row }) => (
-                    <option key={row.id} value={row.id}>Next to program: {row.program || row.task || "Untitled row"}</option>
-                  ))}
-                </select>
-              </div>
               {team && (team.roles || []).length > 0 && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 8 }}>
                   {team.roles.map((teamRole) => (
@@ -1958,7 +1962,6 @@ function EventsView({ config, updateConfig, canEdit }) {
               {(block.roles || []).map((r) => (
                 <div key={r.id} style={{ display: "flex", gap: 6, marginBottom: 6 }}>
                   <input value={r.label} onChange={(e) => setMinistryRole(block, r.id, "label", e.target.value)} placeholder="Role" style={{ ...styles.roleEditInput, flex: "1 1 120px" }} />
-                  <input value={r.value} onChange={(e) => setMinistryRole(block, r.id, "value", e.target.value)} placeholder="Volunteer" style={{ ...styles.roleEditInput, flex: "1 1 120px" }} />
                   <button onClick={() => removeMinistryRole(block, r.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove role">✕</button>
                 </div>
               ))}
@@ -2008,22 +2011,45 @@ function EventsView({ config, updateConfig, canEdit }) {
 }
 
 // Ministry-side view of the Events: pick an event, fill in this ministry's roles for it.
-// Names go straight into that event's ministry block (config.events), so the event sheet picks them up.
+// Names are saved on the event (event.assignments), so the event sheet picks them up.
 function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack }) {
   const [eventId, setEventId] = useState(null);
   const events = (config.events || []).slice().sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
   const event = events.find((e) => e.id === eventId);
-  const block = event ? (event.ministries || []).find((b) => b.teamId === team.id) : null;
 
-  const setRoleValue = (rowId, value) => updateConfig((prev) => ({
+  // roles this ministry fills in an event: the ones picked for its bottom block,
+  // plus any task row linked to one of its roles
+  const rolesForEvent = (e) => {
+    const list = [];
+    const seen = new Set();
+    const add = (key, label) => {
+      if (seen.has(key)) return;
+      seen.add(key);
+      list.push({ key, label });
+    };
+    const block = (e.ministries || []).find((b) => b.teamId === team.id);
+    if (block) (block.roles || []).forEach((r) => add(blockRoleKey(block, r), r.label));
+    (e.rows || []).forEach((row) => {
+      const [linkedTeamId, linkedRoleId] = splitRoleKey(row.linkedRole);
+      if (linkedTeamId !== team.id) return;
+      const teamRole = (team.roles || []).find((r) => r.id === linkedRoleId);
+      if (teamRole) add(row.linkedRole, teamRole.name);
+    });
+    return list;
+  };
+
+  const setRoleValue = (key, value) => updateConfig((prev) => ({
     ...prev,
-    events: (prev.events || []).map((e) => (e.id !== eventId ? e : {
-      ...e,
-      ministries: (e.ministries || []).map((b) => (b.teamId !== team.id ? b : {
-        ...b, roles: (b.roles || []).map((r) => (r.id === rowId ? { ...r, value } : r)),
-      })),
-    })),
+    events: (prev.events || []).map((e) => {
+      if (e.id !== eventId) return e;
+      const next = { ...(e.assignments || {}) };
+      if (norm(value)) next[key] = value;
+      else delete next[key];
+      return { ...e, assignments: next };
+    }),
   }));
+
+  const roles = event ? rolesForEvent(event) : [];
 
   return (
     <div style={styles.viewWrap}>
@@ -2045,14 +2071,14 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
         <div>
           {events.length === 0 && <div style={styles.emptyNote}>No events yet. Events are added in the Events tab.</div>}
           {events.map((e) => {
-            const eventBlock = (e.ministries || []).find((b) => b.teamId === team.id);
+            const count = rolesForEvent(e).length;
             return (
               <button key={e.id} onClick={() => setEventId(e.id)}
                 style={{ display: "block", width: "100%", textAlign: "left", cursor: "pointer", border: "1px solid var(--lD8CFB0)", borderRadius: 10, background: "var(--bFFFFFF)", padding: "12px 14px", marginBottom: 8, fontFamily: "system-ui, sans-serif" }}>
                 <div style={{ fontWeight: 700, color: "var(--t1F3864)" }}>{e.title || "Untitled event"}</div>
                 <div style={{ fontSize: 12.5, color: "var(--t6B6B6B)", marginTop: 2 }}>
                   {[eventDateLabel(e.date) || "No date yet", clockLabel(e.startTime)].filter(Boolean).join(" · ")}
-                  {" — "}{eventBlock ? `${(eventBlock.roles || []).length} role(s) for this ministry` : "this ministry isn't in this event"}
+                  {" — "}{count > 0 ? `${count} role(s) for this ministry` : "this ministry isn't in this event"}
                 </div>
               </button>
             );
@@ -2060,30 +2086,28 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
         </div>
       )}
 
-      {event && !block && (
-        <div style={styles.emptyNote}>{team.name} isn't part of this event yet. Ask an admin to add it under Events.</div>
+      {event && roles.length === 0 && (
+        <div style={styles.emptyNote}>{team.name} has no roles in this event yet. Ask an admin to link one of its roles to a task, or add the ministry, under Events.</div>
       )}
-      {event && block && (block.roles || []).length === 0 && (
-        <div style={styles.emptyNote}>No roles were picked for {team.name} in this event.</div>
-      )}
-      {event && block && (block.roles || []).length > 0 && (
+      {event && roles.length > 0 && (
         <div style={styles.rolesCard}>
-          {(block.roles || []).map((row, i) => {
-            const teamRole = (team.roles || []).find((r) => r.id === row.roleId);
+          {roles.map((role, i) => {
+            const [, roleId] = splitRoleKey(role.key);
+            const teamRole = (team.roles || []).find((r) => r.id === roleId);
             const roleVolunteers = ((teamRole && teamRole.volunteers) || []).slice().sort((a, b) => a.localeCompare(b));
             return (
-              <div key={row.id} className="role-row" style={{ ...styles.roleRow, ...(i % 2 === 1 ? styles.roleRowAlt : {}), borderTop: i === 0 ? "none" : "1px solid var(--lEFE7D3)", ...(isMobile ? { flexDirection: "column", gap: 8 } : {}) }}>
-                <div style={{ ...styles.roleName, ...(isMobile ? { width: "100%", paddingTop: 0 } : {}) }}><span className="role-dot" style={styles.roleNameDot} />{row.label}</div>
+              <div key={role.key} className="role-row" style={{ ...styles.roleRow, ...(i % 2 === 1 ? styles.roleRowAlt : {}), borderTop: i === 0 ? "none" : "1px solid var(--lEFE7D3)", ...(isMobile ? { flexDirection: "column", gap: 8 } : {}) }}>
+                <div style={{ ...styles.roleName, ...(isMobile ? { width: "100%", paddingTop: 0 } : {}) }}><span className="role-dot" style={styles.roleNameDot} />{role.label}</div>
                 <div style={{ ...styles.roleInputWrap, ...(isMobile ? { width: "100%" } : {}) }}>
                   <VolunteerNameInput
-                    value={row.value || ""}
-                    onChange={(val) => setRoleValue(row.id, val)}
+                    value={eventVolunteer(event, role.key)}
+                    onChange={(val) => setRoleValue(role.key, val)}
                     volunteers={roleVolunteers}
                     locked={locked}
                     placeholder="Volunteer name"
                     allowAbove={!isMobile}
                     compact={isMobile}
-                    popupTitle={`${row.label} · ${event.title || "Event"}`}
+                    popupTitle={`${role.label} · ${event.title || "Event"}`}
                     popupMinWidth={220}
                     style={{ ...styles.input, flex: 1, ...(locked ? { background: "var(--bF3EFE2)", cursor: "default" } : {}) }}
                   />
