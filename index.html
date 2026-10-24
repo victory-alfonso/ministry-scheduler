@@ -3303,7 +3303,7 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
       const programSpans = spanList(group.map((c, i) => i === 0 || !!norm(c.row.program)));
       return group.map(({ row, time, durationText }, i) => (
         <tr key={row.id}>
-          {timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={styles.sheetTd}>{time}</td>}
+          {timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={{ ...styles.sheetTd, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{time}</td>}
           {timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={styles.sheetTd}>{durationText}</td>}
           {programSpans[i] > 0 && <td rowSpan={programSpans[i]} style={styles.sheetTd}></td>}
           {programSpans[i] > 0 && (
@@ -3361,9 +3361,9 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
               {openEvent.date && <div style={styles.sheetBannerSub}>{eventDateLabel(openEvent.date)}</div>}
               <table style={{ ...styles.sheetTable, tableLayout: "fixed" }}>
                 <colgroup>
-                  <col style={{ width: "9%" }} />
+                  <col style={{ width: "14%" }} />
                   <col style={{ width: "8%" }} />
-                  <col style={{ width: "17%" }} />
+                  <col style={{ width: "12%" }} />
                   <col style={{ width: "17%" }} />
                   <col style={{ width: "25%" }} />
                   <col style={{ width: "20%" }} />
@@ -6022,9 +6022,9 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
           <table style={{ ...styles.sheetTable, tableLayout: "fixed" }}>
             {/* fixed widths so the new column matches Program */}
             <colgroup>
-              <col style={{ width: "9%" }} />
+              <col style={{ width: "14%" }} />
               <col style={{ width: "8%" }} />
-              <col style={{ width: "17%" }} />
+              <col style={{ width: "12%" }} />
               <col style={{ width: "17%" }} />
               <col style={{ width: "25%" }} />
               <col style={{ width: "20%" }} />
@@ -6068,7 +6068,7 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                   const verseText = resolveRowVerse(config, monthState, week, slot, row);
                   return (
                     <tr key={row.id}>
-                      {startsTimeGroup && <td rowSpan={timeSpan} style={styles.sheetTd}>{timing.time}</td>}
+                      {startsTimeGroup && <td rowSpan={timeSpan} style={{ ...styles.sheetTd, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{timing.time}</td>}
                       {startsTimeGroup && <td rowSpan={timeSpan} style={styles.sheetTd}>{timing.duration}</td>}
                       {i === 0 && (
                         <td rowSpan={visibleRows.length} style={{ ...styles.sheetTd, verticalAlign: "middle", whiteSpace: "pre-wrap" }}>
