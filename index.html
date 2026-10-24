@@ -1638,6 +1638,7 @@ function eventEndTime(event) {
 function EventsView({ config, updateConfig, canEdit }) {
   const [openId, setOpenId] = useState(null);
   const [mode, setMode] = useState("list"); // list | edit | print
+  const [programModal, setProgramModal] = useState(null); // "+ Program" popup (add / edit one program with its role/task rows)
   const events = (config.events || []).slice().sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
   const openEvent = events.find((e) => e.id === openId);
   const printSettings = config.printSettings || {};
@@ -1669,6 +1670,156 @@ function EventsView({ config, updateConfig, canEdit }) {
     [rows[a], rows[b]] = [rows[b], rows[a]];
     return { ...e, rows };
   });
+
+  // ---- "+ Program" popup ----
+  // A program = one row that carries Start at / Mins / Program name, followed by
+  // rows with those left blank (they merge under it on the sheet), one per Role/Task.
+  const groupsForPhase = (e, phaseId) => {
+    const groups = [];
+    (e.rows || []).filter((r) => phaseOf(r) === phaseId).forEach((r) => {
+      const startsGroup = groups.length === 0 || norm(r.duration) || norm(r.startAt) || norm(r.program);
+      if (startsGroup) groups.push([r]);
+      else groups[groups.length - 1].push(r);
+    });
+    return groups;
+  };
+  const linkedLabel = (key) => {
+    const [teamId, roleId] = splitRoleKey(key);
+    const team = (config.teams || []).find((t) => t.id === teamId);
+    const role = team && (team.roles || []).find((r) => r.id === roleId);
+    return team && role ? { team: team.name, role: role.name } : null;
+  };
+  const blankTask = () => ({ id: uid(), task: "", linkedRole: "", fixedText: "" });
+  const openProgramModal = (phaseId, group) => {
+    const first = group && group[0];
+    setProgramModal({
+      phase: phaseId,
+      rowIds: group ? group.map((r) => r.id) : null,
+      startAt: first ? first.startAt || "" : "",
+      duration: first ? first.duration || "" : "",
+      program: first ? first.program || "" : "",
+      programNote: first ? first.programNote || "" : "",
+      tasks: group ? group.map((r) => ({ id: r.id, task: r.task || "", linkedRole: r.linkedRole || "", fixedText: r.fixedText || "" })) : [blankTask()],
+    });
+  };
+  const saveProgramModal = () => {
+    const m = programModal;
+    if (!m) return;
+    updateEvent(openId, (e) => {
+      const old = e.rows || [];
+      const tasks = m.tasks.length ? m.tasks : [blankTask()];
+      const built = tasks.map((t, i) => {
+        const base = old.find((r) => r.id === t.id) || {};
+        return {
+          ...base, id: t.id, phase: m.phase, task: t.task, linkedRole: t.linkedRole, fixedText: t.fixedText,
+          duration: i === 0 ? m.duration : "", startAt: i === 0 ? m.startAt : "",
+          program: i === 0 ? m.program : "", programNote: i === 0 ? m.programNote : "",
+        };
+      });
+      if (!m.rowIds) return { ...e, rows: [...old, ...built] };
+      const at = old.findIndex((r) => r.id === m.rowIds[0]);
+      const rest = old.filter((r) => !m.rowIds.includes(r.id));
+      const insertAt = old.slice(0, Math.max(at, 0)).filter((r) => !m.rowIds.includes(r.id)).length;
+      return { ...e, rows: [...rest.slice(0, insertAt), ...built, ...rest.slice(insertAt)] };
+    });
+    setProgramModal(null);
+  };
+  const moveGroup = (phaseId, idx, dir) => updateEvent(openId, (e) => {
+    const groups = groupsForPhase(e, phaseId);
+    const j = idx + dir;
+    if (j < 0 || j >= groups.length) return e;
+    [groups[idx], groups[j]] = [groups[j], groups[idx]];
+    const others = (e.rows || []).filter((r) => phaseOf(r) !== phaseId);
+    return { ...e, rows: [...others, ...groups.flat()] };
+  });
+  const removeGroup = (group) => {
+    if (!window.confirm("Remove this program and its roles/tasks?")) return;
+    updateEvent(openId, (e) => ({ ...e, rows: e.rows.filter((r) => !group.some((g) => g.id === r.id)) }));
+  };
+  const renderProgramModal = () => {
+    const m = programModal;
+    const setM = (field, value) => setProgramModal((cur) => ({ ...cur, [field]: value }));
+    const setTask = (id, field, value) => setProgramModal((cur) => ({
+      ...cur,
+      tasks: cur.tasks.map((t) => {
+        if (t.id !== id) return t;
+        const next = { ...t, [field]: value };
+        // picking a role fills the task name with the role name if it's still blank
+        if (field === "linkedRole" && value && !norm(t.task)) {
+          const info = linkedLabel(value);
+          if (info) next.task = info.role.toUpperCase();
+        }
+        return next;
+      }),
+    }));
+    const removeTask = (id) => setProgramModal((cur) => ({ ...cur, tasks: cur.tasks.filter((t) => t.id !== id) }));
+    const addTask = () => setProgramModal((cur) => ({ ...cur, tasks: [...cur.tasks, blankTask()] }));
+    const lbl = { fontSize: 12, fontWeight: 700, color: "var(--t6B6B6B)", marginBottom: 3 };
+    return ReactDOM.createPortal(
+      <div className="no-print" style={styles.modalOverlay} onMouseDown={(ev) => { if (ev.target === ev.currentTarget) setProgramModal(null); }}>
+        <div style={{ ...styles.modalCard, maxWidth: 580, maxHeight: "90vh", overflowY: "auto" }}>
+          <div style={styles.modalIconRow}>
+            <div style={{ ...styles.modalIconBadge, background: "var(--b1F3864)" }}>＋</div>
+            <div style={styles.modalTitle}>{m.rowIds ? "Edit program" : "Add program"}</div>
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+            <div style={{ flex: "1 1 130px" }}>
+              <div style={lbl}>Start at (optional)</div>
+              <input type="time" value={m.startAt} onChange={(ev) => setM("startAt", ev.target.value)}
+                style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box" }} />
+            </div>
+            <div style={{ flex: "0 0 84px" }}>
+              <div style={lbl}>Mins</div>
+              <input value={m.duration} onChange={(ev) => setM("duration", ev.target.value)} inputMode="numeric" placeholder="e.g. 18"
+                style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box" }} />
+            </div>
+            <div style={{ flex: "1 1 130px" }}>
+              <div style={lbl}>When</div>
+              <select value={m.phase} onChange={(ev) => setM("phase", ev.target.value)}
+                style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box" }}>
+                {EVENT_PHASES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <div style={lbl}>Program</div>
+            <input value={m.program} onChange={(ev) => setM("program", ev.target.value)} placeholder="e.g. PRAISE AND WORSHIP" autoFocus
+              style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box", fontWeight: 700 }} />
+          </div>
+          <div style={lbl}>Role / Task (linked to a ministry role)</div>
+          {m.tasks.map((t) => (
+            <div key={t.id} style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
+              <input value={t.task} onChange={(ev) => setTask(t.id, "task", ev.target.value)} placeholder="Task (e.g. WORSHIP LEADER)"
+                style={{ ...styles.roleEditInput, flex: "1 1 150px" }} />
+              <select value={t.linkedRole} onChange={(ev) => setTask(t.id, "linkedRole", ev.target.value)}
+                style={{ ...styles.roleEditInput, flex: "1 1 170px" }}>
+                <option value="">Linked role: none</option>
+                {(config.teams || []).map((tm) => (
+                  <optgroup key={tm.id} label={tm.name}>
+                    {(tm.roles || []).map((r) => <option key={r.id} value={eventRoleKey(tm.id, r.id)}>{tm.name} — {r.name}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+              {!t.linkedRole && (
+                <input value={t.fixedText} onChange={(ev) => setTask(t.id, "fixedText", ev.target.value)} placeholder="Fixed text (optional)"
+                  style={{ ...styles.roleEditInput, flex: "1 1 100%" }} />
+              )}
+              <button onClick={() => removeTask(t.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove role/task">✕</button>
+            </div>
+          ))}
+          <button onClick={addTask} style={{ ...styles.smallBtn, background: "var(--b2F4858)", marginBottom: 14 }}>+ Role / Task</button>
+          <div style={lbl}>Program notes (optional, one per line e.g. songs)</div>
+          <textarea value={m.programNote} onChange={(ev) => setM("programNote", ev.target.value)} rows={2}
+            style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box", resize: "vertical", fontSize: 12.5, marginBottom: 16 }} />
+          <div style={styles.modalActions}>
+            <button onClick={() => setProgramModal(null)} style={styles.modalCancelBtn}>Cancel</button>
+            <button onClick={saveProgramModal} style={{ ...styles.smallBtn, padding: "9px 18px" }}>Save</button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  };
 
   // ministries: a block per team, with only the roles picked for this event
   const teams = config.teams || [];
@@ -1903,50 +2054,48 @@ function EventsView({ config, updateConfig, canEdit }) {
         </div>
 
         <div style={labelStyle}>Program flow (start time = when the service starts; rows follow one another; use “Start at” for rows that overlap)</div>
-        {EVENT_PHASES.map((phase) => (
-          <div key={phase.id} style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, margin: "8px 0 6px", color: "var(--t1F3864)" }}>{phase.label}</div>
-            {computeEventRows(openEvent).filter((c) => c.phase === phase.id).map(({ row, time }) => (
-              <div key={row.id} style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 6 }}>
-                <input value={row.duration} onChange={(e) => setRowField(row.id, "duration", e.target.value)} placeholder="Mins" inputMode="numeric"
-                  style={{ ...styles.roleEditInput, flex: "0 0 64px" }} />
-                <div style={{ flex: "0 0 118px" }}>
-                  <div style={{ fontSize: 10, color: "var(--t6B6B6B)" }}>Start at (optional)</div>
-                  <input type="time" value={row.startAt || ""} onChange={(e) => setRowField(row.id, "startAt", e.target.value)}
-                    style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box", padding: "4px 6px" }} />
-                </div>
-                <input value={row.program} onChange={(e) => setRowField(row.id, "program", e.target.value)} placeholder="Program (e.g. Worship)"
-                  style={{ ...styles.roleEditInput, flex: "1 1 130px" }} />
-                <input value={row.task || ""} onChange={(e) => setRowField(row.id, "task", e.target.value)} placeholder="Task"
-                  style={{ ...styles.roleEditInput, flex: "2 1 150px" }} />
-                <select value={row.linkedRole || ""} onChange={(e) => setRowField(row.id, "linkedRole", e.target.value)}
-                  style={{ ...styles.roleEditInput, flex: "1 1 170px" }}>
-                  <option value="">Linked role: none</option>
-                  {teams.map((t) => (
-                    <optgroup key={t.id} label={t.name}>
-                      {(t.roles || []).map((r) => <option key={r.id} value={eventRoleKey(t.id, r.id)}>{t.name} — {r.name}</option>)}
-                    </optgroup>
-                  ))}
-                </select>
-                <input value={row.fixedText || ""} onChange={(e) => setRowField(row.id, "fixedText", e.target.value)} placeholder="Fixed text (optional)"
-                  style={{ ...styles.roleEditInput, flex: "1 1 130px" }} />
-                <select value={phaseOf(row)} onChange={(e) => setRowField(row.id, "phase", e.target.value)}
-                  style={{ ...styles.roleEditInput, flex: "0 0 96px" }}>
-                  {EVENT_PHASES.map((p) => <option key={p.id} value={p.id}>{p.short}</option>)}
-                </select>
-                <span style={{ fontSize: 11.5, color: "var(--t6B6B6B)", flex: "0 0 105px" }}>{time}</span>
-                <button onClick={() => moveRow(row.id, -1)} style={styles.smallBtn} aria-label="Move up">↑</button>
-                <button onClick={() => moveRow(row.id, 1)} style={styles.smallBtn} aria-label="Move down">↓</button>
-                <button onClick={() => addRowBelow(row.id)} style={{ ...styles.smallBtn, background: "var(--b2F4858)" }}>+ Role below</button>
-                <button onClick={() => removeRow(row.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove row">✕</button>
-                <textarea value={row.programNote || ""} onChange={(e) => setRowField(row.id, "programNote", e.target.value)} rows={2}
-                  placeholder="Program notes under the program name, one per line (e.g. songs)"
-                  style={{ ...styles.roleEditInput, flex: "1 1 100%", resize: "vertical", fontSize: 12.5 }} />
+        {(() => {
+          const computed = computeEventRows(openEvent);
+          return EVENT_PHASES.map((phase) => {
+            const groups = groupsForPhase(openEvent, phase.id);
+            return (
+              <div key={phase.id} style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, margin: "8px 0 6px", color: "var(--t1F3864)" }}>{phase.label}</div>
+                {groups.map((group, gi) => {
+                  const first = group[0];
+                  const time = (computed.find((c) => c.row.id === first.id) || {}).time;
+                  const title = norm(first.program) || norm(first.task) || "Untitled program";
+                  const lines = group.filter((r, i) => !(i === 0 && !norm(first.program)) && (norm(r.task) || r.linkedRole || norm(r.fixedText)));
+                  return (
+                    <div key={first.id} style={{ border: "1px solid var(--lD8CFB0)", borderRadius: 8, padding: "8px 10px", marginBottom: 6, display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
+                      <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13.5 }}>{title}</div>
+                        <div style={{ fontSize: 11.5, color: "var(--t6B6B6B)" }}>
+                          {[time, rowMinutes(first) ? `${rowMinutes(first)} mins` : "", first.startAt ? `start at ${clockLabel(first.startAt)}` : ""].filter(Boolean).join(" · ") || "—"}
+                        </div>
+                        {lines.map((r) => {
+                          const info = linkedLabel(r.linkedRole);
+                          return (
+                            <div key={r.id} style={{ fontSize: 12, marginTop: 2 }}>
+                              • {r.task || (info && info.role) || r.fixedText}
+                              {info && <span style={{ color: "var(--t6B6B6B)" }}> — {info.team} · {info.role}</span>}
+                              {!info && r.task && norm(r.fixedText) && <span style={{ color: "var(--t6B6B6B)" }}> — {r.fixedText}</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <button onClick={() => moveGroup(phase.id, gi, -1)} style={styles.smallBtn} aria-label="Move up">↑</button>
+                      <button onClick={() => moveGroup(phase.id, gi, 1)} style={styles.smallBtn} aria-label="Move down">↓</button>
+                      <button onClick={() => openProgramModal(phase.id, group)} style={{ ...styles.smallBtn, background: "var(--b2F4858)" }}>Edit</button>
+                      <button onClick={() => removeGroup(group)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove program">✕</button>
+                    </div>
+                  );
+                })}
+                <button onClick={() => openProgramModal(phase.id, null)} style={{ ...styles.smallBtn, marginTop: 4 }}>+ Program</button>
               </div>
-            ))}
-            <button onClick={() => addRow(phase.id)} style={{ ...styles.smallBtn, marginTop: 4 }}>+ Add row</button>
-          </div>
-        ))}
+            );
+          });
+        })()}
 
         <div style={{ fontSize: 13, fontWeight: 800, margin: "18px 0 6px", color: "var(--t1F3864)" }}>Ministries</div>
         {(openEvent.ministries || []).map((block) => {
@@ -1989,6 +2138,7 @@ function EventsView({ config, updateConfig, canEdit }) {
           <input type="checkbox" checked={!!openEvent.showHeadCount} onChange={(e) => setField("showHeadCount", e.target.checked)} />
           Include head count box on the sheet
         </label>
+        {programModal && renderProgramModal()}
       </div>
     );
   }
