@@ -3491,24 +3491,18 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
     const jumpKey = (k) => jump(Math.floor((k - 1) / 12), ((k - 1) % 12) + 1);
     const selS = { padding: "7px 6px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.28)", background: "rgba(255,255,255,0.12)", color: "#FFFFFF", fontSize: 13, fontFamily: "system-ui, sans-serif", colorScheme: "dark", minWidth: 0 };
     const navB = (disabled) => ({ width: 32, height: 34, borderRadius: 8, border: "none", background: "rgba(255,255,255,0.16)", color: "#FFFFFF", fontSize: 18, cursor: disabled ? "default" : "pointer", flexShrink: 0, opacity: disabled ? 0.35 : 1 });
+    const yNavB = (disabled) => ({ background: "transparent", border: "none", color: "#1F3864", fontSize: 20, cursor: disabled ? "default" : "pointer", padding: "0 14px", lineHeight: 1, opacity: disabled ? 0.3 : 1 });
     const opt = { background: "#2A1A38" };
     return (
       <div>
-        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.7)", margin: "18px 0 8px" }}>Choose a date</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <button onClick={() => prevKey && jumpKey(prevKey)} disabled={!prevKey} style={navB(!prevKey)} aria-label="Previous month with a date">‹</button>
-          <select value={sel.month} onChange={(e) => jump(sel.year, Number(e.target.value))} aria-label="Month" style={{ ...selS, flex: 1 }}>
-            {months.map((m) => <option key={m} value={m} style={opt}>{MONTH_NAMES[m - 1]}</option>)}
-          </select>
-          <select value={sel.year} onChange={(e) => {
-            const y = Number(e.target.value);
-            const ms = monthsOf(y);
-            jump(y, ms.includes(sel.month) ? sel.month : (ms[0] || sel.month));
-          }} aria-label="Year" style={{ ...selS, width: 74 }}>
-            {years.map((y) => <option key={y} value={y} style={opt}>{y}</option>)}
-          </select>
-          <button onClick={() => nextKey && jumpKey(nextKey)} disabled={!nextKey} style={navB(!nextKey)} aria-label="Next month with a date">›</button>
+        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.7)", margin: "18px 0 8px" }}>{group.rec.repeats && group.rec.freq === "monthly" ? "Choose a month" : "Choose a date"}</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#F6F1E4", border: "1px solid #E4DCC6", borderRadius: 12, padding: "6px 4px" }}>
+          <button onClick={() => prevKey && jumpKey(prevKey)} disabled={!prevKey} style={yNavB(!prevKey)} aria-label="Previous month with a date">‹</button>
+          <div style={{ flex: 1, textAlign: "center", fontFamily: "system-ui, sans-serif", fontWeight: 700, fontSize: 15, color: "#1F3864" }}>{MONTH_NAMES[sel.month - 1]} {sel.year}</div>
+          <button onClick={() => nextKey && jumpKey(nextKey)} disabled={!nextKey} style={yNavB(!nextKey)} aria-label="Next month with a date">›</button>
         </div>
+        {!(group.rec.repeats && group.rec.freq === "monthly") && (
+          <div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
           {monthDates.length === 0 && <div style={{ fontSize: 12.5, opacity: 0.8 }}>No dates in {MONTH_NAMES[sel.month - 1]} {sel.year}.</div>}
           {monthDates.map((iso) => {
@@ -3530,6 +3524,9 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
           })}
         </div>
         <div style={{ fontSize: 11, opacity: 0.7, marginTop: 8, lineHeight: 1.4 }}>Dashed dates have no event yet — it is created when you add the first name.</div>
+          </div>
+        )}
+        {group.rec.repeats && group.rec.freq === "monthly" && !byDate[sel.date] && <div style={{ fontSize: 11, opacity: 0.7, marginTop: 8, lineHeight: 1.4 }}>No event yet for this month — it is created when you add the first name.</div>}
       </div>
     );
   };
