@@ -1533,6 +1533,9 @@ function App() {
             year={year} month={month} locked={!canEditServiceInfo} userName={userName} />
         )}
         {effectiveTab === "master" && <MasterListView config={config} monthState={monthState} updateMonthState={updateMonthState} week={week} slot={slot} year={year} month={month} />}
+        {effectiveTab === "events" && (
+          <EventsView config={config} updateConfig={updateConfig} canEdit={canManage || canEditServiceInfo} />
+        )}
         {effectiveTab === "manage" && canManage && (
           <ManageView config={config} updateConfig={updateConfig} monthState={monthState} updateMonthState={updateMonthState}
             monthLabelText={monthLabel(year, month)} year={year} month={month} isMobile={isMobile} />
@@ -1541,6 +1544,232 @@ function App() {
 
       </div>
     </React.Fragment>
+  );
+}
+
+// ---- Events tab: one-off services (prayer meeting, Sambang Gabi, etc.) ----
+// Saved inside config.events so it syncs like the rest of the config.
+const padTwo = (n) => String(n).padStart(2, "0");
+
+const blankEvent = () => ({
+  id: uid(), title: "", subtitle: "", date: "", startTime: "19:00", announcements: "",
+  rows: [{ id: uid(), duration: "", program: "", volunteer: "" }],
+});
+
+function addMinutesToClock(startTime, minutes) {
+  const [h, m] = (startTime || "").split(":").map((n) => parseInt(n, 10));
+  if (isNaN(h) || isNaN(m)) return "";
+  const total = h * 60 + m + minutes;
+  return `${padTwo(Math.floor(total / 60) % 24)}:${padTwo(total % 60)}`;
+}
+
+function clockLabel(time) {
+  const [h, m] = (time || "").split(":").map((n) => parseInt(n, 10));
+  if (isNaN(h) || isNaN(m)) return "";
+  return `${h % 12 || 12}:${padTwo(m)} ${h >= 12 ? "PM" : "AM"}`;
+}
+
+function eventDateLabel(dateStr) {
+  const [y, m, d] = (dateStr || "").split("-").map((n) => parseInt(n, 10));
+  if (isNaN(y) || isNaN(m) || isNaN(d)) return "";
+  return `${MONTH_NAMES[m - 1]} ${d}, ${y}`;
+}
+
+// Time column = start time + the minutes of every row above it
+function computeEventRows(event) {
+  let elapsed = 0;
+  return (event.rows || []).map((row) => {
+    const mins = parseInt(row.duration, 10);
+    if (isNaN(mins) || mins <= 0) return { row, time: "", durationText: "" };
+    const from = addMinutesToClock(event.startTime, elapsed);
+    elapsed += mins;
+    const to = addMinutesToClock(event.startTime, elapsed);
+    return { row, time: from ? `${from} – ${to}` : "", durationText: mins === 60 ? "1 HR" : `${mins} MINS` };
+  });
+}
+
+function EventsView({ config, updateConfig, canEdit }) {
+  const [openId, setOpenId] = useState(null);
+  const [mode, setMode] = useState("list"); // list | edit | print
+  const events = (config.events || []).slice().sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
+  const openEvent = events.find((e) => e.id === openId);
+  const printSettings = config.printSettings || {};
+
+  const updateEvent = (id, updater) => updateConfig((prev) => ({
+    ...prev, events: (prev.events || []).map((e) => (e.id === id ? updater(e) : e)),
+  }));
+  const setField = (field, value) => updateEvent(openId, (e) => ({ ...e, [field]: value }));
+  const setRowField = (rowId, field, value) => updateEvent(openId, (e) => ({
+    ...e, rows: e.rows.map((r) => (r.id === rowId ? { ...r, [field]: value } : r)),
+  }));
+  const addRow = () => updateEvent(openId, (e) => ({ ...e, rows: [...e.rows, { id: uid(), duration: "", program: "", volunteer: "" }] }));
+  const removeRow = (rowId) => updateEvent(openId, (e) => ({ ...e, rows: e.rows.filter((r) => r.id !== rowId) }));
+  const moveRow = (index, direction) => updateEvent(openId, (e) => {
+    const target = index + direction;
+    if (target < 0 || target >= e.rows.length) return e;
+    const rows = e.rows.slice();
+    [rows[index], rows[target]] = [rows[target], rows[index]];
+    return { ...e, rows };
+  });
+
+  const createEvent = () => {
+    const created = blankEvent();
+    updateConfig((prev) => ({ ...prev, events: [...(prev.events || []), created] }));
+    setOpenId(created.id);
+    setMode("edit");
+  };
+  const duplicateEvent = (source) => {
+    const copy = { ...source, id: uid(), title: `${source.title} (copy)`, date: "", rows: source.rows.map((r) => ({ ...r, id: uid() })) };
+    updateConfig((prev) => ({ ...prev, events: [...(prev.events || []), copy] }));
+    setOpenId(copy.id);
+    setMode("edit");
+  };
+  const deleteEvent = (event) => {
+    if (!window.confirm(`Delete "${event.title || "Untitled event"}"?`)) return;
+    updateConfig((prev) => ({ ...prev, events: (prev.events || []).filter((e) => e.id !== event.id) }));
+    setOpenId(null);
+    setMode("list");
+  };
+
+  const labelStyle = { fontSize: 12, fontWeight: 700, color: "var(--t6B6B6B)", marginBottom: 3 };
+  const fieldWrap = { display: "flex", flexDirection: "column", flex: "1 1 180px", minWidth: 0 };
+
+  if (mode === "print" && openEvent) {
+    const computed = computeEventRows(openEvent);
+    return (
+      <div className="print-sheet-wrap" style={styles.viewWrap}>
+        <div className="no-print sheet-toolbar">
+          <button onClick={() => setMode(canEdit ? "edit" : "list")} style={{ ...styles.smallBtn, whiteSpace: "normal" }}>← Back</button>
+          <button onClick={() => window.print()} style={{ ...styles.smallBtn, background: "var(--bA9782F)", whiteSpace: "normal" }}>🖨 Print</button>
+        </div>
+        <div className="sheet-scroll">
+          <div className="print-sheet paper" style={styles.sheet}>
+            <div className="print-sheet-watermark" style={styles.sheetWatermark} aria-hidden="true">
+              <img src="./icons/VictoryWatermark.png" alt="" style={styles.sheetWatermarkImg} />
+            </div>
+            <div style={styles.sheetInner}>
+              <div style={styles.sheetBannerMain}>{(openEvent.title || "EVENT").toUpperCase()}</div>
+              <div style={styles.sheetBannerSub}>
+                {[printSettings.campus || "VICTORY ALFONSO", clockLabel(openEvent.startTime) && `START TIME: ${clockLabel(openEvent.startTime)}`].filter(Boolean).join(" | ")}
+              </div>
+              {openEvent.subtitle && <div style={styles.sheetBannerLight}>{openEvent.subtitle}</div>}
+              {openEvent.date && <div style={styles.sheetBannerSub}>{eventDateLabel(openEvent.date)}</div>}
+              <table style={{ ...styles.sheetTable, tableLayout: "fixed" }}>
+                <colgroup>
+                  <col style={{ width: "20%" }} />
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "38%" }} />
+                  <col style={{ width: "30%" }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th style={styles.sheetTh}>Time</th>
+                    <th style={styles.sheetTh}>Duration</th>
+                    <th style={styles.sheetTh}>Program</th>
+                    <th style={styles.sheetTh}>Volunteer(s)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {computed.map(({ row, time, durationText }) => (
+                    <tr key={row.id}>
+                      <td style={styles.sheetTd}>{time}</td>
+                      <td style={styles.sheetTd}>{durationText}</td>
+                      <td style={styles.sheetTd}>{row.program}</td>
+                      <td style={styles.sheetTd}>{row.volunteer}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {norm(openEvent.announcements) && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={styles.sheetSectionHead}>ANNOUNCEMENTS</div>
+                  <div style={{ border: "1px solid var(--l23211D)", borderTop: "none", padding: "8px 10px", fontSize: 12.5, whiteSpace: "pre-wrap" }}>{openEvent.announcements}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "edit" && openEvent && canEdit) {
+    return (
+      <div style={styles.viewWrap}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+          <button onClick={() => setMode("list")} style={styles.smallBtn}>← All events</button>
+          <button onClick={() => setMode("print")} style={{ ...styles.smallBtn, background: "var(--bA9782F)" }}>Preview / Print</button>
+          <button onClick={() => duplicateEvent(openEvent)} style={{ ...styles.smallBtn, background: "var(--b2F4858)" }}>Duplicate</button>
+          <button onClick={() => deleteEvent(openEvent)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }}>Delete</button>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+          <div style={fieldWrap}>
+            <div style={labelStyle}>Event name</div>
+            <input value={openEvent.title} onChange={(e) => setField("title", e.target.value)} placeholder="Prayer Meeting Night" style={styles.roleEditInput} />
+          </div>
+          <div style={fieldWrap}>
+            <div style={labelStyle}>Subtitle (optional)</div>
+            <input value={openEvent.subtitle} onChange={(e) => setField("subtitle", e.target.value)} placeholder="Theme or verse" style={styles.roleEditInput} />
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+          <div style={fieldWrap}>
+            <div style={labelStyle}>Date</div>
+            <input type="date" value={openEvent.date} onChange={(e) => setField("date", e.target.value)} style={styles.roleEditInput} />
+          </div>
+          <div style={fieldWrap}>
+            <div style={labelStyle}>Start time</div>
+            <input type="time" value={openEvent.startTime} onChange={(e) => setField("startTime", e.target.value)} style={styles.roleEditInput} />
+          </div>
+        </div>
+
+        <div style={labelStyle}>Program flow (times are computed from the start time and each row's minutes)</div>
+        {computeEventRows(openEvent).map(({ row, time }, index) => (
+          <div key={row.id} style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 6 }}>
+            <input value={row.duration} onChange={(e) => setRowField(row.id, "duration", e.target.value)} placeholder="Mins" inputMode="numeric"
+              style={{ ...styles.roleEditInput, flex: "0 0 64px" }} />
+            <input value={row.program} onChange={(e) => setRowField(row.id, "program", e.target.value)} placeholder="Program item"
+              style={{ ...styles.roleEditInput, flex: "2 1 160px" }} />
+            <input value={row.volunteer} onChange={(e) => setRowField(row.id, "volunteer", e.target.value)} placeholder="Volunteer(s)"
+              style={{ ...styles.roleEditInput, flex: "1 1 130px" }} />
+            <span style={{ fontSize: 11.5, color: "var(--t6B6B6B)", flex: "0 0 105px" }}>{time}</span>
+            <button onClick={() => moveRow(index, -1)} style={styles.smallBtn} aria-label="Move up">↑</button>
+            <button onClick={() => moveRow(index, 1)} style={styles.smallBtn} aria-label="Move down">↓</button>
+            <button onClick={() => removeRow(row.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove row">✕</button>
+          </div>
+        ))}
+        <button onClick={addRow} style={{ ...styles.smallBtn, marginTop: 6 }}>+ Add row</button>
+
+        <div style={{ ...labelStyle, marginTop: 18 }}>Announcements (optional)</div>
+        <textarea value={openEvent.announcements} onChange={(e) => setField("announcements", e.target.value)} rows={3}
+          style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box", resize: "vertical" }} />
+      </div>
+    );
+  }
+
+  return (
+    <div style={styles.viewWrap}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 18, fontWeight: 800 }}>Events</div>
+        {canEdit && <button onClick={createEvent} style={styles.smallBtn}>+ New event</button>}
+      </div>
+      {events.length === 0 && (
+        <div style={{ color: "var(--t6B6B6B)", fontSize: 14 }}>No events yet.{canEdit ? " Tap “New event” to add one." : ""}</div>
+      )}
+      {events.map((event) => (
+        <div key={event.id} style={{ border: "1px solid var(--lD8CFB0)", borderRadius: 8, padding: "10px 12px", marginBottom: 8, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+            <div style={{ fontWeight: 700 }}>{event.title || "Untitled event"}</div>
+            <div style={{ fontSize: 12.5, color: "var(--t6B6B6B)" }}>
+              {[eventDateLabel(event.date) || "No date yet", clockLabel(event.startTime)].filter(Boolean).join(" · ")}
+            </div>
+          </div>
+          <button onClick={() => { setOpenId(event.id); setMode("print"); }} style={{ ...styles.smallBtn, background: "var(--b2F4858)" }}>View</button>
+          {canEdit && <button onClick={() => { setOpenId(event.id); setMode("edit"); }} style={styles.smallBtn}>Edit</button>}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -1638,7 +1867,7 @@ function initials(name) {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
-const TAB_ICONS = { myschedule: "🗓️", assign: "👥", info: "📝", master: "📋", manage: "⚙️" };
+const TAB_ICONS = { myschedule: "🗓️", assign: "👥", info: "📝", master: "📋", events: "📅", manage: "⚙️" };
 
 function Sidebar({ config, monthState, week, setWeek, slot, setSlot, tab, setTab, activeTeamId, setActiveTeamId, userName, onlineUsers, allowedTeamIds, hasRestrictionEntry, canManage, monthLabelText, year, month, onPrevMonth, onNextMonth, isMobile, onRenameUser, onChangePassword }) {
   const others = (onlineUsers || []).filter((u) => norm(u.name).toLowerCase() !== norm(userName).toLowerCase());
@@ -1657,6 +1886,7 @@ function Sidebar({ config, monthState, week, setWeek, slot, setSlot, tab, setTab
           <CompactNavItem icon={TAB_ICONS.assign} label="Assign" active={tab === "assign"} onClick={() => setTab("assign")} />
           <CompactNavItem icon={TAB_ICONS.info} label="Details" active={tab === "info"} onClick={() => setTab("info")} />
           <CompactNavItem icon={TAB_ICONS.master} label="Master" active={tab === "master"} onClick={() => setTab("master")} />
+          <CompactNavItem icon={TAB_ICONS.events} label="Events" active={tab === "events"} onClick={() => setTab("events")} />
           {canManage && <CompactNavItem icon={TAB_ICONS.manage} label="Manage" active={tab === "manage"} onClick={() => setTab("manage")} />}
         </nav>
         {tab === "assign" && (
@@ -1786,6 +2016,7 @@ function Sidebar({ config, monthState, week, setWeek, slot, setSlot, tab, setTab
           <NavItem label="Assign volunteers" active={tab === "assign"} onClick={() => setTab("assign")} />
           <NavItem label="Service details" active={tab === "info"} onClick={() => setTab("info")} />
           <NavItem label="Master list" active={tab === "master"} onClick={() => setTab("master")} />
+          <NavItem label="Events" active={tab === "events"} onClick={() => setTab("events")} />
           {canManage && (
             <NavItem label="Manage teams" active={tab === "manage"} onClick={() => setTab("manage")} />
           )}
