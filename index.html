@@ -1978,6 +1978,28 @@ function recurrenceDates(r, anchorISO, untilISO) {
   }
   return out;
 }
+// The one date a monthly/yearly repeat lands on in a given month/year, worked out from the rule alone (not from the
+// event's own start date), so months/years before the start work too. null when the repeat has ended by then.
+function repeatDateIn(r, year, month, anchorISO) {
+  let dt;
+  if (r.freq === "yearly") {
+    const m0 = r.ym - 1;
+    const dim = new Date(year, m0 + 1, 0).getDate();
+    dt = r.yearMode === "weekday" ? nthWeekdayDate(year, m0, r.wd, r.occ === "last" ? 0 : r.occ, r.occ === "last") : new Date(year, m0, Math.min(r.yd, dim));
+  } else {
+    const m0 = month - 1;
+    const dim = new Date(year, m0 + 1, 0).getDate();
+    dt = r.monthMode === "weekday" ? nthWeekdayDate(year, m0, r.wd, r.occ === "last" ? 0 : r.occ, r.occ === "last") : new Date(year, m0, Math.min(r.monthDayN, dim));
+  }
+  if (!dt) return null;
+  const iso = isoOf(dt);
+  if (r.endType === "date" && r.endDate && iso > r.endDate) return null;
+  if (r.endType === "count" && anchorISO) {
+    const all = recurrenceDates(r, anchorISO, "9999-12-31");
+    if (iso > all[all.length - 1]) return null;
+  }
+  return iso;
+}
 // last day of the month that is `months` months after the month of `fromISO`
 function recurrenceHorizon(r, fromISO) {
   const [y, m] = fromISO.split("-").map((n) => parseInt(n, 10));
@@ -2638,6 +2660,7 @@ function EventsView({ config, updateConfig, canEdit }) {
       setRepPick({ id: ev.id, year: y, month: m });
     };
     const prefix = yearly ? `${cur.year}-` : `${cur.year}-${padTwo(cur.month)}`;
+    const single = rec.freq === "monthly" || rec.freq === "yearly"; // one date per month / per year
     const endISO = yearly ? `${cur.year}-12-31` : isoOf(new Date(cur.year, cur.month, 0));
     const set = new Set(recurrenceDates(rec, anchor, endISO).filter((d) => d.startsWith(prefix)));
     Object.keys(byDate).filter((d) => d.startsWith(prefix)).forEach((d) => set.add(d));
@@ -2656,7 +2679,30 @@ function EventsView({ config, updateConfig, canEdit }) {
           <div style={{ flex: 1, textAlign: "center", fontFamily: "system-ui, sans-serif", fontWeight: 700, fontSize: 15, color: "#1F3864" }}>{yearly ? cur.year : monthLabel(cur.year, cur.month)}</div>
           <button onClick={() => go(1)} style={navBtn} aria-label={yearly ? "Next year" : "Next month"}>›</button>
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+        {single && (() => {
+          const patIso = repeatDateIn(rec, cur.year, cur.month, anchor);
+          const madeIso = Object.keys(byDate).sort().find((d) => d.startsWith(prefix));
+          const showIso = madeIso || patIso;
+          const when = (iso) => { const [y, m, d] = iso.split("-").map((n) => parseInt(n, 10)); return `${WEEKDAY_NAMES[new Date(y, m - 1, d).getDay()]}, ${eventDateLabel(iso)}`; };
+          const smallBtn = { ...styles.smallBtn, background: "var(--bA9782F)", padding: "7px 12px", marginTop: 8 };
+          if (!showIso) return <div style={{ fontSize: 12.5, opacity: 0.8, marginTop: 8 }}>The repeat has ended — no date in {yearly ? cur.year : monthLabel(cur.year, cur.month)}.</div>;
+          const isCurrent = madeIso && byDate[madeIso].id === ev.id;
+          return (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF" }}>{when(showIso)}</div>
+              <div style={{ fontSize: 11.5, opacity: 0.75, marginTop: 2 }}>{madeIso ? (isCurrent ? "This event" : "Event created") : "No event yet"}</div>
+              {madeIso && isCurrent && patIso && madeIso !== patIso && (
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ fontSize: 12, color: "#FFD9A0", lineHeight: 1.4 }}>⚠ The repeat falls on {when(patIso)}, not on this date.</div>
+                  <button onClick={() => setField("date", patIso)} style={smallBtn}>Move to {eventDateLabel(patIso)}</button>
+                </div>
+              )}
+              {madeIso && !isCurrent && <button onClick={() => setOpenId(byDate[madeIso].id)} style={smallBtn}>Open this event</button>}
+              {!madeIso && <button onClick={() => { const id = createOccurrences(ev, [showIso]); if (id) setOpenId(id); }} style={smallBtn}>+ Create event for this date</button>}
+            </div>
+          );
+        })()}
+        {!single && (<div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
           {dates.length === 0 && <div style={{ fontSize: 12.5, opacity: 0.8 }}>No repeat dates in {yearly ? cur.year : monthLabel(cur.year, cur.month)}.</div>}
           {dates.map((iso) => {
             const [y, m, d] = iso.split("-").map((n) => parseInt(n, 10));
@@ -2675,8 +2721,8 @@ function EventsView({ config, updateConfig, canEdit }) {
               </button>
             );
           })}
-        </div>
-        <div style={{ fontSize: 11, opacity: 0.7, marginTop: 6, lineHeight: 1.4 }}>Dashed dates have no event yet — tap one to create it.</div>
+        </div>)}
+        {!single && <div style={{ fontSize: 11, opacity: 0.7, marginTop: 6, lineHeight: 1.4 }}>Dashed dates have no event yet — tap one to create it.</div>}
       </div>
     );
   };
@@ -3457,14 +3503,14 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
     const monthDates = all.filter((d) => d.startsWith(prefix));
     // Yearly repeat = one date per year, so only the year can be picked (no month or date buttons)
     if (group.rec.repeats && group.rec.freq === "yearly") {
+      const mateDates = group.mates.map((m) => m.date).filter(Boolean);
+      const yearDate = (y) => mateDates.find((d) => d.startsWith(`${y}-`)) || repeatDateIn(group.rec, y, 1, tmpl.date);
       const pickYear = (y) => {
-        const first = all.find((d) => d.startsWith(`${y}-`));
+        const first = yearDate(y);
         if (first) setSel((s) => ({ ...s, year: y, month: parseInt(first.slice(5, 7), 10), date: first }));
       };
-      const yearList = years.filter((y) => all.some((d) => d.startsWith(`${y}-`)));
-      const yi = yearList.indexOf(sel.year);
-      const prevY = yi > 0 ? yearList[yi - 1] : null;
-      const nextY = yi >= 0 && yi < yearList.length - 1 ? yearList[yi + 1] : null;
+      const prevY = yearDate(sel.year - 1) ? sel.year - 1 : null;
+      const nextY = yearDate(sel.year + 1) ? sel.year + 1 : null;
       const yNav = (disabled) => ({ background: "transparent", border: "none", color: "#1F3864", fontSize: 20, cursor: disabled ? "default" : "pointer", padding: "0 14px", lineHeight: 1, opacity: disabled ? 0.3 : 1 });
       return (
         <div>
@@ -3491,15 +3537,29 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
     const jumpKey = (k) => jump(Math.floor((k - 1) / 12), ((k - 1) % 12) + 1);
     const selS = { padding: "7px 6px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.28)", background: "rgba(255,255,255,0.12)", color: "#FFFFFF", fontSize: 13, fontFamily: "system-ui, sans-serif", colorScheme: "dark", minWidth: 0 };
     const navB = (disabled) => ({ width: 32, height: 34, borderRadius: 8, border: "none", background: "rgba(255,255,255,0.16)", color: "#FFFFFF", fontSize: 18, cursor: disabled ? "default" : "pointer", flexShrink: 0, opacity: disabled ? 0.35 : 1 });
+    const isMonthly = group.rec.repeats && group.rec.freq === "monthly";
+    const mateDatesM = group.mates.map((m) => m.date).filter(Boolean);
+    const monthDate = (y, m) => mateDatesM.find((d) => d.startsWith(`${y}-${padTwo(m)}`)) || repeatDateIn(group.rec, y, m, tmpl.date);
+    const stepOf = (delta) => {
+      let y = sel.year, m = sel.month + delta;
+      while (m > 12) { m -= 12; y += 1; }
+      while (m < 1) { m += 12; y -= 1; }
+      return monthDate(y, m) ? { y, m } : null;
+    };
+    const goStep = (delta) => {
+      if (isMonthly) { const st = stepOf(delta); if (st) setSel((s) => ({ ...s, year: st.y, month: st.m, date: monthDate(st.y, st.m) })); }
+      else { const k = delta < 0 ? prevKey : nextKey; if (k) jumpKey(k); }
+    };
+    const canStep = (delta) => (isMonthly ? !!stepOf(delta) : !!(delta < 0 ? prevKey : nextKey));
     const yNavB = (disabled) => ({ background: "transparent", border: "none", color: "#1F3864", fontSize: 20, cursor: disabled ? "default" : "pointer", padding: "0 14px", lineHeight: 1, opacity: disabled ? 0.3 : 1 });
     const opt = { background: "#2A1A38" };
     return (
       <div>
         <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.7)", margin: "18px 0 8px" }}>{group.rec.repeats && group.rec.freq === "monthly" ? "Choose a month" : "Choose a date"}</div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#F6F1E4", border: "1px solid #E4DCC6", borderRadius: 12, padding: "6px 4px" }}>
-          <button onClick={() => prevKey && jumpKey(prevKey)} disabled={!prevKey} style={yNavB(!prevKey)} aria-label="Previous month with a date">‹</button>
+          <button onClick={() => goStep(-1)} disabled={!canStep(-1)} style={yNavB(!canStep(-1))} aria-label="Previous month">‹</button>
           <div style={{ flex: 1, textAlign: "center", fontFamily: "system-ui, sans-serif", fontWeight: 700, fontSize: 15, color: "#1F3864" }}>{MONTH_NAMES[sel.month - 1]} {sel.year}</div>
-          <button onClick={() => nextKey && jumpKey(nextKey)} disabled={!nextKey} style={yNavB(!nextKey)} aria-label="Next month with a date">›</button>
+          <button onClick={() => goStep(1)} disabled={!canStep(1)} style={yNavB(!canStep(1))} aria-label="Next month">›</button>
         </div>
         {!(group.rec.repeats && group.rec.freq === "monthly") && (
           <div>
