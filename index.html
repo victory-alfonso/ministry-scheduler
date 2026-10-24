@@ -438,6 +438,10 @@ const prayerColor = (week) => (week === THURSDAY_ONSITE_WEEK ? ONSITE_COLOR : ON
 function nthThursday(year, month, week) {
   return year && month ? nthWeekdayDate(year, month - 1, 4, week, false) : null;
 }
+// On the ONSITE Thursday the role reads "Onsite ..." instead of "Online ..." (display only; the saved role keeps its name).
+function thuRoleName(name, week) {
+  return week === THURSDAY_ONSITE_WEEK ? String(name || "").replace(/online/i, (m) => (m === m.toUpperCase() ? "ONSITE" : m[0] === m[0].toUpperCase() ? "Onsite" : "onsite")) : name;
+}
 function thursdayLabel(date) {
   return `Thursday, ${MONTH_NAMES[date.getMonth()]} ${date.getDate()}`;
 }
@@ -4620,7 +4624,7 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
                         const verse = (monthState.verses || {})[key] || "";
                         return (
                           <tr key={role.id}>
-                            <td style={{ ...roleCell, background: w.color }}>{role.name}</td>
+                            <td style={{ ...roleCell, background: w.color }}>{thuRoleName(role.name, w.week)}</td>
                             <td style={valueCell}>
                               {name}
                               {role.hasVerse && verse && <div style={{ fontSize: 10.5, color: "var(--t6B6B6B)", marginTop: 2, whiteSpace: "normal" }}>{verse}</div>}
@@ -4817,7 +4821,7 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
           const roleVolunteers = (role.volunteers || []).slice().sort((a, b) => a.localeCompare(b));
           return (
             <div key={role.id} className="role-row" data-role={i % 4} style={{ ...styles.roleRow, ...(i % 2 === 1 ? styles.roleRowAlt : {}), borderTop: i === 0 ? "none" : "1px solid var(--lEFE7D3)", ...(isMobile ? { flexDirection: "column", gap: 8, padding: "12px 10px" } : {}) }}>
-              <div style={{ ...styles.roleName, ...(isMobile ? { width: "100%", paddingTop: 0 } : {}) }}><span className="role-dot" style={styles.roleNameDot} />{role.name}</div>
+              <div style={{ ...styles.roleName, ...(isMobile ? { width: "100%", paddingTop: 0 } : {}) }}><span className="role-dot" style={styles.roleNameDot} />{isThu ? thuRoleName(role.name, week) : role.name}</div>
                 <div style={{ ...styles.roleInputWrap, ...(isMobile ? { width: "100%" } : {}) }}>
                 <div style={{ display: "grid", gridTemplateColumns: `repeat(${slotList.length}, minmax(0, 1fr))`, gap: isMobile ? 6 : 10, alignItems: "start" }}>
                   {slotList.map((s, si) => {
@@ -4851,7 +4855,7 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
                           allowAbove={!isMobile}
                           warningText={nameWarningText}
                           compact={isMobile}
-                          popupTitle={isThu ? `${role.name} · ${prayerKind(week)}` : `${role.name} · ${s}`}
+                          popupTitle={isThu ? `${thuRoleName(role.name, week)} · ${prayerKind(week)}` : `${role.name} · ${s}`}
                           popupMinWidth={220}
                           style={{ ...styles.input, flex: 1, ...cellStyle, ...(hasConflict ? styles.inputConflict : hasDup ? styles.inputDup : {}), ...(locked ? { background: "var(--bF3EFE2)", cursor: "default" } : {}) }}
                         />
@@ -6560,7 +6564,7 @@ function MyScheduleView({ config, monthState, userName, year, month, partial }) 
                         style={{ background: hasConflict ? "var(--bFBE9E5)" : hasDup ? "var(--bFBF3DC)" : idx % 2 === 0 ? "var(--bFFFFFF)" : "var(--bFAF6EA)" }}>
                         <td style={styles.td}>{m.team.thursday ? `${nthThursday(year, month, w.week) ? thursdayLabel(nthThursday(year, month, w.week)) : "Thursday"} · ${prayerKind(w.week)}` : sl.slot}</td>
                         <td style={styles.td}>{m.team.name}</td>
-                        <td style={styles.td}>{m.role.name}</td>
+                        <td style={styles.td}>{m.team.thursday ? thuRoleName(m.role.name, w.week) : m.role.name}</td>
                         <td style={styles.td}>
                           {m.name}{!exactMatch && !partial && <span style={styles.tdMuted}> (close match)</span>}
                         </td>
