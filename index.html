@@ -3368,6 +3368,36 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
     const months = monthsOf(sel.year);
     if (!months.includes(sel.month)) { months.push(sel.month); months.sort((a, b) => a - b); }
     const monthDates = all.filter((d) => d.startsWith(prefix));
+    // Yearly repeat = one date per year, so only the year can be picked (no month or date buttons)
+    if (group.rec.repeats && group.rec.freq === "yearly") {
+      const pickYear = (y) => {
+        const first = all.find((d) => d.startsWith(`${y}-`));
+        if (first) setSel((s) => ({ ...s, year: y, month: parseInt(first.slice(5, 7), 10), date: first }));
+      };
+      return (
+        <div>
+          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: "rgba(255,255,255,0.7)", margin: "18px 0 8px" }}>Choose a year</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {years.map((y) => {
+              const iso = all.find((d) => d.startsWith(`${y}-`));
+              if (!iso) return null;
+              const active = sel.date === iso;
+              const made = !!byDate[iso];
+              return (
+                <button key={y} onClick={() => pickYear(y)} aria-label={eventDateLabel(iso)}
+                  style={{
+                    minWidth: 68, height: 40, borderRadius: 10, cursor: "pointer", padding: "0 10px", fontFamily: "system-ui, sans-serif", fontSize: 15, fontWeight: 700,
+                    color: active ? "#1F3864" : "#FFFFFF",
+                    border: active ? "2px solid #FFFFFF" : made ? "1px solid rgba(229,164,48,0.8)" : "1.5px dashed rgba(229,164,48,0.8)",
+                    background: active ? "#FFFFFF" : "rgba(255,255,255,0.08)",
+                  }}>{y}</button>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: 11, opacity: 0.7, marginTop: 8, lineHeight: 1.4 }}>Dashed years have no event yet — it is created when you add the first name.</div>
+        </div>
+      );
+    }
     // jump to a month and pick its first date, so the roles on the right always match the buttons
     const jump = (y, m) => {
       const first = all.find((d) => d.startsWith(`${y}-${padTwo(m)}`));
