@@ -3674,11 +3674,9 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
             <tbody>
               {program.sections.map((section) => {
                 if (section.kind === "divider") {
-                  const dividerTiming = resolveRowTiming(section, week, slot, timeOffset);
                   return (
                     <tr key={section.id} data-divider="1">
-                      <td style={styles.sheetTd}>{dividerTiming.time}</td>
-                      <td colSpan={6} style={styles.sheetBand}>{shiftDividerLabel(section.label, slot)}</td>
+                      <td colSpan={7} style={styles.sheetBand}>{shiftDividerLabel(section.label, slot)}</td>
                     </tr>
                   );
                 }
@@ -3688,13 +3686,20 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                   .map((tag) => resolveRoleTagValue(config, monthState, week, slot, tag))
                   .filter((v) => norm(v));
 
+                const timings = visibleRows.map((r) => resolveRowTiming(r, week, slot, timeOffset));
+                const isBlankTiming = (t) => !norm(t.time) && !norm(t.duration);
+
                 return visibleRows.map((row, i) => {
-                  const timing = resolveRowTiming(row, week, slot, timeOffset);
+                  const timing = timings[i];
+                  // blank rows below get merged into this one's Time/Duration
+                  const startsTimeGroup = i === 0 || !isBlankTiming(timing);
+                  let timeSpan = 1;
+                  while (startsTimeGroup && i + timeSpan < visibleRows.length && isBlankTiming(timings[i + timeSpan])) timeSpan++;
                   const verseText = resolveRowVerse(config, monthState, week, slot, row);
                   return (
                     <tr key={row.id}>
-                      <td style={styles.sheetTd}>{timing.time}</td>
-                      <td style={styles.sheetTd}>{timing.duration}</td>
+                      {startsTimeGroup && <td rowSpan={timeSpan} style={styles.sheetTd}>{timing.time}</td>}
+                      {startsTimeGroup && <td rowSpan={timeSpan} style={styles.sheetTd}>{timing.duration}</td>}
                       {i === 0 && (
                         <td rowSpan={visibleRows.length} style={{ ...styles.sheetTd, verticalAlign: "middle", whiteSpace: "pre-wrap" }}>
                           {section.extraCol || ""}
