@@ -2000,6 +2000,7 @@ function EventsView({ config, updateConfig, canEdit }) {
   const [backMode, setBackMode] = useState("detail"); // where Back goes from the print preview
   const [repeatConfirm, setRepeatConfirm] = useState(false); // "Apply repeat" confirmation
   const [repeatOptions, setRepeatOptions] = useState(false); // Repeat options popup
+  const [repPick, setRepPick] = useState(null); // month/year shown by the repeat date picker: { id, year, month }
   const [seriesCal, setSeriesCal] = useState(null); // repeat calendar: { srcId, year, month, selected }
   const [programModal, setProgramModal] = useState(null); // "+ Program" popup (add / edit one program with its role/task rows)
   useEffect(() => {
@@ -2358,6 +2359,7 @@ function EventsView({ config, updateConfig, canEdit }) {
                     <DateInput3 value={ev.date || ""} onChange={(v) => setField("date", v)} style={{ ...dInput, padding: "6px 4px" }} />
                   </div>
                 )}
+                {resolveRecurrence(ev).repeats && renderRepeatDates(ev, dLabel)}
                 <div style={{ display: "flex", gap: 8, marginTop: 0 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={dLabel}>Start time</div>
@@ -2618,6 +2620,66 @@ function EventsView({ config, updateConfig, canEdit }) {
   // series: events created from one repeating event share a seriesId
   const cloneJson = (v) => JSON.parse(JSON.stringify(v));
   const laterInSeries = (e) => (e.seriesId ? events.filter((x) => x.seriesId === e.seriesId && x.id !== e.id && x.date && x.date > (e.date || "")) : []);
+  // ---- Month/year picker + the dates of the repeat, shown on the event card when "Repeats" is chosen ----
+  const renderRepeatDates = (ev, dLabel) => {
+    const rec = resolveRecurrence(ev);
+    const mates = events.filter((x) => x.id === ev.id || (ev.seriesId && x.seriesId === ev.seriesId));
+    const byDate = {};
+    mates.forEach((x) => { if (x.date) byDate[x.date] = x; });
+    const anchor = Object.keys(byDate).sort()[0];
+    if (!anchor) return null;
+    const yearly = rec.freq === "yearly";
+    const [ay, am] = (ev.date || anchor).split("-").map((n) => parseInt(n, 10));
+    const cur = repPick && repPick.id === ev.id ? repPick : { year: ay, month: am };
+    const go = (delta) => {
+      let y = cur.year, m = cur.month;
+      if (yearly) y += delta;
+      else { m += delta; while (m > 12) { m -= 12; y += 1; } while (m < 1) { m += 12; y -= 1; } }
+      setRepPick({ id: ev.id, year: y, month: m });
+    };
+    const prefix = yearly ? `${cur.year}-` : `${cur.year}-${padTwo(cur.month)}`;
+    const endISO = yearly ? `${cur.year}-12-31` : isoOf(new Date(cur.year, cur.month, 0));
+    const set = new Set(recurrenceDates(rec, anchor, endISO).filter((d) => d.startsWith(prefix)));
+    Object.keys(byDate).filter((d) => d.startsWith(prefix)).forEach((d) => set.add(d));
+    const dates = Array.from(set).sort();
+    const navBtn = { background: "transparent", border: "none", color: "#1F3864", fontSize: 20, cursor: "pointer", padding: "0 14px", lineHeight: 1 };
+    const openDate = (iso) => {
+      if (byDate[iso]) { if (byDate[iso].id !== ev.id) setOpenId(byDate[iso].id); return; }
+      const id = createOccurrences(ev, [iso]);
+      if (id) setOpenId(id);
+    };
+    return (
+      <div>
+        <div style={dLabel}>{yearly ? "Year" : "Month & year"}</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#F6F1E4", border: "1px solid #E4DCC6", borderRadius: 12, padding: "6px 4px" }}>
+          <button onClick={() => go(-1)} style={navBtn} aria-label={yearly ? "Previous year" : "Previous month"}>‹</button>
+          <div style={{ flex: 1, textAlign: "center", fontFamily: "system-ui, sans-serif", fontWeight: 700, fontSize: 15, color: "#1F3864" }}>{yearly ? cur.year : monthLabel(cur.year, cur.month)}</div>
+          <button onClick={() => go(1)} style={navBtn} aria-label={yearly ? "Next year" : "Next month"}>›</button>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+          {dates.length === 0 && <div style={{ fontSize: 12.5, opacity: 0.8 }}>No repeat dates in {yearly ? cur.year : monthLabel(cur.year, cur.month)}.</div>}
+          {dates.map((iso) => {
+            const [y, m, d] = iso.split("-").map((n) => parseInt(n, 10));
+            const active = ev.date === iso;
+            const made = !!byDate[iso];
+            return (
+              <button key={iso} onClick={() => openDate(iso)} aria-label={eventDateLabel(iso)}
+                style={{
+                  width: yearly ? 74 : 52, height: 48, borderRadius: 10, cursor: "pointer", padding: 0, fontFamily: "system-ui, sans-serif",
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1,
+                  border: active ? "2px solid #FFFFFF" : made ? "1px solid rgba(229,164,48,0.8)" : "1.5px dashed rgba(229,164,48,0.8)",
+                  background: active ? "#FFFFFF" : "rgba(255,255,255,0.08)",
+                }}>
+                <span style={{ fontSize: 8.5, fontWeight: 600, letterSpacing: "0.08em", color: active ? "#7A6E4E" : "rgba(255,255,255,0.7)" }}>{(yearly ? MONTH_NAMES[m - 1].slice(0, 3) : WEEKDAY_NAMES[new Date(y, m - 1, d).getDay()].slice(0, 3)).toUpperCase()}</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: active ? "#1F3864" : "#FFFFFF" }}>{d}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ fontSize: 11, opacity: 0.7, marginTop: 6, lineHeight: 1.4 }}>Dashed dates have no event yet — tap one to create it.</div>
+      </div>
+    );
+  };
   // ---- Repeat settings panel (left side of the event popup) ----
   const renderRepeatSection = (ev, dInput, dLabel, ghostBtn) => {
     const raw = { ...REC_DEFAULT, ...(ev.recurrence || legacyRecurrence(ev)) };
@@ -2800,20 +2862,16 @@ function EventsView({ config, updateConfig, canEdit }) {
           <div style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF" }}>{recurrenceSummary(rec)}</div>
           {preview && <div style={{ fontSize: 11.5, opacity: 0.8, marginTop: 4 }}>Dates: {preview}</div>}
         </div>
-              <button onClick={() => setRepeatOptions(false)}
-                style={{ ...ghostBtn, width: "100%", marginTop: 12, padding: "9px 12px", fontSize: 13, fontWeight: 700, background: "var(--bA9782F)" }}>Done</button>
+              <button onClick={() => { setRepeatOptions(false); if (rec.repeats && ev.date) setRepeatConfirm(true); }} disabled={rec.repeats && errors.length > 0}
+                style={{ ...ghostBtn, width: "100%", marginTop: 12, padding: "9px 12px", fontSize: 13, fontWeight: 700, background: "var(--bA9782F)", opacity: rec.repeats && errors.length ? 0.45 : 1, cursor: rec.repeats && errors.length ? "not-allowed" : "pointer" }}>Done</button>
             </div>
           </div>,
           document.body
         )}
 
-        {rec.repeats && ev.date && (
+        {rec.repeats && ev.date && laterInSeries(ev).length > 0 && (
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-            <button onClick={() => setRepeatConfirm(true)} disabled={errors.length > 0}
-              style={{ ...ghostBtn, padding: "7px 12px", fontSize: 12.5, fontWeight: 700, background: "var(--bA9782F)", opacity: errors.length ? 0.45 : 1, cursor: errors.length ? "not-allowed" : "pointer" }}>
-              📅 Apply repeat…
-            </button>
-            {laterInSeries(ev).length > 0 && <button onClick={() => updateUpcoming(ev)} style={{ ...ghostBtn, padding: "7px 12px", fontSize: 12.5 }}>Update upcoming</button>}
+            <button onClick={() => updateUpcoming(ev)} style={{ ...ghostBtn, padding: "7px 12px", fontSize: 12.5 }}>Update upcoming</button>
           </div>
         )}
         {ev.seriesId && <div style={{ fontSize: 11, opacity: 0.65, marginTop: 4 }}>{events.filter((x) => x.seriesId === ev.seriesId).length} event{events.filter((x) => x.seriesId === ev.seriesId).length === 1 ? "" : "s"} in this series</div>}
@@ -2826,8 +2884,8 @@ function EventsView({ config, updateConfig, canEdit }) {
     setRepeatConfirm(false);
     if (!src) return;
     if (!src.seriesId) setField("seriesId", uid());
-    const [y, m, d] = (src.date || "").split("-").map((n) => parseInt(n, 10));
-    setSeriesCal({ srcId: src.id, year: y, month: m, selected: src.date || null });
+    const [y, m] = (src.date || "").split("-").map((n) => parseInt(n, 10));
+    if (y && m) setRepPick({ id: src.id, year: y, month: m });
   };
   // makes real events (copy of the source: programs, ministries, start time) on the given dates
   const createOccurrences = (src, isoList) => {
@@ -2842,6 +2900,7 @@ function EventsView({ config, updateConfig, canEdit }) {
       ...prev,
       events: [...(prev.events || []).map((e) => (e.id === src.id ? { ...e, seriesId: sid } : e)), ...copies],
     }));
+    return copies[0].id;
   };
   const renderRepeatConfirm = () => {
     const src = openEvent;
@@ -2851,11 +2910,11 @@ function EventsView({ config, updateConfig, canEdit }) {
       <ClearNamesModal
         teamName={recurrenceSummary(rec)}
         title="Proceed with this repeat?"
-        body={`“${src.title || "Untitled event"}” will repeat using the schedule below. Next you can pick a year and month to see each date, and create the event for any date.`}
+        body={`“${src.title || "Untitled event"}” will repeat using the schedule below. Then use the month/year picker on the event card to see each date and create the event for any date.`}
         note="No events are created until you choose a date."
         warning="You can still change the repeat settings afterwards."
         confirmLabel="Yes, proceed"
-        onCancel={() => setRepeatConfirm(false)}
+        onCancel={() => { setRepeatConfirm(false); setRepeatOptions(true); }}
         onConfirm={proceedRepeat}
       />
     );
