@@ -1650,6 +1650,13 @@ function EventsView({ config, updateConfig, canEdit }) {
     ...e, rows: e.rows.map((r) => (r.id === rowId ? { ...r, [field]: value } : r)),
   }));
   const addRow = (phase) => updateEvent(openId, (e) => ({ ...e, rows: [...e.rows, { id: uid(), phase, duration: "", program: "", task: "", volunteer: "" }] }));
+  // new blank row right under this one, same phase; blank Time/Program merge into the row above
+  const addRowBelow = (rowId) => updateEvent(openId, (e) => {
+    const at = e.rows.findIndex((r) => r.id === rowId);
+    if (at < 0) return e;
+    const blank = { id: uid(), phase: phaseOf(e.rows[at]), duration: "", program: "", task: "", linkedRole: "", fixedText: "" };
+    return { ...e, rows: [...e.rows.slice(0, at + 1), blank, ...e.rows.slice(at + 1)] };
+  });
   const removeRow = (rowId) => updateEvent(openId, (e) => ({ ...e, rows: e.rows.filter((r) => r.id !== rowId) }));
   const moveRow = (rowId, direction) => updateEvent(openId, (e) => {
     const row = e.rows.find((r) => r.id === rowId);
@@ -1930,6 +1937,7 @@ function EventsView({ config, updateConfig, canEdit }) {
                 <span style={{ fontSize: 11.5, color: "var(--t6B6B6B)", flex: "0 0 105px" }}>{time}</span>
                 <button onClick={() => moveRow(row.id, -1)} style={styles.smallBtn} aria-label="Move up">↑</button>
                 <button onClick={() => moveRow(row.id, 1)} style={styles.smallBtn} aria-label="Move down">↓</button>
+                <button onClick={() => addRowBelow(row.id)} style={{ ...styles.smallBtn, background: "var(--b2F4858)" }}>+ Role below</button>
                 <button onClick={() => removeRow(row.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove row">✕</button>
                 <textarea value={row.programNote || ""} onChange={(e) => setRowField(row.id, "programNote", e.target.value)} rows={2}
                   placeholder="Program notes under the program name, one per line (e.g. songs)"
