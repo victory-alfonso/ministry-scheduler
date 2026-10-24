@@ -116,6 +116,9 @@
 
   }
 
+  :root[data-theme="dark"] [data-slot="3"] { --sc:#9B6FD6; --cb:#6B3FA0; --ct:#FFFFFF; }
+  :root:not([data-theme="dark"]) [data-slot="3"] { --cb:#6B3FA0; --ct:#FFFFFF; --sc:#6B3FA0; --sl:#6B3FA0; }
+
   /* ---- Light mode: same slot colors (screen only; print/export keep the old colors) ---- */
   @media screen {
     :root:not([data-theme="dark"]) [data-slot="0"] { --cb:#0B3D82; --ct:#FFFFFF; --sc:#0B3D82; --sl:#0B3D82; }
@@ -315,6 +318,9 @@ const DEFAULT_TEAMS = [
   { id: "prayer", name: "TEAM JESUS PRAYER", flexible: true, roles: [
       { id: "prayer", name: "Team JESUS Prayer" },
   ]},
+  { id: "prayer-meeting", name: "Online/Onsite Prayer", flexible: true, thursday: true, roles: [
+      { id: "online-prayer-lead", name: "Online Prayer Lead" },
+  ]},
 ];
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -420,6 +426,89 @@ function nthSundayOfMonth(year, month, week) {
   const date = new Date(year, month - 1, day);
   return date.getMonth() === month - 1 ? date : null;
 }
+// ---- Online / Onsite Prayer ministry (Thursday meetings) ----
+// Its dates are the Thursdays of the month (week n = the nth Thursday). The 4th Thursday is the
+// ONSITE prayer meeting; every other Thursday is ONLINE.
+const PRAYER_MEETING_TEAM_ID = "prayer-meeting";
+const THURSDAY_ONSITE_WEEK = 4;
+const ONLINE_COLOR = "#079FC8";
+const ONSITE_COLOR = "#6B3FA0";
+const prayerKind = (week) => (week === THURSDAY_ONSITE_WEEK ? "ONSITE" : "ONLINE");
+const prayerColor = (week) => (week === THURSDAY_ONSITE_WEEK ? ONSITE_COLOR : ONLINE_COLOR);
+function nthThursday(year, month, week) {
+  return year && month ? nthWeekdayDate(year, month - 1, 4, week, false) : null;
+}
+function thursdayLabel(date) {
+  return `Thursday, ${MONTH_NAMES[date.getMonth()]} ${date.getDate()}`;
+}
+
+// One-time move of the "Online Prayer Lead" role out of Team JESUS Prayer into its own ministry.
+// Runs in memory on load (and is saved with the next normal save), so it is safe to repeat.
+function migratePrayerMeetingTeam(cfg) {
+  if (cfg.migrations && cfg.migrations.prayerMeeting) return cfg;
+  const teams = cfg.teams || [];
+  const mark = (info) => ({ ...cfg, migrations: { ...(cfg.migrations || {}), prayerMeeting: info } });
+  if (teams.some((t) => t.id === PRAYER_MEETING_TEAM_ID)) return mark({ toTeam: PRAYER_MEETING_TEAM_ID });
+  const fromIdx = teams.findIndex((t) => t.id === "prayer");
+  const fromTeam = fromIdx >= 0 ? teams[fromIdx] : null;
+  const moved = fromTeam ? (fromTeam.roles || []).find((r) => normKey(r.name) === "online prayer lead") : null;
+  const role = moved || { id: "online-prayer-lead", name: "Online Prayer Lead" };
+  const newTeam = { id: PRAYER_MEETING_TEAM_ID, name: "Online/Onsite Prayer", flexible: true, thursday: true, roles: [role] };
+  const nextTeams = teams.map((t) => (t.id === "prayer" && moved ? { ...t, roles: t.roles.filter((r) => r.id !== moved.id) } : t));
+  nextTeams.splice(fromIdx >= 0 ? fromIdx + 1 : nextTeams.length, 0, newTeam);
+  // anyone allowed to edit Team JESUS Prayer can edit the new ministry too
+  const restrictions = { ...(cfg.restrictions || {}) };
+  Object.keys(restrictions).forEach((k) => {
+    const e = normalizeRestriction(restrictions[k]);
+    if (e.teams.includes("prayer") && !e.teams.includes(PRAYER_MEETING_TEAM_ID)) {
+      restrictions[k] = { ...e, teams: [...e.teams, PRAYER_MEETING_TEAM_ID] };
+    }
+  });
+  let next = { ...cfg, teams: nextTeams, restrictions };
+  if (moved) {
+    // role tags used by the print program / allowed combinations
+    const swapTag = (obj) => (obj ? JSON.parse(JSON.stringify(obj).split(`"prayer::${moved.id}"`).join(`"${PRAYER_MEETING_TEAM_ID}::${moved.id}"`)) : obj);
+    next = { ...next, printProgram: swapTag(next.printProgram), compatibleGroups: swapTag(next.compatibleGroups) };
+  }
+  return { ...next, migrations: { ...(cfg.migrations || {}), prayerMeeting: { fromTeam: "prayer", toTeam: PRAYER_MEETING_TEAM_ID, roleId: moved ? moved.id : null } } };
+}
+// Moves that role's saved names to the new ministry's key. The Thursday meeting has no 9/11/4 services,
+// so whatever was typed in the three time boxes is combined into the first one.
+function migratePrayerMonth(state, cfg) {
+  const m = cfg && cfg.migrations && cfg.migrations.prayerMeeting;
+  if (!state || !m || !m.roleId) return state;
+  let changed = false;
+  const fix = (obj) => {
+    if (!obj) return obj;
+    const out = {};
+    const groups = {};
+    Object.entries(obj).forEach(([key, val]) => {
+      const p = key.split("|");
+      if (p.length === 4 && p[2] === m.fromTeam && (p[3] === m.roleId || p[3] === m.roleId + "__verse")) {
+        changed = true;
+        const nk = [p[0], SLOTS[0], m.toTeam, p[3]].join("|");
+        (groups[nk] = groups[nk] || []).push({ slot: p[1], val });
+      } else out[key] = val;
+    });
+    Object.entries(groups).forEach(([nk, list]) => {
+      if (Object.prototype.hasOwnProperty.call(out, nk)) return;
+      list.sort((a, b) => SLOTS.indexOf(a.slot) - SLOTS.indexOf(b.slot));
+      const vals = list.map((x) => x.val).filter((v) => (typeof v === "string" ? norm(v) : v));
+      if (vals.length === 0) return;
+      if (typeof vals[0] === "string") {
+        const seen = new Set();
+        out[nk] = vals.filter((v) => { const k = normKey(v); if (seen.has(k)) return false; seen.add(k); return true; }).join(" / ");
+      } else out[nk] = vals[0];
+    });
+    return out;
+  };
+  const assignments = fix(state.assignments);
+  const verses = fix(state.verses);
+  const checks = fix(state.checks);
+  const editMeta = fix(state.editMeta);
+  return changed ? { ...state, assignments, verses, checks, editMeta } : state;
+}
+
 // The coming Sunday (or today, if today is Sunday)
 function upcomingSunday(from) {
   return new Date(from.getFullYear(), from.getMonth(), from.getDate() + ((7 - from.getDay()) % 7));
@@ -788,6 +877,8 @@ function findIssues(config, monthState, week, slot, teamId, roleId, name) {
     const otherTeam = config.teams.find((t) => t.id === tId);
     const otherRole = otherTeam && otherTeam.roles.find((r) => r.id === rId);
     if (!otherTeam || !otherRole) continue;
+    const selfTeamObj = config.teams.find((t) => t.id === teamId);
+    if (otherTeam.thursday || (selfTeamObj && selfTeamObj.thursday)) continue;
 
     const otherTag = roleTag(tId, rId);
     const explicitlyAllowed = (config.compatibleGroups || []).some((g) => g.includes(selfTag) && g.includes(otherTag));
@@ -1364,6 +1455,13 @@ function App() {
 
   useEffect(() => { setDisplayNameOverride(null); }, [authUser && authUser.uid]);
 
+  // Moves the old "Online Prayer Lead" names over to the new Online/Onsite Prayer ministry (see migratePrayerMonth).
+  useEffect(() => {
+    if (!config || !monthState) return;
+    const next = migratePrayerMonth(monthState, config);
+    if (next !== monthState) setMonthState(next);
+  }, [config, monthState]);
+
   // Lets a signed-in user change the name/nickname they show up as on the
   // schedule, without needing Firebase console access. Edit access itself
   // still depends on the Editors list (keyed by email, see the note above
@@ -1406,7 +1504,7 @@ function App() {
           ...t,
           roles: t.roles || [],
         }));
-        setConfig({ ...emptyConfig(), ...val, teams: safeTeams, printProgram: val.printProgram || defaultPrintProgram() });
+        setConfig(migratePrayerMeetingTeam({ ...emptyConfig(), ...val, teams: safeTeams, printProgram: val.printProgram || defaultPrintProgram() }));
         return;
       }
       if (migratedRef.current) return;
@@ -1609,7 +1707,7 @@ function App() {
         {isMobile && (
           <MobileControls monthState={monthState} week={week} setWeek={setWeek} slot={slot} setSlot={setSlot}
             monthLabelText={monthLabel(year, month)} year={year} month={month} onPrevMonth={() => shiftMonth(-1)} onNextMonth={() => shiftMonth(1)}
-            onlineUsers={onlineUsers} userName={userName} hideSlots={effectiveTab === "assign"} />
+            onlineUsers={onlineUsers} userName={userName} hideSlots={effectiveTab === "assign"} thursday={effectiveTab === "assign" && !!(activeTeam && activeTeam.thursday)} />
         )}
         {effectiveTab === "myschedule" && (
           <MyScheduleView config={config} monthState={monthState} userName={userName} year={year} month={month} />
@@ -3906,7 +4004,7 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
   );
 }
 
-function MobileControls({ monthState, week, setWeek, slot, setSlot, monthLabelText, year, month, onPrevMonth, onNextMonth, onlineUsers, userName, hideSlots }) {
+function MobileControls({ monthState, week, setWeek, slot, setSlot, monthLabelText, year, month, onPrevMonth, onNextMonth, onlineUsers, userName, hideSlots, thursday }) {
   const others = (onlineUsers || []).filter((u) => norm(u.name).toLowerCase() !== norm(userName).toLowerCase());
   const [showPresence, setShowPresence] = useState(false);
   const [coords, setCoords] = useState(null);
@@ -3972,11 +4070,12 @@ function MobileControls({ monthState, week, setWeek, slot, setSlot, monthLabelTe
       </div>
       <div style={styles.mobileControlsRow}>
         {WEEKS.map((w) => {
-          const text = weekButtonText(w, monthState.weekLabels, year, month);
+          const thu = thursday ? nthThursday(year, month, w) : null;
+          const text = thursday ? (thu ? String(thu.getDate()) : null) : weekButtonText(w, monthState.weekLabels, year, month);
           if (!text && w !== week) return null;
           return (
             <button key={w} onClick={() => setWeek(w)}
-              style={{ ...styles.mobileWeekBtn, ...(w === week ? styles.weekBtnActive : {}) }}>
+              style={{ ...styles.mobileWeekBtn, ...(thursday && w === THURSDAY_ONSITE_WEEK ? { borderColor: ONSITE_COLOR, ...(w === week ? { background: ONSITE_COLOR, color: "#FFFFFF" } : { color: ONSITE_COLOR }) } : (w === week ? styles.weekBtnActive : {})) }}>
               {text || "–"}
             </button>
           );
@@ -3988,7 +4087,11 @@ function MobileControls({ monthState, week, setWeek, slot, setSlot, monthLabelTe
           </button>
         ))}
       </div>
-      <div style={styles.mobileWeekDate}>{weekDisplayLabel(week, monthState.weekLabels, year, month)}</div>
+      <div style={styles.mobileWeekDate}>
+        {thursday
+          ? (nthThursday(year, month, week) ? `${thursdayLabel(nthThursday(year, month, week))} · ${prayerKind(week)}` : "No Thursday this week")
+          : weekDisplayLabel(week, monthState.weekLabels, year, month)}
+      </div>
     </div>
   );
 }
@@ -4217,6 +4320,14 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
   const [showEvents, setShowEvents] = useState(false); // this ministry's view of the Events tab
   const [exporting, setExporting] = useState(null); // null | "image" | "pdf"
   const sheetRef = useRef(null);
+  // The Online/Onsite Prayer ministry meets on Thursdays (week n = the nth Thursday) and has a single box per role.
+  const isThu = !!(team && team.thursday);
+  const slotList = isThu ? [SLOTS[0]] : SLOTS;
+  const thuDate = isThu ? nthThursday(year, month, week) : null;
+  const thuSlotIdx = isThu ? (week === THURSDAY_ONSITE_WEEK ? 3 : 1) : 0;
+  useEffect(() => {
+    if (isThu && !thuDate) setWeek(THURSDAY_ONSITE_WEEK);
+  }, [isThu, thuDate ? thuDate.getTime() : 0, year, month]);
 
   // ---- Per-role volunteer list editing (add / remove right on the ministry tab) ----
   // Same data as Manage Teams (role.volunteers in the shared config), so the
@@ -4442,6 +4553,12 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
     // black gridlines, white value cells. No card chrome, shadow, rounded
     // corners, or watermark — this view is meant to be screenshotted/printed
     // as a clean roster, not styled like the rest of the app.
+    const thuWeeks = team.thursday
+      ? WEEKS.map((w) => {
+          const d = nthThursday(year, month, w);
+          return d ? { week: w, label: thursdayLabel(d), kind: prayerKind(w), color: prayerColor(w) === ONSITE_COLOR ? "#4E2B78" : "#0B6F8A" } : null;
+        }).filter(Boolean)
+      : [];
     const NAVY_DARK = "#153D64";
     const NAVY_MED = "#215C98";
     const GRID = "#000000";
@@ -4480,7 +4597,42 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
                 {[printSettings.campus || "VICTORY ALFONSO", team.name, monthLabelText].filter(Boolean).join(" | ")}
               </div>
             </div>
-            {weeksData.length === 0 ? (
+            {team.thursday ? (
+              thuWeeks.length === 0 ? (
+                <div style={{ fontFamily: "Calibri, Arial, sans-serif", color: "var(--t8A7F5E)", textAlign: "center", padding: 20 }}>No Thursdays found for this month.</div>
+              ) : (
+                <table style={{ borderCollapse: "collapse", fontFamily: "Calibri, Arial, sans-serif", width: "100%", tableLayout: "fixed" }}>
+                  <colgroup>
+                    <col style={{ width: "34%" }} />
+                    <col style={{ width: "66%" }} />
+                  </colgroup>
+                  {thuWeeks.map((w, wi) => (
+                    <tbody key={w.week} style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
+                      {wi > 0 && <tr><td colSpan={2} style={{ border: "none", padding: 0, height: 14 }} /></tr>}
+                      <tr>
+                        <th colSpan={2} style={{ ...dateBarCell, background: w.color }}>{w.label} — {w.kind} PRAYER MEETING</th>
+                      </tr>
+                      {team.roles.length === 0 ? (
+                        <tr><td style={valueCell} colSpan={2}>No roles set up for this team yet.</td></tr>
+                      ) : team.roles.map((role) => {
+                        const key = assignKey(w.week, SLOTS[0], team.id, role.id);
+                        const name = monthState.assignments[key] || "";
+                        const verse = (monthState.verses || {})[key] || "";
+                        return (
+                          <tr key={role.id}>
+                            <td style={{ ...roleCell, background: w.color }}>{role.name}</td>
+                            <td style={valueCell}>
+                              {name}
+                              {role.hasVerse && verse && <div style={{ fontSize: 10.5, color: "var(--t6B6B6B)", marginTop: 2, whiteSpace: "normal" }}>{verse}</div>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  ))}
+                </table>
+              )
+            ) : weeksData.length === 0 ? (
               <div style={{ fontFamily: "Calibri, Arial, sans-serif", color: "var(--t8A7F5E)", textAlign: "center", padding: 20 }}>
                 No Sundays found for this month.
               </div>
@@ -4601,11 +4753,13 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
             </div>
           )}
           <span>
-          {isMobile
+          {isThu
+            ? (thuDate ? `${thursdayLabel(thuDate)} · ${prayerKind(week)}` : "")
+            : isMobile
             ? weekDisplayLabel(week, monthState.weekLabels, year, month)
             : (norm(monthState.weekLabels && monthState.weekLabels[week])
                 ? weekDisplayLabel(week, monthState.weekLabels, year, month)
-                : "")}{isMobile ? " · All services" : ""}
+                : "")}{isMobile && !isThu ? " · All services" : ""}
           </span>
           {team.flexible && <span style={styles.flexTag}>compatible with every team</span>}
           {locked && <span style={styles.flexTag}>view only — you can only edit your ministry</span>}
@@ -4624,32 +4778,35 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
         {!isMobile && (
           <div style={{ width: 233, flexShrink: 0, display: "flex", gap: 5 }}>
             {WEEKS.map((w) => {
-              const text = weekButtonText(w, monthState.weekLabels, year, month);
+              const thu = isThu ? nthThursday(year, month, w) : null;
+              const text = isThu ? (thu ? String(thu.getDate()) : null) : weekButtonText(w, monthState.weekLabels, year, month);
               if (!text && w !== week) return null;
               const active = w === week;
+              const kindColor = isThu ? prayerColor(w) : null;
               return (
-                <button key={w} onClick={() => setWeek(w)} aria-label={`Service date ${weekDisplayLabel(w, monthState.weekLabels, year, month)}`}
+                <button key={w} onClick={() => setWeek(w)} aria-label={isThu ? `${thu ? thursdayLabel(thu) : "Thursday"} ${prayerKind(w)}` : `Service date ${weekDisplayLabel(w, monthState.weekLabels, year, month)}`}
                   style={{
-                    flex: 1, minWidth: 0, height: 46, borderRadius: 10, cursor: "pointer", padding: 0,
+                    flex: 1, minWidth: 0, height: isThu ? 54 : 46, borderRadius: 10, cursor: "pointer", padding: 0,
                     display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1,
                     fontFamily: "system-ui, sans-serif",
-                    border: `1px solid ${active ? "var(--l1F3864)" : "var(--lD8CFB0)"}`,
-                    background: active ? "var(--b1F3864)" : "var(--bFFFFFF)",
+                    border: `1px solid ${isThu ? (active ? kindColor : "var(--lD8CFB0)") : (active ? "var(--l1F3864)" : "var(--lD8CFB0)")}`,
+                    background: isThu ? (active ? kindColor : "var(--bFFFFFF)") : (active ? "var(--b1F3864)" : "var(--bFFFFFF)"),
                   }}>
-                  <span style={{ fontSize: 8, fontWeight: 600, letterSpacing: "0.08em", color: active ? "#E3C27A" : "var(--t8A7F5E)" }}>SUN</span>
-                  <span style={{ fontSize: 16, fontWeight: active ? 700 : 600, color: active ? "#FFFFFF" : "var(--t1F3864)" }}>{text || "–"}</span>
+                  <span style={{ fontSize: 8, fontWeight: 600, letterSpacing: "0.08em", color: isThu ? (active ? "rgba(255,255,255,0.85)" : "var(--t8A7F5E)") : (active ? "#E3C27A" : "var(--t8A7F5E)") }}>{isThu ? "THU" : "SUN"}</span>
+                  <span style={{ fontSize: 16, fontWeight: active ? 700 : 600, color: isThu ? (active ? "#FFFFFF" : kindColor) : (active ? "#FFFFFF" : "var(--t1F3864)") }}>{text || "–"}</span>
+                  {isThu && <span style={{ fontSize: 7, fontWeight: 700, letterSpacing: "0.06em", color: active ? "#FFFFFF" : kindColor }}>{prayerKind(w)}</span>}
                 </button>
               );
             })}
           </div>
         )}
-        <div style={{ flex: 1, minWidth: 0, display: "grid", gridTemplateColumns: `repeat(${SLOTS.length}, minmax(0, 1fr))`, gap: isMobile ? 6 : 10 }}>
-          {SLOTS.map((s, si) => (
-            <div key={s} className="slot-chip" data-slot={si} style={{
-              background: slotColor(si), color: "#FFFFFF", fontWeight: 600, textAlign: "center",
+        <div style={{ flex: 1, minWidth: 0, display: "grid", gridTemplateColumns: `repeat(${slotList.length}, minmax(0, 1fr))`, gap: isMobile ? 6 : 10 }}>
+          {slotList.map((s, si) => (
+            <div key={s} className="slot-chip" data-slot={isThu ? thuSlotIdx : si} style={{
+              background: isThu ? prayerColor(week) : slotColor(si), color: "#FFFFFF", fontWeight: 600, textAlign: "center",
               borderRadius: 8, fontFamily: "system-ui, sans-serif",
               ...(isMobile ? { fontSize: 11.5, padding: "8px 0" } : { fontSize: 14, padding: "9px 0" }),
-            }}>{s}</div>
+            }}>{isThu ? `${prayerKind(week)} PRAYER MEETING` : s}</div>
           ))}
         </div>
       </div>
@@ -4662,8 +4819,8 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
             <div key={role.id} className="role-row" data-role={i % 4} style={{ ...styles.roleRow, ...(i % 2 === 1 ? styles.roleRowAlt : {}), borderTop: i === 0 ? "none" : "1px solid var(--lEFE7D3)", ...(isMobile ? { flexDirection: "column", gap: 8, padding: "12px 10px" } : {}) }}>
               <div style={{ ...styles.roleName, ...(isMobile ? { width: "100%", paddingTop: 0 } : {}) }}><span className="role-dot" style={styles.roleNameDot} />{role.name}</div>
                 <div style={{ ...styles.roleInputWrap, ...(isMobile ? { width: "100%" } : {}) }}>
-                <div style={{ display: "grid", gridTemplateColumns: `repeat(${SLOTS.length}, minmax(0, 1fr))`, gap: isMobile ? 6 : 10, alignItems: "start" }}>
-                  {SLOTS.map((s, si) => {
+                <div style={{ display: "grid", gridTemplateColumns: `repeat(${slotList.length}, minmax(0, 1fr))`, gap: isMobile ? 6 : 10, alignItems: "start" }}>
+                  {slotList.map((s, si) => {
                     const key = assignKey(week, s, team.id, role.id);
                     const value = monthState.assignments[key] || "";
                     const verseValue = (monthState.verses && monthState.verses[key]) || "";
@@ -4682,19 +4839,19 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
                     // smaller text/padding and wraps long names instead of cutting them off.
                     const cellStyle = isMobile ? { padding: "7px 5px", fontSize: 12, lineHeight: 1.25, minHeight: 38, borderLeft: "1px solid var(--lD8CFB0)" } : {};
                     return (
-                      <div key={s} className={"vol-slot" + (hasConflict || hasDup ? " vol-warn" : "")} data-slot={si} style={{ minWidth: 0 }}>
-                        <div aria-hidden="true" style={{ height: 3, borderRadius: 3, background: slotColor(si), marginBottom: 5 }} />
+                      <div key={s} className={"vol-slot" + (hasConflict || hasDup ? " vol-warn" : "")} data-slot={isThu ? thuSlotIdx : si} style={{ minWidth: 0 }}>
+                        <div aria-hidden="true" style={{ height: 3, borderRadius: 3, background: isThu ? prayerColor(week) : slotColor(si), marginBottom: 5 }} />
                         <VolunteerNameInput
                           value={value}
                           onChange={(val) => setName(role.id, val, s)}
                           volunteers={roleVolunteers}
                           locked={locked}
-                          placeholder={isMobile ? `+ ${shortSlot(s)}` : (songPlaceholder(role) || "Volunteer name")}
+                          placeholder={isThu ? "Volunteer name" : isMobile ? `+ ${shortSlot(s)}` : (songPlaceholder(role) || "Volunteer name")}
                           meta={meta}
                           allowAbove={!isMobile}
                           warningText={nameWarningText}
                           compact={isMobile}
-                          popupTitle={`${role.name} · ${s}`}
+                          popupTitle={isThu ? `${role.name} · ${prayerKind(week)}` : `${role.name} · ${s}`}
                           popupMinWidth={220}
                           style={{ ...styles.input, flex: 1, ...cellStyle, ...(hasConflict ? styles.inputConflict : hasDup ? styles.inputDup : {}), ...(locked ? { background: "var(--bF3EFE2)", cursor: "default" } : {}) }}
                         />
@@ -6401,7 +6558,7 @@ function MyScheduleView({ config, monthState, userName, year, month, partial }) 
                     return (
                       <tr key={`${sl.slot}-${m.team.id}-${m.role.id}`}
                         style={{ background: hasConflict ? "var(--bFBE9E5)" : hasDup ? "var(--bFBF3DC)" : idx % 2 === 0 ? "var(--bFFFFFF)" : "var(--bFAF6EA)" }}>
-                        <td style={styles.td}>{sl.slot}</td>
+                        <td style={styles.td}>{m.team.thursday ? `${nthThursday(year, month, w.week) ? thursdayLabel(nthThursday(year, month, w.week)) : "Thursday"} · ${prayerKind(w.week)}` : sl.slot}</td>
                         <td style={styles.td}>{m.team.name}</td>
                         <td style={styles.td}>{m.role.name}</td>
                         <td style={styles.td}>
