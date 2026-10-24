@@ -2000,6 +2000,21 @@ function repeatDateIn(r, year, month, anchorISO) {
   }
   return iso;
 }
+// Stable text form of an event (key order, empty values and nulls ignored) so a saved copy can be compared to the one first made.
+function canonJson(v) {
+  if (Array.isArray(v)) return v.map(canonJson);
+  if (v && typeof v === "object") {
+    const o = {};
+    Object.keys(v).sort().forEach((k) => {
+      const c = canonJson(v[k]);
+      const empty = c === null || c === undefined || c === "" || (Array.isArray(c) && c.length === 0) || (typeof c === "object" && !Array.isArray(c) && Object.keys(c).length === 0);
+      if (!empty) o[k] = c;
+    });
+    return o;
+  }
+  return v;
+}
+const canonEvent = (e) => JSON.stringify(canonJson(e));
 // last day of the month that is `months` months after the month of `fromISO`
 function recurrenceHorizon(r, fromISO) {
   const [y, m] = fromISO.split("-").map((n) => parseInt(n, 10));
@@ -2023,6 +2038,20 @@ function EventsView({ config, updateConfig, canEdit }) {
   const [repeatConfirm, setRepeatConfirm] = useState(false); // "Apply repeat" confirmation
   const [repeatOptions, setRepeatOptions] = useState(false); // Repeat options popup
   const [repPick, setRepPick] = useState(null); // month/year shown by the repeat date picker: { id, year, month }
+  // Events made just by browsing the repeat picker are only kept if they get changed: id -> snapshot when made.
+  const autoMade = useRef({});
+  const prevOpen = useRef(null);
+  useEffect(() => {
+    const prevId = prevOpen.current;
+    const leaving = prevId && (prevId !== openId || mode === "list");
+    if (leaving && autoMade.current[prevId]) {
+      const snap = autoMade.current[prevId];
+      delete autoMade.current[prevId];
+      const e = (config.events || []).find((x) => x.id === prevId);
+      if (e && canonEvent(e) === snap) updateConfig((cfg) => ({ ...cfg, events: (cfg.events || []).filter((x) => x.id !== prevId) }));
+    }
+    prevOpen.current = mode === "list" ? null : openId;
+  }, [openId, mode]);
   const [seriesCal, setSeriesCal] = useState(null); // repeat calendar: { srcId, year, month, selected }
   const [programModal, setProgramModal] = useState(null); // "+ Program" popup (add / edit one program with its role/task rows)
   useEffect(() => {
@@ -2653,24 +2682,31 @@ function EventsView({ config, updateConfig, canEdit }) {
     const yearly = rec.freq === "yearly";
     const [ay, am] = (ev.date || anchor).split("-").map((n) => parseInt(n, 10));
     const cur = repPick && repPick.id === ev.id ? repPick : { year: ay, month: am };
+    const single = rec.freq === "monthly" || rec.freq === "yearly"; // one date per month / per year
+    // open the event on `iso`, making it first (a copy of this one) if it does not exist yet
+    const openOrCreate = (iso) => {
+      if (byDate[iso]) { if (byDate[iso].id !== ev.id) { setRepPick(null); setOpenId(byDate[iso].id); } return; }
+      const id = createOccurrences(ev, [iso], true);
+      if (id) { setRepPick(null); setOpenId(id); }
+    };
     const go = (delta) => {
       let y = cur.year, m = cur.month;
       if (yearly) y += delta;
       else { m += delta; while (m > 12) { m -= 12; y += 1; } while (m < 1) { m += 12; y -= 1; } }
+      if (single) {
+        const pre = yearly ? `${y}-` : `${y}-${padTwo(m)}`;
+        const iso = Object.keys(byDate).sort().find((d) => d.startsWith(pre)) || repeatDateIn(rec, y, m, anchor);
+        if (iso) { openOrCreate(iso); return; }
+      }
       setRepPick({ id: ev.id, year: y, month: m });
     };
     const prefix = yearly ? `${cur.year}-` : `${cur.year}-${padTwo(cur.month)}`;
-    const single = rec.freq === "monthly" || rec.freq === "yearly"; // one date per month / per year
     const endISO = yearly ? `${cur.year}-12-31` : isoOf(new Date(cur.year, cur.month, 0));
     const set = new Set(recurrenceDates(rec, anchor, endISO).filter((d) => d.startsWith(prefix)));
     Object.keys(byDate).filter((d) => d.startsWith(prefix)).forEach((d) => set.add(d));
     const dates = Array.from(set).sort();
     const navBtn = { background: "transparent", border: "none", color: "#1F3864", fontSize: 20, cursor: "pointer", padding: "0 14px", lineHeight: 1 };
-    const openDate = (iso) => {
-      if (byDate[iso]) { if (byDate[iso].id !== ev.id) setOpenId(byDate[iso].id); return; }
-      const id = createOccurrences(ev, [iso]);
-      if (id) setOpenId(id);
-    };
+    const openDate = (iso) => openOrCreate(iso);
     return (
       <div>
         <div style={dLabel}>{yearly ? "Year" : "Month & year"}</div>
@@ -2690,15 +2726,13 @@ function EventsView({ config, updateConfig, canEdit }) {
           return (
             <div style={{ marginTop: 8 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF" }}>{when(showIso)}</div>
-              <div style={{ fontSize: 11.5, opacity: 0.75, marginTop: 2 }}>{madeIso ? (isCurrent ? "This event" : "Event created") : "No event yet"}</div>
+              <div style={{ fontSize: 11.5, opacity: 0.75, marginTop: 2 }}>{isCurrent ? "This event" : "Not open"}</div>
               {madeIso && isCurrent && patIso && madeIso !== patIso && (
                 <div style={{ marginTop: 6 }}>
                   <div style={{ fontSize: 12, color: "#FFD9A0", lineHeight: 1.4 }}>⚠ The repeat falls on {when(patIso)}, not on this date.</div>
                   <button onClick={() => setField("date", patIso)} style={smallBtn}>Move to {eventDateLabel(patIso)}</button>
                 </div>
               )}
-              {madeIso && !isCurrent && <button onClick={() => setOpenId(byDate[madeIso].id)} style={smallBtn}>Open this event</button>}
-              {!madeIso && <button onClick={() => { const id = createOccurrences(ev, [showIso]); if (id) setOpenId(id); }} style={smallBtn}>+ Create event for this date</button>}
             </div>
           );
         })()}
@@ -2722,7 +2756,7 @@ function EventsView({ config, updateConfig, canEdit }) {
             );
           })}
         </div>)}
-        {!single && <div style={{ fontSize: 11, opacity: 0.7, marginTop: 6, lineHeight: 1.4 }}>Dashed dates have no event yet — tap one to create it.</div>}
+        {!single && <div style={{ fontSize: 11, opacity: 0.7, marginTop: 6, lineHeight: 1.4 }}>Dashed dates have no event yet — tap one to open it (it is only kept once you change something).</div>}
       </div>
     );
   };
@@ -2934,7 +2968,7 @@ function EventsView({ config, updateConfig, canEdit }) {
     if (y && m) setRepPick({ id: src.id, year: y, month: m });
   };
   // makes real events (copy of the source: programs, ministries, start time) on the given dates
-  const createOccurrences = (src, isoList) => {
+  const createOccurrences = (src, isoList, auto) => {
     const rec = resolveRecurrence(src);
     const sid = src.seriesId || uid();
     const taken = new Set(events.filter((x) => x.id === src.id || (x.seriesId && x.seriesId === sid)).map((x) => x.date));
@@ -2946,6 +2980,7 @@ function EventsView({ config, updateConfig, canEdit }) {
       ...prev,
       events: [...(prev.events || []).map((e) => (e.id === src.id ? { ...e, seriesId: sid } : e)), ...copies],
     }));
+    if (auto) copies.forEach((c) => { autoMade.current[c.id] = canonEvent(c); });
     return copies[0].id;
   };
   const renderRepeatConfirm = () => {
