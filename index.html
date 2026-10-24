@@ -1653,6 +1653,34 @@ function EventsView({ config, updateConfig, canEdit }) {
     return { ...e, rows };
   });
 
+  // ministries: a block per team, with only the roles picked for this event
+  const teams = config.teams || [];
+  const addMinistry = (teamId) => {
+    const team = teams.find((t) => t.id === teamId);
+    if (!team) return;
+    updateEvent(openId, (e) => ({
+      ...e,
+      ministries: [...(e.ministries || []), {
+        id: uid(), teamId, title: team.name,
+        roles: (team.roles || []).map((r) => ({ id: uid(), roleId: r.id, label: r.name, value: "" })),
+      }],
+    }));
+  };
+  const updateMinistry = (blockId, updater) => updateEvent(openId, (e) => ({
+    ...e, ministries: (e.ministries || []).map((b) => (b.id === blockId ? updater(b) : b)),
+  }));
+  const removeMinistry = (blockId) => updateEvent(openId, (e) => ({ ...e, ministries: (e.ministries || []).filter((b) => b.id !== blockId) }));
+  const toggleTeamRole = (block, teamRole) => updateMinistry(block.id, (b) => {
+    const current = b.roles || [];
+    if (current.some((r) => r.roleId === teamRole.id)) return { ...b, roles: current.filter((r) => r.roleId !== teamRole.id) };
+    return { ...b, roles: [...current, { id: uid(), roleId: teamRole.id, label: teamRole.name, value: "" }] };
+  });
+  const setMinistryRole = (block, roleRowId, field, value) => updateMinistry(block.id, (b) => ({
+    ...b, roles: (b.roles || []).map((r) => (r.id === roleRowId ? { ...r, [field]: value } : r)),
+  }));
+  const addCustomRole = (block) => updateMinistry(block.id, (b) => ({ ...b, roles: [...(b.roles || []), { id: uid(), roleId: null, label: "", value: "" }] }));
+  const removeMinistryRole = (block, roleRowId) => updateMinistry(block.id, (b) => ({ ...b, roles: (b.roles || []).filter((r) => r.id !== roleRowId) }));
+
   const createEvent = () => {
     const created = blankEvent();
     updateConfig((prev) => ({ ...prev, events: [...(prev.events || []), created] }));
@@ -1660,7 +1688,8 @@ function EventsView({ config, updateConfig, canEdit }) {
     setMode("edit");
   };
   const duplicateEvent = (source) => {
-    const copy = { ...source, id: uid(), title: `${source.title} (copy)`, date: "", rows: source.rows.map((r) => ({ ...r, id: uid() })) };
+    const copy = { ...source, id: uid(), title: `${source.title} (copy)`, date: "", rows: source.rows.map((r) => ({ ...r, id: uid() })),
+      ministries: (source.ministries || []).map((b) => ({ ...b, id: uid(), roles: (b.roles || []).map((r) => ({ ...r, id: uid() })) })) };
     updateConfig((prev) => ({ ...prev, events: [...(prev.events || []), copy] }));
     setOpenId(copy.id);
     setMode("edit");
@@ -1755,12 +1784,56 @@ function EventsView({ config, updateConfig, canEdit }) {
                   {renderPhaseRows("after")}
                 </tbody>
               </table>
-              {norm(openEvent.announcements) && (
-                <div style={{ marginTop: 14 }}>
-                  <div style={styles.sheetSectionHead}>ANNOUNCEMENTS</div>
-                  <div style={{ border: "1px solid var(--l23211D)", borderTop: "none", padding: "8px 10px", fontSize: 12.5, whiteSpace: "pre-wrap" }}>{openEvent.announcements}</div>
-                </div>
-              )}
+              {(() => {
+                const ministries = openEvent.ministries || [];
+                const renderMinistry = (block) => (
+                  <div key={block.id} style={{ marginBottom: 14 }}>
+                    <div style={styles.sheetSectionHead}>{(block.title || "").toUpperCase()}</div>
+                    <table style={{ ...styles.sheetTable, tableLayout: "fixed", width: "100%" }}>
+                      <colgroup>
+                        <col style={{ width: "58%" }} />
+                        <col />
+                      </colgroup>
+                      <tbody>
+                        {(block.roles || []).map((r) => (
+                          <tr key={r.id}>
+                            <td style={styles.sheetTd}>{r.label}</td>
+                            <td style={styles.sheetTd}>{r.value}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+                const headCount = openEvent.showHeadCount && (
+                  <div style={{ marginBottom: 14, maxWidth: 320 }}>
+                    <div style={styles.sheetSectionHead}>HEAD COUNT</div>
+                    <table style={styles.sheetTable}>
+                      <tbody>
+                        {["Volunteer", "Adult", "Kids", "Total"].map((label) => (
+                          <tr key={label}>
+                            <td style={{ ...styles.sheetTdTall, fontWeight: label === "Total" ? 700 : 400 }}>{label}</td>
+                            <td style={{ ...styles.sheetTdTall, width: 80 }}></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+                const announcements = norm(openEvent.announcements) && (
+                  <div>
+                    <div style={styles.sheetSectionHead}>ANNOUNCEMENTS</div>
+                    <div style={{ border: "1px solid var(--l23211D)", borderTop: "none", padding: "8px 10px", fontSize: 12.5, whiteSpace: "pre-wrap" }}>{openEvent.announcements}</div>
+                  </div>
+                );
+                if (ministries.length === 0 && !headCount && !announcements) return null;
+                return (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14, alignItems: "start" }}>
+                    <div>{ministries.filter((_, i) => i % 2 === 0).map(renderMinistry)}{headCount}</div>
+                    <div>{ministries.filter((_, i) => i % 2 === 1).map(renderMinistry)}{announcements}</div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -1836,9 +1909,48 @@ function EventsView({ config, updateConfig, canEdit }) {
           </div>
         ))}
 
+        <div style={{ fontSize: 13, fontWeight: 800, margin: "18px 0 6px", color: "var(--t1F3864)" }}>Ministries</div>
+        {(openEvent.ministries || []).map((block) => {
+          const team = teams.find((t) => t.id === block.teamId);
+          return (
+            <div key={block.id} style={{ border: "1px solid var(--lD8CFB0)", borderRadius: 8, padding: 10, marginBottom: 10 }}>
+              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                <input value={block.title} onChange={(e) => updateMinistry(block.id, (b) => ({ ...b, title: e.target.value }))} style={{ ...styles.roleEditInput, fontWeight: 700 }} />
+                <button onClick={() => removeMinistry(block.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove ministry">✕</button>
+              </div>
+              {team && (team.roles || []).length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 8 }}>
+                  {team.roles.map((teamRole) => (
+                    <label key={teamRole.id} style={{ fontSize: 12.5, display: "flex", alignItems: "center", gap: 4 }}>
+                      <input type="checkbox" checked={(block.roles || []).some((r) => r.roleId === teamRole.id)} onChange={() => toggleTeamRole(block, teamRole)} />
+                      {teamRole.name}
+                    </label>
+                  ))}
+                </div>
+              )}
+              {(block.roles || []).map((r) => (
+                <div key={r.id} style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                  <input value={r.label} onChange={(e) => setMinistryRole(block, r.id, "label", e.target.value)} placeholder="Role" style={{ ...styles.roleEditInput, flex: "1 1 120px" }} />
+                  <input value={r.value} onChange={(e) => setMinistryRole(block, r.id, "value", e.target.value)} placeholder="Volunteer" style={{ ...styles.roleEditInput, flex: "1 1 120px" }} />
+                  <button onClick={() => removeMinistryRole(block, r.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove role">✕</button>
+                </div>
+              ))}
+              <button onClick={() => addCustomRole(block)} style={{ ...styles.smallBtn, background: "var(--b2F4858)" }}>+ Custom role</button>
+            </div>
+          );
+        })}
+        <select value="" onChange={(e) => e.target.value && addMinistry(e.target.value)} style={{ ...styles.roleEditInput, maxWidth: 260 }}>
+          <option value="">+ Add ministry…</option>
+          {teams.filter((t) => !(openEvent.ministries || []).some((b) => b.teamId === t.id)).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+
         <div style={{ ...labelStyle, marginTop: 18 }}>Announcements (optional)</div>
         <textarea value={openEvent.announcements} onChange={(e) => setField("announcements", e.target.value)} rows={3}
           style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box", resize: "vertical" }} />
+        <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 14, fontSize: 13.5 }}>
+          <input type="checkbox" checked={!!openEvent.showHeadCount} onChange={(e) => setField("showHeadCount", e.target.checked)} />
+          Include head count box on the sheet
+        </label>
       </div>
     );
   }
