@@ -3735,66 +3735,72 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
             </tbody>
           </table>
 
-          {(program.sideBlocks || []).length > 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }}>
-              {program.sideBlocks.map((block) => (
-                <div key={block.id}>
-                  <div style={styles.sheetSectionHead}>{block.title}</div>
-                  <table style={{ ...styles.sheetTable, tableLayout: "fixed", width: "100%" }}>
-                    <colgroup>
-                      <col style={{ width: "58%" }} />
-                      <col />
-                    </colgroup>
-                    <tbody>
-                      {(block.rows || []).map((row) => (
-                        <tr key={row.id}>
-                          <td style={styles.sheetTd}>{row.label}</td>
-                          <td style={styles.sheetTd}><VolunteerCell row={row} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }}>
-            {(program.soloRows || []).length > 0 && (
-              <div>
+          {/* two independent columns so the left side doesn't wait on the taller ushering block */}
+          {(() => {
+            const sideBlocks = program.sideBlocks || [];
+            const renderSideBlock = (block) => (
+              <div key={block.id} style={{ marginBottom: 14 }}>
+                <div style={styles.sheetSectionHead}>{block.title}</div>
                 <table style={{ ...styles.sheetTable, tableLayout: "fixed", width: "100%" }}>
                   <colgroup>
-                    <col style={{ width: "40%" }} />
+                    <col style={{ width: "58%" }} />
                     <col />
                   </colgroup>
                   <tbody>
-                    {program.soloRows.map((row) => (
+                    {(block.rows || []).map((row) => (
                       <tr key={row.id}>
-                        <td style={{ ...styles.sheetTdTall, background: "var(--b1F3864)", color: "#FFFFFF", fontWeight: 700 }}>{row.label.toUpperCase()}</td>
-                        <td style={styles.sheetTdTall}><VolunteerCell row={row} /></td>
+                        <td style={styles.sheetTd}>{row.label}</td>
+                        <td style={styles.sheetTd}><VolunteerCell row={row} /></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            )}
-            <div>
-              <div style={styles.sheetSectionHead}>ANNOUNCEMENTS</div>
-              <div style={{ border: "1px solid var(--l23211D)", borderTop: "none", padding: "8px 10px", fontSize: 12.5, whiteSpace: "pre-wrap", minHeight: 30 }}>{info.announcements || ""}</div>
-            </div>
-          </div>
-
-          <div style={{ marginTop: 14, maxWidth: 320 }}>
-            <div style={styles.sheetSectionHead}>HEAD COUNT</div>
-            <table style={styles.sheetTable}>
-              <tbody>
-                <tr><td style={styles.sheetTdTall}>Volunteer</td><td style={{ ...styles.sheetTdTall, width: 80 }}>{info.headcountVolunteer || ""}</td></tr>
-                <tr><td style={styles.sheetTdTall}>Adult</td><td style={styles.sheetTdTall}>{info.headcountAdult || ""}</td></tr>
-                <tr><td style={styles.sheetTdTall}>Kids</td><td style={styles.sheetTdTall}>{info.headcountKids || ""}</td></tr>
-                <tr><td style={{ ...styles.sheetTdTall, fontWeight: 700 }}>Total</td><td style={{ ...styles.sheetTdTall, fontWeight: 700 }}>{total || ""}</td></tr>
-              </tbody>
-            </table>
-          </div>
+            );
+            return (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14, alignItems: "start" }}>
+                <div>
+                  {sideBlocks.slice(0, 1).map(renderSideBlock)}
+                  {(program.soloRows || []).length > 0 && (
+                    <div style={{ marginBottom: 14 }}>
+                      <table style={{ ...styles.sheetTable, tableLayout: "fixed", width: "100%" }}>
+                        <colgroup>
+                          <col style={{ width: "40%" }} />
+                          <col />
+                        </colgroup>
+                        <tbody>
+                          {program.soloRows.map((row) => (
+                            <tr key={row.id}>
+                              <td style={{ ...styles.sheetTdTall, background: "var(--b1F3864)", color: "#FFFFFF", fontWeight: 700 }}>{row.label.toUpperCase()}</td>
+                              <td style={styles.sheetTdTall}><VolunteerCell row={row} /></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  <div style={{ maxWidth: 320 }}>
+                    <div style={styles.sheetSectionHead}>HEAD COUNT</div>
+                    <table style={styles.sheetTable}>
+                      <tbody>
+                        <tr><td style={styles.sheetTdTall}>Volunteer</td><td style={{ ...styles.sheetTdTall, width: 80 }}>{info.headcountVolunteer || ""}</td></tr>
+                        <tr><td style={styles.sheetTdTall}>Adult</td><td style={styles.sheetTdTall}>{info.headcountAdult || ""}</td></tr>
+                        <tr><td style={styles.sheetTdTall}>Kids</td><td style={styles.sheetTdTall}>{info.headcountKids || ""}</td></tr>
+                        <tr><td style={{ ...styles.sheetTdTall, fontWeight: 700 }}>Total</td><td style={{ ...styles.sheetTdTall, fontWeight: 700 }}>{total || ""}</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div>
+                  {sideBlocks.slice(1).map(renderSideBlock)}
+                  <div>
+                    <div style={styles.sheetSectionHead}>ANNOUNCEMENTS</div>
+                    <div style={{ border: "1px solid var(--l23211D)", borderTop: "none", padding: "8px 10px", fontSize: 12.5, whiteSpace: "pre-wrap", minHeight: 30 }}>{info.announcements || ""}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
           </div>
         </div>
         </div>
