@@ -1908,7 +1908,7 @@ function EventsView({ config, updateConfig, canEdit }) {
     setMode("edit");
   };
   const duplicateEvent = (source) => {
-    const copy = { ...source, id: uid(), title: `${source.title} (copy)`, date: "", assignments: {}, rows: source.rows.map((r) => ({ ...r, id: uid() })),
+    const copy = { ...source, id: uid(), title: `${source.title} (copy)`, date: "", assignments: {}, verses: {}, rows: source.rows.map((r) => ({ ...r, id: uid() })),
       ministries: (source.ministries || []).map((b) => ({ ...b, id: uid(), roles: (b.roles || []).map((r) => ({ ...r, id: uid() })) })) };
     updateConfig((prev) => ({ ...prev, events: [...(prev.events || []), copy] }));
     setOpenId(copy.id);
@@ -1940,6 +1940,13 @@ function EventsView({ config, updateConfig, canEdit }) {
       const role = team && (team.roles || []).find((r) => r.id === roleId);
       return role ? role.name : "";
     };
+    // verse typed by the ministry, only for roles with "Add a verse box" turned on in Manage Teams
+    const verseFor = (key) => {
+      const [teamId, roleId] = splitRoleKey(key);
+      const team = (config.teams || []).find((t) => t.id === teamId);
+      const role = team && (team.roles || []).find((r) => r.id === roleId);
+      return role && role.hasVerse ? ((openEvent.verses || {})[key] || "") : "";
+    };
     const renderPhaseRows = (phaseId) => {
       const group = computed.filter((c) => c.phase === phaseId);
       const timeSpans = spanList(group.map((c, i) => i === 0 || !!c.time));
@@ -1964,7 +1971,12 @@ function EventsView({ config, updateConfig, canEdit }) {
               })()}
             </td>
           )}
-          <td style={styles.sheetTd}>{row.task}</td>
+          <td style={styles.sheetTd}>
+            {row.task}
+            {norm(verseFor(row.linkedRole)) && (
+              <div style={{ fontWeight: 400, fontStyle: "italic", fontSize: 10.5, marginTop: row.task ? 3 : 0, color: "var(--t3B5A8A)" }}>{verseFor(row.linkedRole)}</div>
+            )}
+          </td>
           <td style={styles.sheetTd}>{row.fixedText || eventVolunteer(openEvent, row.linkedRole)}</td>
           <td style={{ ...styles.sheetTd, textAlign: "center" }}>
             <span style={{ display: "inline-block", width: 12, height: 12, border: "1px solid var(--l23211D)", borderRadius: 3 }} />
@@ -2278,6 +2290,17 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
     }),
   }));
 
+  const setVerseValue = (key, value) => updateConfig((prev) => ({
+    ...prev,
+    events: (prev.events || []).map((e) => {
+      if (e.id !== eventId) return e;
+      const next = { ...(e.verses || {}) };
+      if (norm(value)) next[key] = value;
+      else delete next[key];
+      return { ...e, verses: next };
+    }),
+  }));
+
   const roles = event ? rolesForEvent(event) : [];
 
   return (
@@ -2340,6 +2363,11 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
                     popupMinWidth={220}
                     style={{ ...styles.input, flex: 1, ...(locked ? { background: "var(--bF3EFE2)", cursor: "default" } : {}) }}
                   />
+                  {teamRole && teamRole.hasVerse && (
+                    <input value={(event.verses || {})[role.key] || ""} onChange={(ev) => setVerseValue(role.key, ev.target.value)}
+                      placeholder="Verse (John 3:16)" readOnly={locked} autoComplete="off"
+                      style={{ ...styles.input, width: "100%", boxSizing: "border-box", marginTop: 6, ...(locked ? { background: "var(--bF3EFE2)", cursor: "default" } : {}) }} />
+                  )}
                 </div>
               </div>
             );
