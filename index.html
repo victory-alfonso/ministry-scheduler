@@ -1714,25 +1714,36 @@ function EventsView({ config, updateConfig, canEdit }) {
       return span;
     });
     const bandText = (word) => `${word} OF ${(openEvent.title || "EVENT").toUpperCase()}`;
+    // ministries set to "show next to a program row" turn into task/volunteer lines of that row
+    const isPlacedInRow = (block) => !!block.placeInRowId && (openEvent.rows || []).some((r) => r.id === block.placeInRowId);
+    const placedMinistries = (openEvent.ministries || []).filter(isPlacedInRow);
     const renderPhaseRows = (phaseId) => {
       const group = computed.filter((c) => c.phase === phaseId);
-      const timeSpans = spanList(group.map((c, i) => i === 0 || !!c.time));
-      const programSpans = spanList(group.map((c, i) => i === 0 || !!norm(c.row.program)));
-      return group.map(({ row, time, durationText }, i) => (
-        <tr key={row.id}>
-          {timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={styles.sheetTd}>{time}</td>}
-          {timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={styles.sheetTd}>{durationText}</td>}
-          {programSpans[i] > 0 && <td rowSpan={programSpans[i]} style={styles.sheetTd}></td>}
-          {programSpans[i] > 0 && (
+      const lines = group.map(({ row }) => {
+        const linkedRoles = placedMinistries.filter((b) => b.placeInRowId === row.id).flatMap((b) => b.roles || []);
+        return linkedRoles.length > 0
+          ? linkedRoles.map((r) => ({ id: r.id, task: r.label, volunteer: r.value }))
+          : [{ id: row.id, task: row.task, volunteer: row.volunteer }];
+      });
+      // spans are counted in rows, so convert them to printed lines
+      const toLineSpans = (spans) => spans.map((span, i) => (span === 0 ? 0 : lines.slice(i, i + span).reduce((sum, l) => sum + l.length, 0)));
+      const timeSpans = toLineSpans(spanList(group.map((c, i) => i === 0 || !!c.time)));
+      const programSpans = toLineSpans(spanList(group.map((c, i) => i === 0 || !!norm(c.row.program))));
+      return group.flatMap(({ row, time, durationText }, i) => lines[i].map((line, lineIndex) => (
+        <tr key={line.id}>
+          {lineIndex === 0 && timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={styles.sheetTd}>{time}</td>}
+          {lineIndex === 0 && timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={styles.sheetTd}>{durationText}</td>}
+          {lineIndex === 0 && programSpans[i] > 0 && <td rowSpan={programSpans[i]} style={styles.sheetTd}></td>}
+          {lineIndex === 0 && programSpans[i] > 0 && (
             <td rowSpan={programSpans[i]} style={{ ...styles.sheetTd, fontWeight: 700, verticalAlign: "middle", whiteSpace: "pre-wrap" }}>{row.program}</td>
           )}
-          <td style={styles.sheetTd}>{row.task}</td>
-          <td style={styles.sheetTd}>{row.volunteer}</td>
+          <td style={styles.sheetTd}>{line.task}</td>
+          <td style={styles.sheetTd}>{line.volunteer}</td>
           <td style={{ ...styles.sheetTd, textAlign: "center" }}>
             <span style={{ display: "inline-block", width: 12, height: 12, border: "1px solid var(--l23211D)", borderRadius: 3 }} />
           </td>
         </tr>
-      ));
+      )));
     };
     return (
       <div className="print-sheet-wrap" style={styles.viewWrap}>
@@ -1785,7 +1796,7 @@ function EventsView({ config, updateConfig, canEdit }) {
                 </tbody>
               </table>
               {(() => {
-                const ministries = openEvent.ministries || [];
+                const ministries = (openEvent.ministries || []).filter((b) => !isPlacedInRow(b));
                 const renderMinistry = (block) => (
                   <div key={block.id} style={{ marginBottom: 14 }}>
                     <div style={styles.sheetSectionHead}>{(block.title || "").toUpperCase()}</div>
@@ -1917,6 +1928,16 @@ function EventsView({ config, updateConfig, canEdit }) {
               <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
                 <input value={block.title} onChange={(e) => updateMinistry(block.id, (b) => ({ ...b, title: e.target.value }))} style={{ ...styles.roleEditInput, fontWeight: 700 }} />
                 <button onClick={() => removeMinistry(block.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove ministry">✕</button>
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 10, color: "var(--t6B6B6B)" }}>Show in</div>
+                <select value={block.placeInRowId || ""} onChange={(e) => updateMinistry(block.id, (b) => ({ ...b, placeInRowId: e.target.value }))}
+                  style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box" }}>
+                  <option value="">Bottom section of the sheet</option>
+                  {computeEventRows(openEvent).map(({ row }) => (
+                    <option key={row.id} value={row.id}>Next to program: {row.program || row.task || "Untitled row"}</option>
+                  ))}
+                </select>
               </div>
               {team && (team.roles || []).length > 0 && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 8 }}>
