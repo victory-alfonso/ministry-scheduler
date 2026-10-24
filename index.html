@@ -1661,6 +1661,7 @@ function eventEndTime(event) {
 function EventsView({ config, updateConfig, canEdit }) {
   const [openId, setOpenId] = useState(null);
   const [mode, setMode] = useState("list"); // list | edit | print
+  const [eventSearch, setEventSearch] = useState("");
   const [programModal, setProgramModal] = useState(null); // "+ Program" popup (add / edit one program with its role/task rows)
   const events = (config.events || []).slice().sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
   const openEvent = events.find((e) => e.id === openId);
@@ -1693,6 +1694,38 @@ function EventsView({ config, updateConfig, canEdit }) {
     [rows[a], rows[b]] = [rows[b], rows[a]];
     return { ...e, rows };
   });
+
+  // cover photo: shrunk in the browser and saved on the event itself (so it syncs like everything else)
+  const uploadCover = (file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, 720 / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        setField("cover", canvas.toDataURL("image/jpeg", 0.8));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  };
+  // how many of this event's ministry roles already have a name
+  const eventProgress = (event) => {
+    const keys = new Set();
+    (event.rows || []).forEach((r) => {
+      if (r.linkedRole) keys.add(r.linkedRole);
+      (r.programSubRoles || []).forEach((k) => keys.add(k));
+    });
+    (event.ministries || []).forEach((b) => (b.roles || []).forEach((r) => keys.add(blockRoleKey(b, r))));
+    const total = keys.size;
+    const filled = Array.from(keys).filter((k) => norm(eventVolunteer(event, k))).length;
+    const programs = EVENT_PHASES.reduce((sum, p) => sum + eventGroups(event, p.id).length, 0);
+    return { total, filled, programs };
+  };
 
   // ---- "+ Program" popup ----
   // A program = one row that carries Start at / Mins / Program name, followed by
@@ -2126,6 +2159,18 @@ function EventsView({ config, updateConfig, canEdit }) {
           </div>
         </div>
 
+        <div style={{ marginBottom: 16 }}>
+          <div style={labelStyle}>Cover photo (optional)</div>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            {openEvent.cover && <img src={openEvent.cover} alt="" style={{ width: 64, height: 84, objectFit: "cover", borderRadius: 8, border: "1px solid var(--lD8CFB0)" }} />}
+            <label style={{ ...styles.smallBtn, background: "var(--b2F4858)", cursor: "pointer" }}>
+              {openEvent.cover ? "Change photo" : "Upload photo"}
+              <input type="file" accept="image/*" style={{ display: "none" }}
+                onChange={(ev) => { uploadCover(ev.target.files && ev.target.files[0]); ev.target.value = ""; }} />
+            </label>
+            {openEvent.cover && <button onClick={() => setField("cover", "")} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }}>Remove</button>}
+          </div>
+        </div>
         <button onClick={() => openProgramModal("during", null)} style={{ ...styles.smallBtn, marginBottom: 8 }}>+ Program</button>
         <div style={labelStyle}>Program flow (start time = when the service starts; programs with a “Start at” are sorted by time automatically — the rest follow the program above them)</div>
         {(() => {
@@ -2221,25 +2266,62 @@ function EventsView({ config, updateConfig, canEdit }) {
 
   return (
     <div style={styles.viewWrap}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        <div style={{ fontSize: 18, fontWeight: 800 }}>Events</div>
-        {canEdit && <button onClick={createEvent} style={styles.smallBtn}>+ New event</button>}
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 18, flexWrap: "wrap" }}>
+        <input type="text" value={eventSearch} onChange={(e) => setEventSearch(e.target.value)} placeholder="Search event name…"
+          style={{ ...styles.toolbarInput, flex: "1 1 220px", padding: "10px 14px", borderRadius: 10 }} />
+        {canEdit && <button onClick={createEvent} style={{ ...styles.smallBtn, padding: "10px 16px", borderRadius: 10, fontWeight: 700 }}>+ New event</button>}
       </div>
-      {events.length === 0 && (
-        <div style={{ color: "var(--t6B6B6B)", fontSize: 14 }}>No events yet.{canEdit ? " Tap “New event” to add one." : ""}</div>
-      )}
-      {events.map((event) => (
-        <div key={event.id} style={{ border: "1px solid var(--lD8CFB0)", borderRadius: 8, padding: "10px 12px", marginBottom: 8, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ flex: "1 1 200px", minWidth: 0 }}>
-            <div style={{ fontWeight: 700 }}>{event.title || "Untitled event"}</div>
-            <div style={{ fontSize: 12.5, color: "var(--t6B6B6B)" }}>
-              {[eventDateLabel(event.date) || "No date yet", clockLabel(event.startTime)].filter(Boolean).join(" · ")}
-            </div>
+      {(() => {
+        const q = normKey(eventSearch);
+        const shown = q ? events.filter((e) => normKey(e.title).includes(q) || normKey(eventDateLabel(e.date)).includes(q)) : events;
+        if (events.length === 0) {
+          return <div style={{ color: "var(--t6B6B6B)", fontSize: 14 }}>No events yet.{canEdit ? " Tap “New event” to add one." : ""}</div>;
+        }
+        if (shown.length === 0) {
+          return <div style={{ color: "var(--t6B6B6B)", fontSize: 14 }}>No events match “{eventSearch}”.</div>;
+        }
+        return (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
+            {shown.map((event) => {
+              const prog = eventProgress(event);
+              const pct = prog.total ? Math.round((prog.filled / prog.total) * 100) : 0;
+              const when = [eventDateLabel(event.date) || "No date yet", clockLabel(event.startTime)].filter(Boolean).join(" · ");
+              return (
+                <div key={event.id} role="button" tabIndex={0}
+                  onClick={() => { setOpenId(event.id); setMode("print"); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") { setOpenId(event.id); setMode("print"); } }}
+                  style={{
+                    position: "relative", height: 290, borderRadius: 16, overflow: "hidden", cursor: "pointer", color: "#FFFFFF", fontFamily: "system-ui, sans-serif",
+                    background: "linear-gradient(160deg, #2B4A86 0%, #16294B 100%)",
+                    ...(event.cover ? { backgroundImage: `url("${event.cover}")`, backgroundSize: "cover", backgroundPosition: "center" } : {}),
+                    boxShadow: "0 12px 26px -12px rgba(35,33,29,0.55)",
+                  }}>
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.05) 30%, rgba(0,0,0,0.82) 100%)" }} />
+                  <div style={{ position: "absolute", top: 12, left: 12, right: canEdit ? 64 : 12, background: "rgba(0,0,0,0.55)", borderRadius: 14, padding: "6px 10px", fontSize: 11.5, fontWeight: 700, lineHeight: 1.35 }}>
+                    {when}
+                    <div style={{ fontWeight: 400, fontSize: 10.5, opacity: 0.85 }}>{prog.programs} program{prog.programs === 1 ? "" : "s"}</div>
+                  </div>
+                  {canEdit && (
+                    <button onClick={(e) => { e.stopPropagation(); setOpenId(event.id); setMode("edit"); }}
+                      style={{ position: "absolute", top: 12, right: 12, border: "none", borderRadius: 14, padding: "6px 12px", background: "rgba(255,255,255,0.92)", color: "#1F3864", fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "system-ui, sans-serif" }}>
+                      Edit
+                    </button>
+                  )}
+                  <div style={{ position: "absolute", left: 14, right: 14, bottom: 14 }}>
+                    <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 20, lineHeight: 1.2, marginBottom: 8, textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
+                      {event.title || "Untitled event"}
+                    </div>
+                    <div style={{ height: 4, borderRadius: 4, background: "rgba(255,255,255,0.3)", overflow: "hidden", marginBottom: 6 }}>
+                      <div style={{ width: `${pct}%`, height: "100%", background: "#E5A430" }} />
+                    </div>
+                    <div style={{ fontSize: 11.5, opacity: 0.92 }}>{prog.total ? `${prog.filled} of ${prog.total} roles filled` : "No ministry roles yet"}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <button onClick={() => { setOpenId(event.id); setMode("print"); }} style={{ ...styles.smallBtn, background: "var(--b2F4858)" }}>View</button>
-          {canEdit && <button onClick={() => { setOpenId(event.id); setMode("edit"); }} style={styles.smallBtn}>Edit</button>}
-        </div>
-      ))}
+        );
+      })()}
     </div>
   );
 }
