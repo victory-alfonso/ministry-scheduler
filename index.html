@@ -2053,7 +2053,7 @@ function RecRadio({ name, checked, onChange, label, disabled }) {
   );
 }
 
-function EventsView({ config, updateConfig, canEdit }) {
+function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
   const [openId, setOpenId] = useState(null);
   const [mode, setMode] = useState("list"); // list | detail | print
   const [eventSearch, setEventSearch] = useState("");
@@ -2061,20 +2061,26 @@ function EventsView({ config, updateConfig, canEdit }) {
   const [repeatConfirm, setRepeatConfirm] = useState(false); // "Apply repeat" confirmation
   const [repeatOptions, setRepeatOptions] = useState(false); // Repeat options popup
   const [repPick, setRepPick] = useState(null); // month/year shown by the repeat date picker: { id, year, month }
-  // Events made just by browsing the repeat picker are only kept if they get changed: id -> snapshot when made.
-  const autoMade = useRef({});
+  // Events made just by browsing the repeat picker are only kept if they get changed (any edit made while one is open keeps it).
+  const autoMade = useRef({}); // id -> true while such an event is still untouched
   const prevOpen = useRef(null);
+  const updateConfig = (updater) => {
+    if (openId && autoMade.current[openId]) delete autoMade.current[openId];
+    updateConfigRaw(updater);
+  };
+  const dropUntouched = (ids) => {
+    if (!ids.length) return;
+    ids.forEach((id) => { delete autoMade.current[id]; });
+    updateConfigRaw((cfg) => ({ ...cfg, events: (cfg.events || []).filter((x) => !ids.includes(x.id)) }));
+  };
   useEffect(() => {
     const prevId = prevOpen.current;
     const leaving = prevId && (prevId !== openId || mode === "list");
-    if (leaving && autoMade.current[prevId]) {
-      const snap = autoMade.current[prevId];
-      delete autoMade.current[prevId];
-      const e = (config.events || []).find((x) => x.id === prevId);
-      if (e && canonEvent(e) === snap) updateConfig((cfg) => ({ ...cfg, events: (cfg.events || []).filter((x) => x.id !== prevId) }));
-    }
+    if (leaving && autoMade.current[prevId]) dropUntouched([prevId]);
     prevOpen.current = mode === "list" ? null : openId;
   }, [openId, mode]);
+  // leaving the Events page with an untouched browsing copy still open
+  useEffect(() => () => { dropUntouched(Object.keys(autoMade.current)); }, []);
   const [seriesCal, setSeriesCal] = useState(null); // repeat calendar: { srcId, year, month, selected }
   const [programModal, setProgramModal] = useState(null); // "+ Program" popup (add / edit one program with its role/task rows)
   useEffect(() => {
@@ -3008,11 +3014,11 @@ function EventsView({ config, updateConfig, canEdit }) {
     if (fresh.length === 0) return;
     const copyRec = storedRecurrence(rec);
     const copies = fresh.map((iso) => ({ ...cloneJson(src), id: uid(), date: iso, assignments: {}, verses: {}, announcements: "", seriesId: sid, repeat: null, recurrence: copyRec }));
-    updateConfig((prev) => ({
+    updateConfigRaw((prev) => ({
       ...prev,
       events: [...(prev.events || []).map((e) => (e.id === src.id ? { ...e, seriesId: sid } : e)), ...copies],
     }));
-    if (auto) copies.forEach((c) => { autoMade.current[c.id] = canonEvent(c); });
+    if (auto) copies.forEach((c) => { autoMade.current[c.id] = true; });
     return copies[0].id;
   };
   const renderRepeatConfirm = () => {
