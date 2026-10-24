@@ -1588,6 +1588,12 @@ function computeEventRows(event) {
   });
 }
 
+// end time = start time + total minutes of all rows
+function eventEndTime(event) {
+  const totalMins = (event.rows || []).reduce((sum, r) => sum + (parseInt(r.duration, 10) > 0 ? parseInt(r.duration, 10) : 0), 0);
+  return totalMins > 0 ? addMinutesToClock(event.startTime, totalMins) : "";
+}
+
 function EventsView({ config, updateConfig, canEdit }) {
   const [openId, setOpenId] = useState(null);
   const [mode, setMode] = useState("list"); // list | edit | print
@@ -1636,6 +1642,15 @@ function EventsView({ config, updateConfig, canEdit }) {
 
   if (mode === "print" && openEvent) {
     const computed = computeEventRows(openEvent);
+    // blank Time/Program cells get merged into the row above, same as the Master List
+    const spanList = (starts) => starts.map((isStart, i) => {
+      if (!isStart) return 0;
+      let span = 1;
+      while (i + span < starts.length && !starts[i + span]) span++;
+      return span;
+    });
+    const timeSpans = spanList(computed.map((c, i) => i === 0 || !!c.time));
+    const programSpans = spanList(computed.map((c, i) => i === 0 || !!norm(c.row.program)));
     return (
       <div className="print-sheet-wrap" style={styles.viewWrap}>
         <div className="no-print sheet-toolbar">
@@ -1650,32 +1665,45 @@ function EventsView({ config, updateConfig, canEdit }) {
             <div style={styles.sheetInner}>
               <div style={styles.sheetBannerMain}>{(openEvent.title || "EVENT").toUpperCase()}</div>
               <div style={styles.sheetBannerSub}>
-                {[printSettings.campus || "VICTORY ALFONSO", clockLabel(openEvent.startTime) && `START TIME: ${clockLabel(openEvent.startTime)}`].filter(Boolean).join(" | ")}
+                {[printSettings.campus || "VICTORY ALFONSO", clockLabel(openEvent.startTime) && `START TIME: ${clockLabel(openEvent.startTime)}`, clockLabel(eventEndTime(openEvent)) && `END TIME: ${clockLabel(eventEndTime(openEvent))}`].filter(Boolean).join(" | ")}
               </div>
               {openEvent.subtitle && <div style={styles.sheetBannerLight}>{openEvent.subtitle}</div>}
               {openEvent.date && <div style={styles.sheetBannerSub}>{eventDateLabel(openEvent.date)}</div>}
               <table style={{ ...styles.sheetTable, tableLayout: "fixed" }}>
                 <colgroup>
+                  <col style={{ width: "9%" }} />
+                  <col style={{ width: "8%" }} />
+                  <col style={{ width: "17%" }} />
+                  <col style={{ width: "17%" }} />
+                  <col style={{ width: "25%" }} />
                   <col style={{ width: "20%" }} />
-                  <col style={{ width: "12%" }} />
-                  <col style={{ width: "38%" }} />
-                  <col style={{ width: "30%" }} />
+                  <col style={{ width: "4%" }} />
                 </colgroup>
                 <thead>
                   <tr>
                     <th style={styles.sheetTh}>Time</th>
                     <th style={styles.sheetTh}>Duration</th>
+                    <th style={styles.sheetTh}></th>
                     <th style={styles.sheetTh}>Program</th>
+                    <th style={styles.sheetTh}>Task</th>
                     <th style={styles.sheetTh}>Volunteer(s)</th>
+                    <th style={styles.sheetTh}></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {computed.map(({ row, time, durationText }) => (
+                  {computed.map(({ row, time, durationText }, i) => (
                     <tr key={row.id}>
-                      <td style={styles.sheetTd}>{time}</td>
-                      <td style={styles.sheetTd}>{durationText}</td>
-                      <td style={styles.sheetTd}>{row.program}</td>
+                      {timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={styles.sheetTd}>{time}</td>}
+                      {timeSpans[i] > 0 && <td rowSpan={timeSpans[i]} style={styles.sheetTd}>{durationText}</td>}
+                      {programSpans[i] > 0 && <td rowSpan={programSpans[i]} style={styles.sheetTd}></td>}
+                      {programSpans[i] > 0 && (
+                        <td rowSpan={programSpans[i]} style={{ ...styles.sheetTd, fontWeight: 700, verticalAlign: "middle", whiteSpace: "pre-wrap" }}>{row.program}</td>
+                      )}
+                      <td style={styles.sheetTd}>{row.task}</td>
                       <td style={styles.sheetTd}>{row.volunteer}</td>
+                      <td style={{ ...styles.sheetTd, textAlign: "center" }}>
+                        <span style={{ display: "inline-block", width: 12, height: 12, border: "1px solid var(--l23211D)", borderRadius: 3 }} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1722,6 +1750,10 @@ function EventsView({ config, updateConfig, canEdit }) {
             <div style={labelStyle}>Start time</div>
             <input type="time" value={openEvent.startTime} onChange={(e) => setField("startTime", e.target.value)} style={styles.roleEditInput} />
           </div>
+          <div style={fieldWrap}>
+            <div style={labelStyle}>End time (computed)</div>
+            <div style={{ ...styles.roleEditInput, background: "transparent", border: "1px dashed var(--lD8CFB0)" }}>{clockLabel(eventEndTime(openEvent)) || "—"}</div>
+          </div>
         </div>
 
         <div style={labelStyle}>Program flow (times are computed from the start time and each row's minutes)</div>
@@ -1729,8 +1761,10 @@ function EventsView({ config, updateConfig, canEdit }) {
           <div key={row.id} style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 6 }}>
             <input value={row.duration} onChange={(e) => setRowField(row.id, "duration", e.target.value)} placeholder="Mins" inputMode="numeric"
               style={{ ...styles.roleEditInput, flex: "0 0 64px" }} />
-            <input value={row.program} onChange={(e) => setRowField(row.id, "program", e.target.value)} placeholder="Program item"
-              style={{ ...styles.roleEditInput, flex: "2 1 160px" }} />
+            <input value={row.program} onChange={(e) => setRowField(row.id, "program", e.target.value)} placeholder="Program (e.g. Worship)"
+              style={{ ...styles.roleEditInput, flex: "1 1 130px" }} />
+            <input value={row.task || ""} onChange={(e) => setRowField(row.id, "task", e.target.value)} placeholder="Task"
+              style={{ ...styles.roleEditInput, flex: "2 1 150px" }} />
             <input value={row.volunteer} onChange={(e) => setRowField(row.id, "volunteer", e.target.value)} placeholder="Volunteer(s)"
               style={{ ...styles.roleEditInput, flex: "1 1 130px" }} />
             <span style={{ fontSize: 11.5, color: "var(--t6B6B6B)", flex: "0 0 105px" }}>{time}</span>
