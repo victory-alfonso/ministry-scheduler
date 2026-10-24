@@ -1684,8 +1684,7 @@ function EventsView({ config, updateConfig, canEdit }) {
       while (i + span < starts.length && !starts[i + span]) span++;
       return span;
     });
-    const serviceLabel = clockLabel(openEvent.startTime);
-    const bandText = (word) => `${word} OF ${serviceLabel ? `${serviceLabel} ` : ""}SERVICE`;
+    const bandText = (word) => `${word} OF ${(openEvent.title || "EVENT").toUpperCase()}`;
     const renderPhaseRows = (phaseId) => {
       const group = computed.filter((c) => c.phase === phaseId);
       const timeSpans = spanList(group.map((c, i) => i === 0 || !!c.time));
@@ -1718,11 +1717,14 @@ function EventsView({ config, updateConfig, canEdit }) {
               <img src="./icons/VictoryWatermark.png" alt="" style={styles.sheetWatermarkImg} />
             </div>
             <div style={styles.sheetInner}>
-              <div style={styles.sheetBannerMain}>{(openEvent.title || "EVENT").toUpperCase()}</div>
-              <div style={styles.sheetBannerSub}>
-                {[printSettings.campus || "VICTORY ALFONSO", clockLabel(openEvent.startTime) && `START TIME: ${clockLabel(openEvent.startTime)}`, clockLabel(eventEndTime(openEvent)) && `END TIME: ${clockLabel(eventEndTime(openEvent))}`].filter(Boolean).join(" | ")}
-              </div>
+              <div style={styles.sheetBannerMain}>{(printSettings.campus || "VICTORY ALFONSO").toUpperCase()}</div>
+              <div style={styles.sheetBannerBold}>{(openEvent.title || "EVENT").toUpperCase()}</div>
               {openEvent.subtitle && <div style={styles.sheetBannerLight}>{openEvent.subtitle}</div>}
+              {[clockLabel(openEvent.startTime) && `START TIME: ${clockLabel(openEvent.startTime)}`, clockLabel(eventEndTime(openEvent)) && `END TIME: ${clockLabel(eventEndTime(openEvent))}`].filter(Boolean).length > 0 && (
+                <div style={styles.sheetBannerSub}>
+                  {[clockLabel(openEvent.startTime) && `START TIME: ${clockLabel(openEvent.startTime)}`, clockLabel(eventEndTime(openEvent)) && `END TIME: ${clockLabel(eventEndTime(openEvent))}`].filter(Boolean).join(" | ")}
+                </div>
+              )}
               {openEvent.date && <div style={styles.sheetBannerSub}>{eventDateLabel(openEvent.date)}</div>}
               <table style={{ ...styles.sheetTable, tableLayout: "fixed" }}>
                 <colgroup>
