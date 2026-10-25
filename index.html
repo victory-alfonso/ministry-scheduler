@@ -442,6 +442,48 @@ function nthThursday(year, month, week) {
 function thuRoleName(name, week) {
   return week === THURSDAY_ONSITE_WEEK ? String(name || "").replace(/online/i, (m) => (m === m.toUpperCase() ? "ONSITE" : m[0] === m[0].toUpperCase() ? "Onsite" : "onsite")) : name;
 }
+// Names typed in the Online/Onsite Prayer tab flow into the prayer meeting event of that Thursday
+// (event.assignments["prayer-meeting|<role>"]). An event counts as "the prayer meeting" when it uses this
+// ministry's role (a task row, a sub-role line or a ministry block). Repeating events get that date's copy
+// created on the first name, like the ministry popups do.
+function syncPrayerToEvents(cfg, dateISO, key, value) {
+  const events = cfg.events || [];
+  const [teamId] = splitRoleKey(key);
+  const usesRole = (e) => (e.rows || []).some((r) => r.linkedRole === key || (r.programSubRoles || []).includes(key))
+    || (e.ministries || []).some((b) => b.teamId === teamId) || Object.prototype.hasOwnProperty.call(e.assignments || {}, key);
+  const groups = {};
+  events.forEach((e) => { const k = e.seriesId || e.id; (groups[k] = groups[k] || []).push(e); });
+  const hasValue = !!String(value || "").trim();
+  let list = events;
+  let changed = false;
+  Object.values(groups).forEach((mates) => {
+    if (!mates.some(usesRole)) return;
+    const onDate = mates.find((e) => e.date === dateISO);
+    if (onDate) {
+      list = list.map((e) => {
+        if (e.id !== onDate.id) return e;
+        const next = { ...(e.assignments || {}) };
+        if (hasValue) next[key] = value; else delete next[key];
+        changed = true;
+        return { ...e, assignments: next };
+      });
+      return;
+    }
+    if (!hasValue) return;
+    const tmpl = mates.slice().sort((a, b) => (a.date || "").localeCompare(b.date || ""))[0];
+    if (!tmpl || !tmpl.date) return;
+    const rec = resolveRecurrence(tmpl);
+    if (!rec.repeats || !recurrenceDates(rec, tmpl.date, dateISO).includes(dateISO)) return;
+    const sid = tmpl.seriesId || uid();
+    const copy = {
+      ...JSON.parse(JSON.stringify(tmpl)), id: uid(), date: dateISO, assignments: { [key]: value }, verses: {}, announcements: "",
+      seriesId: sid, repeat: null, recurrence: storedRecurrence(rec),
+    };
+    list = [...list.map((e) => (e.id === tmpl.id ? { ...e, seriesId: sid } : e)), copy];
+    changed = true;
+  });
+  return changed ? { ...cfg, events: list } : cfg;
+}
 function thursdayLabel(date) {
   return `Thursday, ${MONTH_NAMES[date.getMonth()]} ${date.getDate()}`;
 }
@@ -4487,6 +4529,12 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
       }
       return { ...prev, assignments: nextAssignments, editMeta: nextEditMeta };
     });
+    // Online/Onsite Prayer: the name also lands on the prayer meeting event of that Thursday
+    if (isThu && thuDate && updateConfig) {
+      const evKey = eventRoleKey(team.id, roleId);
+      const dateISO = isoOf(thuDate);
+      updateConfig((prev) => syncPrayerToEvents(prev, dateISO, evKey, value));
+    }
   };
   const setVerse = (roleId, value, slotArg = slot) => {
     if (locked) return;
