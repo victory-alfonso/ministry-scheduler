@@ -3664,7 +3664,7 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
 
 // Ministry-side view of the Events: pick an event, fill in this ministry's roles for it.
 // Names are saved on the event (event.assignments), so the event sheet picks them up.
-function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack }) {
+function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack, onNameChange }) {
   // sel = the open popup: { key (series id or event id), date, year, month }
   const [sel, setSel] = useState(null);
   const events = (config.events || []).slice().sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
@@ -3756,7 +3756,10 @@ function TeamEventsAssign({ config, updateConfig, team, locked, isMobile, onBack
       };
     });
   };
-  const setRoleValue = (key, value) => writeField("assignments", key, value);
+  const setRoleValue = (key, value) => {
+    writeField("assignments", key, value);
+    if (onNameChange && event && event.date) onNameChange(event.date, key, value);
+  };
   const setVerseValue = (key, value) => writeField("verses", key, value);
 
   const roles = event ? rolesForEvent(event) : [];
@@ -4785,8 +4788,26 @@ function AssignView({ config, updateConfig, monthState, updateMonthState, week, 
     );
   }
 
+  // event name -> Thursday box of this tab (week n = nth Thursday), works for other months too
+  const syncNameFromEvent = (dateISO, eventKey, value) => {
+    if (!isThu || locked) return;
+    const [y, m, d] = String(dateISO || "").split("-").map(Number);
+    const [teamId, roleId] = splitRoleKey(eventKey);
+    if (!y || !m || !d || teamId !== team.id || !team.roles.some((r) => r.id === roleId)) return;
+    if (new Date(y, m - 1, d).getDay() !== 4) return;
+    const key = assignKey(Math.ceil(d / 7), SLOTS[0], team.id, roleId);
+    const apply = (prev) => {
+      const nextAssignments = { ...(prev.assignments || {}) };
+      if (norm(value)) nextAssignments[key] = value;
+      else delete nextAssignments[key];
+      return { ...prev, assignments: nextAssignments, editMeta: withEditMeta({ ...(prev.editMeta || {}) }, key, userName) };
+    };
+    if (y === year && m === month) updateMonthState(apply);
+    else monthRef(y, m).transaction((cur) => apply({ ...emptyMonthState(), ...(cur || {}) }));
+  };
+
   if (showEvents) {
-    return <TeamEventsAssign config={config} updateConfig={updateConfig} team={team} locked={locked} isMobile={isMobile} onBack={() => setShowEvents(false)} />;
+    return <TeamEventsAssign config={config} updateConfig={updateConfig} team={team} locked={locked} isMobile={isMobile} onNameChange={syncNameFromEvent} onBack={() => setShowEvents(false)} />;
   }
 
   return (
