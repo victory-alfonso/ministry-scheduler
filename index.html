@@ -5908,8 +5908,8 @@ function dividerMidRatio(sheetEl) {
   return ((a.bottom + b.top) / 2 - sr.top) / sr.height;
 }
 
-// header text for the notes column at the far right (blank for now)
-const PRINT_EXTRA_COL_LABEL = "";
+// header text for the notes column at the far right
+const PRINT_EXTRA_COL_LABEL = "Notes";
 
 function MasterListView({ config, monthState, updateMonthState, week, slot, year, month }) {
   const [view, setView] = useState("list");
