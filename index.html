@@ -3548,14 +3548,14 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
                     <div style={styles.sheetSectionHead}>{(block.title || "").toUpperCase()}</div>
                     <table style={{ ...styles.sheetTable, tableLayout: "fixed", width: "100%" }}>
                       <colgroup>
-                        <col style={{ width: "58%" }} />
+                        <col style={{ width: SHEET_BOX_LABEL_WIDTH }} />
                         <col />
                       </colgroup>
                       <tbody>
                         {(block.roles || []).map((r) => (
                           <tr key={r.id}>
-                            <td style={styles.sheetTd}>{r.label}</td>
-                            <td style={styles.sheetTd}>{eventVolunteer(openEvent, blockRoleKey(block, r))}</td>
+                            <td style={styles.sheetTdBox}>{r.label}</td>
+                            <td style={styles.sheetTdBox}>{eventVolunteer(openEvent, blockRoleKey(block, r))}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -3563,14 +3563,18 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
                   </div>
                 );
                 const headCount = openEvent.showHeadCount && (
-                  <div style={{ marginBottom: 14, maxWidth: 320 }}>
+                  <div style={{ marginBottom: 14 }}>
                     <div style={styles.sheetSectionHead}>HEAD COUNT</div>
-                    <table style={styles.sheetTable}>
+                    <table style={{ ...styles.sheetTable, tableLayout: "fixed", width: "100%" }}>
+                      <colgroup>
+                        <col style={{ width: SHEET_BOX_LABEL_WIDTH }} />
+                        <col />
+                      </colgroup>
                       <tbody>
                         {["Volunteer", "Adult", "Kids", "Total"].map((label) => (
                           <tr key={label}>
-                            <td style={{ ...styles.sheetTdTall, fontWeight: label === "Total" ? 700 : 400 }}>{label}</td>
-                            <td style={{ ...styles.sheetTdTall, width: 80 }}></td>
+                            <td style={{ ...styles.sheetTdBox, fontWeight: label === "Total" ? 700 : 400 }}>{label}</td>
+                            <td style={styles.sheetTdBox}></td>
                           </tr>
                         ))}
                       </tbody>
@@ -3580,7 +3584,7 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
                 const announcements = norm(openEvent.announcements) && (
                   <div>
                     <div style={styles.sheetSectionHead}>ANNOUNCEMENTS</div>
-                    <table style={styles.sheetTable}><tbody><tr><td style={{ ...styles.sheetTd, padding: "8px 10px", fontSize: 12.5, whiteSpace: "pre-wrap", height: 30 }}>{openEvent.announcements}</td></tr></tbody></table>
+                    <table style={{ ...styles.sheetTable, tableLayout: "fixed", width: "100%" }}><tbody><tr><td style={{ ...styles.sheetTdBox, verticalAlign: "top", whiteSpace: "pre-wrap" }}>{openEvent.announcements}</td></tr></tbody></table>
                   </div>
                 );
                 if (ministries.length === 0 && !headCount && !announcements) return null;
@@ -5911,6 +5915,9 @@ function dividerMidRatio(sheetEl) {
 // header text for the notes column at the far right
 const PRINT_EXTRA_COL_LABEL = "Notes";
 
+// same label/value split for every box under the program table
+const SHEET_BOX_LABEL_WIDTH = "58%";
+
 function MasterListView({ config, monthState, updateMonthState, week, slot, year, month }) {
   const [view, setView] = useState("list");
   const [search, setSearch] = useState("");
@@ -6338,14 +6345,14 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                 <div style={styles.sheetSectionHead}>{block.title}</div>
                 <table style={{ ...styles.sheetTable, tableLayout: "fixed", width: "100%" }}>
                   <colgroup>
-                    <col style={{ width: "58%" }} />
+                    <col style={{ width: SHEET_BOX_LABEL_WIDTH }} />
                     <col />
                   </colgroup>
                   <tbody>
                     {(block.rows || []).map((row) => (
                       <tr key={row.id}>
-                        <td style={styles.sheetTd}>{row.label}</td>
-                        <td style={styles.sheetTd}><VolunteerCell row={row} /></td>
+                        <td style={styles.sheetTdBox}>{row.label}</td>
+                        <td style={styles.sheetTdBox}><VolunteerCell row={row} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -6360,28 +6367,32 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                     <div style={{ marginBottom: 14 }}>
                       <table style={{ ...styles.sheetTable, tableLayout: "fixed", width: "100%" }}>
                         <colgroup>
-                          <col style={{ width: "40%" }} />
+                          <col style={{ width: SHEET_BOX_LABEL_WIDTH }} />
                           <col />
                         </colgroup>
                         <tbody>
                           {program.soloRows.map((row) => (
                             <tr key={row.id}>
-                              <td style={{ ...styles.sheetTdTall, background: "var(--b1F3864)", color: "#FFFFFF", fontWeight: 700 }}>{row.label.toUpperCase()}</td>
-                              <td style={styles.sheetTdTall}><VolunteerCell row={row} /></td>
+                              <td style={{ ...styles.sheetTdBox, background: "var(--b1F3864)", color: "#FFFFFF", fontWeight: 700 }}>{row.label.toUpperCase()}</td>
+                              <td style={styles.sheetTdBox}><VolunteerCell row={row} /></td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
                   )}
-                  <div style={{ maxWidth: 320 }}>
+                  <div>
                     <div style={styles.sheetSectionHead}>HEAD COUNT</div>
-                    <table style={styles.sheetTable}>
+                    <table style={{ ...styles.sheetTable, tableLayout: "fixed", width: "100%" }}>
+                      <colgroup>
+                        <col style={{ width: SHEET_BOX_LABEL_WIDTH }} />
+                        <col />
+                      </colgroup>
                       <tbody>
-                        <tr><td style={styles.sheetTdTall}>Volunteer</td><td style={{ ...styles.sheetTdTall, width: 80 }}>{info.headcountVolunteer || ""}</td></tr>
-                        <tr><td style={styles.sheetTdTall}>Adult</td><td style={styles.sheetTdTall}>{info.headcountAdult || ""}</td></tr>
-                        <tr><td style={styles.sheetTdTall}>Kids</td><td style={styles.sheetTdTall}>{info.headcountKids || ""}</td></tr>
-                        <tr><td style={{ ...styles.sheetTdTall, fontWeight: 700 }}>Total</td><td style={{ ...styles.sheetTdTall, fontWeight: 700 }}>{total || ""}</td></tr>
+                        <tr><td style={styles.sheetTdBox}>Volunteer</td><td style={styles.sheetTdBox}>{info.headcountVolunteer || ""}</td></tr>
+                        <tr><td style={styles.sheetTdBox}>Adult</td><td style={styles.sheetTdBox}>{info.headcountAdult || ""}</td></tr>
+                        <tr><td style={styles.sheetTdBox}>Kids</td><td style={styles.sheetTdBox}>{info.headcountKids || ""}</td></tr>
+                        <tr><td style={{ ...styles.sheetTdBox, fontWeight: 700 }}>Total</td><td style={{ ...styles.sheetTdBox, fontWeight: 700 }}>{total || ""}</td></tr>
                       </tbody>
                     </table>
                   </div>
@@ -6390,7 +6401,7 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                   {sideBlocks.slice(1).map(renderSideBlock)}
                   <div>
                     <div style={styles.sheetSectionHead}>ANNOUNCEMENTS</div>
-                    <table style={styles.sheetTable}><tbody><tr><td style={{ ...styles.sheetTd, padding: "8px 10px", fontSize: 12.5, whiteSpace: "pre-wrap", height: 30 }}>{info.announcements || ""}</td></tr></tbody></table>
+                    <table style={{ ...styles.sheetTable, tableLayout: "fixed", width: "100%" }}><tbody><tr><td style={{ ...styles.sheetTdBox, verticalAlign: "top", whiteSpace: "pre-wrap" }}>{info.announcements || ""}</td></tr></tbody></table>
                   </div>
                 </div>
               </div>
@@ -7723,6 +7734,7 @@ const styles = {
   sheetTable: { width: "100%", borderCollapse: "collapse", fontSize: 11.5, borderTop: "1px solid var(--l23211D)" },
   sheetTh: { textAlign: "left", padding: "5px 8px", background: "var(--b1F3864)", color: "#FFFFFF", fontWeight: 700, fontSize: 10.5, border: "1px solid var(--l23211D)" },
   sheetTd: { padding: "5px 8px", border: "1px solid var(--lB7BFC9)", verticalAlign: "top" },
+  sheetTdBox: { padding: "8px 10px", border: "1px solid var(--lB7BFC9)", verticalAlign: "middle", height: 30 },
   sheetTdTall: { padding: "13px 10px", border: "1px solid var(--lB7BFC9)", verticalAlign: "top" },
   sheetBand: { padding: "4px 8px", background: "var(--bB4C6E7)", color: "var(--t1F3864)", fontWeight: 700, fontSize: 11, border: "1px solid var(--l23211D)", textAlign: "center" },
 
