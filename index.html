@@ -3554,8 +3554,8 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
                       <tbody>
                         {(block.roles || []).map((r) => (
                           <tr key={r.id}>
-                            <td style={styles.sheetTdBox}>{r.label}</td>
-                            <td style={styles.sheetTdBox}>{eventVolunteer(openEvent, blockRoleKey(block, r))}</td>
+                            <td style={styles.sheetTd}>{r.label}</td>
+                            <td style={styles.sheetTd}>{eventVolunteer(openEvent, blockRoleKey(block, r))}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -3573,8 +3573,8 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
                       <tbody>
                         {["Volunteer", "Adult", "Kids", "Total"].map((label) => (
                           <tr key={label}>
-                            <td style={{ ...styles.sheetTdBox, fontWeight: label === "Total" ? 700 : 400 }}>{label}</td>
-                            <td style={styles.sheetTdBox}></td>
+                            <td style={{ ...styles.sheetTd, fontWeight: label === "Total" ? 700 : 400 }}>{label}</td>
+                            <td style={styles.sheetTd}></td>
                           </tr>
                         ))}
                       </tbody>
@@ -3584,7 +3584,7 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
                 const announcements = norm(openEvent.announcements) && (
                   <div style={{ marginBottom: 14 }}>
                     <div style={styles.sheetSectionHead}>ANNOUNCEMENTS</div>
-                    <table style={{ ...styles.sheetTable, tableLayout: "fixed", width: "100%" }}><tbody><tr><td style={{ ...styles.sheetTdBox, verticalAlign: "top", whiteSpace: "pre-wrap" }}>{openEvent.announcements}</td></tr></tbody></table>
+                    <table style={{ ...styles.sheetTable, tableLayout: "fixed", width: "100%" }}><tbody><tr><td style={{ ...styles.sheetTd, whiteSpace: "pre-wrap" }}>{openEvent.announcements}</td></tr></tbody></table>
                   </div>
                 );
                 if (ministries.length === 0 && !headCount && !announcements) return null;
@@ -7734,7 +7734,6 @@ const styles = {
   sheetTable: { width: "100%", borderCollapse: "collapse", fontSize: 11.5, borderTop: "1px solid var(--l23211D)" },
   sheetTh: { textAlign: "center", verticalAlign: "middle", padding: "5px 8px", background: "var(--b1F3864)", color: "#FFFFFF", fontWeight: 700, fontSize: 10.5, border: "1px solid var(--l23211D)" },
   sheetTd: { padding: "5px 8px", border: "1px solid var(--lB7BFC9)", verticalAlign: "top" },
-  sheetTdBox: { padding: "8px 10px", border: "1px solid var(--lB7BFC9)", verticalAlign: "middle", height: 30 },
   sheetTdTall: { padding: "13px 10px", border: "1px solid var(--lB7BFC9)", verticalAlign: "top" },
   sheetBand: { padding: "4px 8px", background: "var(--bB4C6E7)", color: "var(--t1F3864)", fontWeight: 700, fontSize: 11, border: "1px solid var(--l23211D)", textAlign: "center" },
 
