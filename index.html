@@ -8,13 +8,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Scheduler" />
+<meta name="apple-mobile-web-app-title" content="VMS" />
 <link rel="manifest" href="./manifest.json" />
 <link rel="icon" href="./favicon.ico" sizes="any" />
 <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png" />
 <link rel="icon" type="image/png" sizes="16x16" href="./icons/favicon-16.png" />
 <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
-<title>Victory Alfonso</title>
+<title>Volunteer Management System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet" />
 <script>
 (function () {
   try {
@@ -4235,7 +4238,7 @@ function Sidebar({ config, monthState, week, setWeek, slot, setSlot, tab, setTab
           <img src="./icons/victory.png" alt="" style={styles.brandMark} />
           <div>
             <div style={styles.brandTitle}>Victory Alfonso</div>
-            <div style={styles.brandSub}>Synced live with everyone</div>
+            <div style={styles.brandSub}>Volunteer Management System</div>
           </div>
         </div>
 
@@ -7630,8 +7633,8 @@ const styles = {
   mobileWeekDate: { fontSize: 11.5, color: "var(--t8A7F5E)", fontFamily: "system-ui, sans-serif" },
   brand: { display: "flex", alignItems: "center", gap: 10, marginBottom: 26 },
   brandMark: { width: 34, height: 34, borderRadius: 6, objectFit: "cover", flexShrink: 0 },
-  brandTitle: { fontFamily: "Georgia, serif", fontSize: 16.5, lineHeight: 1.2 },
-  brandSub: { fontSize: 11.5, color: "var(--tB8AD8C)", marginTop: 2, fontFamily: "system-ui, sans-serif" },
+  brandTitle: { fontFamily: "'Montserrat', sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", lineHeight: 1.25 },
+  brandSub: { fontSize: 9, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--tB8AD8C)", marginTop: 2, fontFamily: "'Montserrat', sans-serif", lineHeight: 1.25 },
   sectionLabel: { fontSize: 11, letterSpacing: 0.3, color: "var(--t9B8F6C)", margin: "20px 0 8px", fontFamily: "system-ui, sans-serif" },
   whosHere: { marginBottom: 4 },
   presenceRow: { display: "flex", alignItems: "center", gap: 7, padding: "3px 0", fontFamily: "system-ui, sans-serif", fontSize: 12.5, color: "var(--tD9CFAF)" },
