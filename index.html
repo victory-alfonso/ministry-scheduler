@@ -898,8 +898,17 @@ function resolveRoleTagValue(config, monthState, week, slot, tag) {
 // row's linked role, but only when that role has been marked "Add a verse
 // box next to this role" (role.hasVerse) in Manage Teams. Used so the print
 // run sheet can show the verse as its own row under the linked task.
-function resolveRowVerse(config, monthState, week, slot, row) {
+// If any row linked to the same role has "Show the verse on this row" ticked
+// (row.showVerse), only those rows show the verse (e.g. just TRANSITION, not
+// 3-2-1 or ANNOUNCEMENT that share the Program Flow role). With none ticked,
+// every row linked to the role shows it, as before.
+function resolveRowVerse(config, monthState, week, slot, row, program) {
   if (!row.linkedRole) return "";
+  if (program) {
+    const sameRole = [];
+    (program.sections || []).forEach((s) => (s.rows || []).forEach((r) => { if (r.linkedRole === row.linkedRole) sameRole.push(r); }));
+    if (sameRole.some((r) => r.showVerse) && !row.showVerse) return "";
+  }
   const [teamId, roleId] = row.linkedRole.split("::");
   const team = config.teams.find((t) => t.id === teamId);
   const role = team && team.roles.find((r) => r.id === roleId);
@@ -6336,7 +6345,7 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                   const startsTimeGroup = i === 0 || !isBlankTiming(timing);
                   let timeSpan = 1;
                   while (startsTimeGroup && i + timeSpan < visibleRows.length && isBlankTiming(timings[i + timeSpan])) timeSpan++;
-                  const verseText = resolveRowVerse(config, monthState, week, slot, row);
+                  const verseText = resolveRowVerse(config, monthState, week, slot, row, program);
                   return (
                     <tr key={row.id}>
                       {startsTimeGroup && (
@@ -6420,13 +6429,6 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                       </table>
                     </div>
                   )}
-                </div>
-                <div>
-                  {sideBlocks.filter((_, i) => i % 2 === 1).map(renderSideBlock)}
-                  <div style={{ marginBottom: 14 }}>
-                    <div style={styles.sheetSectionHead}>ANNOUNCEMENTS</div>
-                    <table style={{ ...styles.sheetTable, tableLayout: "fixed", width: "100%" }}><tbody><tr><td style={{ ...styles.sheetTd, whiteSpace: "pre-wrap" }}>{info.announcements || ""}</td></tr></tbody></table>
-                  </div>
                   <div>
                     <div style={styles.sheetSectionHead}>HEAD COUNT</div>
                     <table style={{ ...styles.sheetTable, tableLayout: "fixed", width: "100%" }}>
@@ -6441,6 +6443,13 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                         <tr><td style={{ ...styles.sheetTd, fontWeight: 700 }}>Total</td><td style={{ ...styles.sheetTd, fontWeight: 700 }}>{total || ""}</td></tr>
                       </tbody>
                     </table>
+                  </div>
+                </div>
+                <div>
+                  {sideBlocks.filter((_, i) => i % 2 === 1).map(renderSideBlock)}
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={styles.sheetSectionHead}>ANNOUNCEMENTS</div>
+                    <table style={{ ...styles.sheetTable, tableLayout: "fixed", width: "100%" }}><tbody><tr><td style={{ ...styles.sheetTd, whiteSpace: "pre-wrap" }}>{info.announcements || ""}</td></tr></tbody></table>
                   </div>
                 </div>
               </div>
@@ -7681,6 +7690,12 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
                       <input type="checkbox" checked={!!row.checkbox} onChange={() => updateRow(section.id, row.id, "checkbox", !row.checkbox)} />
                       Show a checkbox for this row
                     </label>
+                    {row.linkedRole && (
+                      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "var(--t8A7F5E)" }}>
+                        <input type="checkbox" checked={!!row.showVerse} onChange={() => updateRow(section.id, row.id, "showVerse", !row.showVerse)} />
+                        Show the verse on this row (if ticked on any row of this role, only those rows show it)
+                      </label>
+                    )}
                     <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", paddingTop: 2, borderTop: "1px dashed var(--lE4DCC6)" }}>
                       <span style={{ fontSize: 11.5, color: "var(--t8A7F5E)" }}>Show on weeks:</span>
                       {WEEKS.map((w) => (
