@@ -6255,6 +6255,21 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
 
     // one merged notes cell down the whole table, goes in the first body row
     const bodyRowCount = program.sections.reduce((n, sec) => n + (sec.kind === "divider" ? 1 : (sec.rows || []).filter((row) => rowVisibleForWeek(row, week)).length), 0);
+    // "merge volunteer with row above" can go across sections; a divider band breaks it
+    const volMerge = {};
+    let volHeadId = null;
+    program.sections.forEach((sec) => {
+      if (sec.kind === "divider") { volHeadId = null; return; }
+      (sec.rows || []).filter((row) => rowVisibleForWeek(row, week)).forEach((row) => {
+        if (row.mergeVolAbove && volHeadId) {
+          volMerge[row.id] = { start: false, span: 0 };
+          volMerge[volHeadId].span++;
+        } else {
+          volHeadId = row.id;
+          volMerge[row.id] = { start: true, span: 1 };
+        }
+      });
+    });
     let notesPlaced = false;
     const takeNotesCell = () => {
       if (notesPlaced || bodyRowCount === 0) return null;
@@ -6345,8 +6360,6 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                 const timings = visibleRows.map((r) => resolveRowTiming(r, week, slot, timeOffset));
                 const isBlankTiming = (t) => !norm(t.time) && !norm(t.duration);
 
-                // row has "merge volunteer with the row above" ticked = shares the cell above
-                const canMergeVol = (x, y) => !!visibleRows[y].mergeVolAbove;
 
                 return visibleRows.map((row, i) => {
                   const timing = timings[i];
@@ -6355,9 +6368,9 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                   let timeSpan = 1;
                   while (startsTimeGroup && i + timeSpan < visibleRows.length && isBlankTiming(timings[i + timeSpan])) timeSpan++;
                   const verseText = resolveRowVerse(config, monthState, week, slot, row, program);
-                  const startsVolGroup = i === 0 || !canMergeVol(i - 1, i);
-                  let volSpan = 1;
-                  while (startsVolGroup && i + volSpan < visibleRows.length && canMergeVol(i + volSpan - 1, i + volSpan)) volSpan++;
+                  const volInfo = volMerge[row.id] || { start: true, span: 1 };
+                  const startsVolGroup = volInfo.start;
+                  const volSpan = volInfo.span;
                   return (
                     <tr key={row.id}>
                       {startsTimeGroup && (
@@ -7704,7 +7717,7 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
                       <input type="checkbox" checked={!!row.checkbox} onChange={() => updateRow(section.id, row.id, "checkbox", !row.checkbox)} />
                       Show a checkbox for this row
                     </label>
-                    {rowIdx > 0 && (
+                    {(rowIdx > 0 || (sIdx > 0 && program.sections[sIdx - 1].kind !== "divider")) && (
                       <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "var(--t8A7F5E)" }}>
                         <input type="checkbox" checked={!!row.mergeVolAbove} onChange={() => updateRow(section.id, row.id, "mergeVolAbove", !row.mergeVolAbove)} />
                         Merge the volunteer cell with the row above
