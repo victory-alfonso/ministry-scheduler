@@ -6981,6 +6981,70 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
     updateProgram((p) => ({ ...p, sections: p.sections.map((s) => (s.id === sectionId ? { ...s, programSubRoles: (s.programSubRoles || []).filter((t) => t !== tag) } : s)) }));
   };
 
+  // ---- Print the program layout (read-only copy of what is set up here) ----
+  const printProgramLayout = () => {
+    const esc = (v) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const roleLabel = (tag) => { const o = allRoleOptions.find((r) => r.tag === tag); return o ? o.label : tag; };
+    const weeksText = (row) => (row.showWeeks && row.showWeeks.length ? "Wk " + row.showWeeks.join(", ") : "All");
+    const overrideText = (list) => (list || []).map((ov) =>
+      `${ov.weeks && ov.weeks.length ? "Wk " + ov.weeks.join(",") : "All weeks"} · ${ov.slots && ov.slots.length ? ov.slots.join(", ") : "All slots"} → ${[ov.time, ov.duration].filter((v) => norm(v)).join(" / ") || "—"}`
+    ).join("<br>");
+    let body = "";
+    program.sections.forEach((sec) => {
+      if (sec.kind === "divider") {
+        const ov = overrideText(sec.overrides);
+        body += `<tr class="band"><td colspan="7">${esc(sec.label)}${norm(sec.time) ? " — " + esc(sec.time) : ""}${ov ? `<div class="ov">${ov}</div>` : ""}</td></tr>`;
+        return;
+      }
+      const rows = sec.rows || [];
+      const extra = (sec.programSubRoles || []).map(roleLabel).join(", ");
+      rows.forEach((row, i) => {
+        body += "<tr>" +
+          `<td>${esc(row.time)}</td><td>${esc(row.duration)}</td>` +
+          (i === 0 ? `<td rowspan="${rows.length}" class="prog">${esc(sec.program)}${extra ? `<div class="ov">Extra lines: ${esc(extra)}</div>` : ""}</td>` : "") +
+          `<td>${esc(row.task)}</td>` +
+          `<td>${row.linkedRole ? esc(roleLabel(row.linkedRole)) : esc(row.fixedText || "(free text)")}</td>` +
+          `<td>${weeksText(row)}</td>` +
+          `<td class="ov">${overrideText(row.overrides)}</td></tr>`;
+      });
+    });
+    let side = "";
+    (program.sideBlocks || []).forEach((b) => {
+      side += `<h3>${esc(b.title)}</h3><table><tbody>` +
+        (b.rows || []).map((r) => `<tr><td>${esc(r.label)}</td><td>${r.linkedRole ? esc(roleLabel(r.linkedRole)) : "(free text)"}</td></tr>`).join("") +
+        "</tbody></table>";
+    });
+    if ((program.soloRows || []).length) {
+      side += `<h3>OTHER</h3><table><tbody>` +
+        program.soloRows.map((r) => `<tr><td>${esc(r.label)}</td><td>${r.linkedRole ? esc(roleLabel(r.linkedRole)) : "(free text)"}</td></tr>`).join("") +
+        "</tbody></table>";
+    }
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Print Program</title><style>
+      body{font-family:Arial,sans-serif;font-size:11px;color:#222;margin:16px}
+      h2{margin:0 0 2px;font-size:16px} .sub{color:#666;margin-bottom:10px}
+      h3{margin:14px 0 4px;font-size:12px}
+      table{border-collapse:collapse;width:100%;margin-bottom:6px}
+      td,th{border:1px solid #999;padding:3px 5px;vertical-align:top;text-align:left}
+      th{background:#1F3864;color:#fff} .prog{font-weight:700} .band td{background:#e8e8e8;font-weight:700;text-align:center}
+      .ov{font-size:9.5px;color:#555;font-weight:400}
+      tr{page-break-inside:avoid}
+    </style></head><body>
+      <h2>Print Program (run sheet layout)</h2><div class="sub">Times are for the first service slot</div>
+      <table><thead><tr><th>Time</th><th>Duration</th><th>Program</th><th>Task</th><th>Volunteer / Linked role</th><th>Weeks</th><th>Overrides</th></tr></thead><tbody>${body}</tbody></table>
+      ${side}
+    </body></html>`;
+    const frame = document.createElement("iframe");
+    frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+    frame.onload = () => {
+      const w = frame.contentWindow;
+      w.focus();
+      w.print();
+      setTimeout(() => frame.remove(), 60000);
+    };
+    frame.srcdoc = html;
+    document.body.appendChild(frame);
+  };
+
   // ---- "+ Program" popup (same idea as the Events tab) ----
   const durationToMins = (text) => {
     const t = norm(text).toUpperCase();
@@ -7469,7 +7533,10 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
 
       {manageTab === "program" && (
       <div style={{ marginTop: 28 }}>
-        <div style={styles.sectionLabel}>Print Program (run sheet layout)</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+          <div style={styles.sectionLabel}>Print Program (run sheet layout)</div>
+          <button onClick={printProgramLayout} style={{ ...styles.smallBtn, background: "var(--bA9782F)" }}>🖨 Print</button>
+        </div>
         <div style={styles.pairNote}>
           This is the exact flow printed on the Master List run sheet — separate from
           Teams/Roles above. A row can link to an existing team/role (so it auto-fills
