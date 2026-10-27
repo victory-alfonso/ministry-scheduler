@@ -6345,6 +6345,9 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                 const timings = visibleRows.map((r) => resolveRowTiming(r, week, slot, timeOffset));
                 const isBlankTiming = (t) => !norm(t.time) && !norm(t.duration);
 
+                // row has "merge volunteer with the row above" ticked = shares the cell above
+                const canMergeVol = (x, y) => !!visibleRows[y].mergeVolAbove;
+
                 return visibleRows.map((row, i) => {
                   const timing = timings[i];
                   // blank rows below get merged into this one's Time/Duration
@@ -6352,6 +6355,9 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                   let timeSpan = 1;
                   while (startsTimeGroup && i + timeSpan < visibleRows.length && isBlankTiming(timings[i + timeSpan])) timeSpan++;
                   const verseText = resolveRowVerse(config, monthState, week, slot, row, program);
+                  const startsVolGroup = i === 0 || !canMergeVol(i - 1, i);
+                  let volSpan = 1;
+                  while (startsVolGroup && i + volSpan < visibleRows.length && canMergeVol(i + volSpan - 1, i + volSpan)) volSpan++;
                   return (
                     <tr key={row.id}>
                       {startsTimeGroup && (
@@ -6376,7 +6382,9 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                           <div style={{ fontWeight: 400, fontStyle: "italic", fontSize: 10.5, marginTop: 3, color: "var(--t3B5A8A)" }}>{verseText}</div>
                         )}
                       </td>
-                      <td style={styles.sheetTd}><VolunteerCell row={row} /></td>
+                      {startsVolGroup && (
+                        <td rowSpan={volSpan} style={styles.sheetTd}><VolunteerCell row={row} /></td>
+                      )}
                       <td style={{ ...styles.sheetTd, textAlign: "center" }}>
                         {row.checkbox && (
                           <input className="no-print-interactive" type="checkbox" checked={!!(monthState.checks && monthState.checks[`custom:${row.id}`])}
@@ -7670,7 +7678,7 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
                   </select>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {(section.rows || []).map((row) => {
+                {(section.rows || []).map((row, rowIdx) => {
                   const draft = getOverrideDraft(row.id);
                   return (
                   <div key={row.id} style={{ border: "1px solid var(--lE4DCC6)", borderRadius: 8, padding: 8, display: "flex", flexDirection: "column", gap: 4 }}>
@@ -7696,6 +7704,12 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
                       <input type="checkbox" checked={!!row.checkbox} onChange={() => updateRow(section.id, row.id, "checkbox", !row.checkbox)} />
                       Show a checkbox for this row
                     </label>
+                    {rowIdx > 0 && (
+                      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "var(--t8A7F5E)" }}>
+                        <input type="checkbox" checked={!!row.mergeVolAbove} onChange={() => updateRow(section.id, row.id, "mergeVolAbove", !row.mergeVolAbove)} />
+                        Merge the volunteer cell with the row above
+                      </label>
+                    )}
                     {row.linkedRole && (
                       <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "var(--t8A7F5E)" }}>
                         <input type="checkbox" checked={!!row.showVerse} onChange={() => updateRow(section.id, row.id, "showVerse", !row.showVerse)} />
