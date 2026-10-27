@@ -6274,9 +6274,10 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
         if (row.mergeVolAbove && volHeadId) {
           volMerge[row.id] = { start: false, span: 0 };
           volMerge[volHeadId].span++;
+          if (row.checkbox) volMerge[volHeadId].checkbox = true;
         } else {
           volHeadId = row.id;
-          volMerge[row.id] = { start: true, span: 1 };
+          volMerge[row.id] = { start: true, span: 1, checkbox: !!row.checkbox };
         }
       });
     });
@@ -6408,12 +6409,14 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                       {startsVolGroup && (
                         <td rowSpan={volSpan} style={volSpan > 1 ? { ...styles.sheetTd, verticalAlign: "middle", textAlign: "left" } : styles.sheetTd}><VolunteerCell row={row} /></td>
                       )}
-                      <td style={{ ...styles.sheetTd, textAlign: "center" }}>
-                        {row.checkbox && (
-                          <input className="no-print-interactive" type="checkbox" checked={!!(monthState.checks && monthState.checks[`custom:${row.id}`])}
-                            onChange={() => toggleCheck(`custom:${row.id}`)} />
-                        )}
-                      </td>
+                      {startsVolGroup && (
+                        <td rowSpan={volSpan} style={{ ...styles.sheetTd, textAlign: "center", verticalAlign: volSpan > 1 ? "middle" : undefined }}>
+                          {volInfo.checkbox && (
+                            <input className="no-print-interactive" type="checkbox" checked={!!(monthState.checks && monthState.checks[`custom:${row.id}`])}
+                              onChange={() => toggleCheck(`custom:${row.id}`)} />
+                          )}
+                        </td>
+                      )}
                       {takeNotesCell()}
                     </tr>
                   );
