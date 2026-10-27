@@ -894,6 +894,35 @@ function resolveRoleTagValue(config, monthState, week, slot, tag) {
   return monthState.assignments[key] || "";
 }
 
+// Shrinks a printable sheet so it fits on ONE letter page. The sheet is laid out
+// at the width it will really have on paper (page width / zoom), because text
+// wraps differently than on screen, and a height measured on screen can be too
+// small. Repeats a few times since a smaller zoom makes the layout wider, which
+// makes it shorter. Page: 8.5x11in with 0.35in margins = ~749 x 989 css px.
+const PRINT_PAGE_W = 740;
+const PRINT_PAGE_H = 960;
+function fitSheetToOnePage(el) {
+  if (!el) return;
+  el.style.zoom = "1";
+  el.style.width = PRINT_PAGE_W + "px";
+  let scale = 1;
+  for (let i = 0; i < 8; i++) {
+    el.style.zoom = "1";
+    el.style.width = (PRINT_PAGE_W / scale) + "px";
+    const h = el.offsetHeight;
+    const next = Math.min(1, PRINT_PAGE_H / h);
+    if (Math.abs(next - scale) < 0.003) { scale = Math.min(scale, next); break; }
+    scale = next;
+  }
+  el.style.width = (PRINT_PAGE_W / scale) + "px";
+  el.style.zoom = scale < 1 ? String(scale) : "1";
+}
+function resetSheetFit(el) {
+  if (!el) return;
+  el.style.zoom = "1";
+  el.style.width = "";
+}
+
 // Resolve the verse text entered (in Assign volunteers) for a print-program
 // row's linked role, but only when that role has been marked "Add a verse
 // box next to this role" (role.hasVerse) in Manage Teams. Used so the print
@@ -2322,18 +2351,8 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
   };
   useEffect(() => {
     if (mode !== "print") return;
-    const PAGE_WIDTH_PX = 740;
-    const PAGE_HEIGHT_PX = 975;
-    const applyPrintScale = () => {
-      const el = eventSheetRef.current;
-      if (!el) return;
-      el.style.zoom = "1";
-      const scale = Math.min(1, PAGE_WIDTH_PX / el.scrollWidth, PAGE_HEIGHT_PX / el.scrollHeight);
-      el.style.zoom = scale < 1 ? String(scale) : "1";
-    };
-    const resetPrintScale = () => {
-      if (eventSheetRef.current) eventSheetRef.current.style.zoom = "1";
-    };
+    const applyPrintScale = () => fitSheetToOnePage(eventSheetRef.current);
+    const resetPrintScale = () => resetSheetFit(eventSheetRef.current);
     window.addEventListener("beforeprint", applyPrintScale);
     window.addEventListener("afterprint", resetPrintScale);
     return () => {
@@ -6153,21 +6172,8 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
 
   useEffect(() => {
     if (view !== "print") return;
-    const PAGE_WIDTH_PX = 740;
-    const PAGE_HEIGHT_PX = 980;
-    const applyPrintScale = () => {
-      const el = sheetRef.current;
-      if (!el) return;
-      el.style.zoom = "1";
-      const contentWidth = el.scrollWidth;
-      const contentHeight = el.scrollHeight;
-      const scale = Math.min(1, PAGE_WIDTH_PX / contentWidth, PAGE_HEIGHT_PX / contentHeight);
-      el.style.zoom = scale < 1 ? scale : "1";
-    };
-    const resetPrintScale = () => {
-      const el = sheetRef.current;
-      if (el) el.style.zoom = "1";
-    };
+    const applyPrintScale = () => fitSheetToOnePage(sheetRef.current);
+    const resetPrintScale = () => resetSheetFit(sheetRef.current);
     window.addEventListener("beforeprint", applyPrintScale);
     window.addEventListener("afterprint", resetPrintScale);
     return () => {
