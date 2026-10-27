@@ -6702,6 +6702,9 @@ function MyScheduleView({ config, monthState, userName, year, month, partial }) 
 
 function ManageView({ config, updateConfig, monthState, updateMonthState, monthLabelText, isMobile }) {
   const [manageTab, setManageTab] = useState("teams");
+  // Cards start collapsed; anything created in this session starts open so it can be edited right away.
+  const [freshIds, setFreshIds] = useState({});
+  const markFresh = (id) => setFreshIds((f) => ({ ...f, [id]: true }));
   const [newTeamName, setNewTeamName] = useState("");
   const [newRoleName, setNewRoleName] = useState({});
   const [restrictEmail, setRestrictEmail] = useState("");
@@ -6787,7 +6790,9 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
   const addTeam = () => {
     const name = norm(newTeamName);
     if (!name) return;
-    updateConfig((prev) => ({ ...prev, teams: [...prev.teams, { id: uid(), name, flexible: false, roles: [] }] }));
+    const newId = uid();
+    markFresh(newId);
+    updateConfig((prev) => ({ ...prev, teams: [...prev.teams, { id: newId, name, flexible: false, roles: [] }] }));
     setNewTeamName("");
   };
   const removeTeam = (teamId) => {
@@ -6931,11 +6936,13 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
     return next;
   };
   const addSection = (kind) => {
+    const newId = uid();
+    markFresh(newId);
     updateProgram((p) => ({
       ...p,
       sections: [...p.sections, kind === "divider"
-        ? { id: uid(), kind: "divider", label: "NEW DIVIDER" }
-        : { id: uid(), kind: "group", program: "", rows: [{ id: uid(), time: "", duration: "", task: "New task" }] }],
+        ? { id: newId, kind: "divider", label: "NEW DIVIDER" }
+        : { id: newId, kind: "group", program: "", rows: [{ id: uid(), time: "", duration: "", task: "New task" }] }],
     }));
   };
   const removeSection = (id) => updateProgram((p) => ({ ...p, sections: p.sections.filter((s) => s.id !== id) }));
@@ -7025,7 +7032,7 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
     updateSection(sectionId, "overrides", (sec.overrides || []).filter((o) => o.id !== overrideId));
   };
 
-  const addSideBlock = () => updateProgram((p) => ({ ...p, sideBlocks: [...(p.sideBlocks || []), { id: uid(), title: "NEW SECTION", rows: [{ id: uid(), label: "New row" }] }] }));
+  const addSideBlock = () => { const newId = uid(); markFresh(newId); updateProgram((p) => ({ ...p, sideBlocks: [...(p.sideBlocks || []), { id: newId, title: "NEW SECTION", rows: [{ id: uid(), label: "New row" }] }] })); };
   const removeSideBlock = (id) => updateProgram((p) => ({ ...p, sideBlocks: (p.sideBlocks || []).filter((b) => b.id !== id) }));
   const updateSideBlockTitle = (id, title) => updateProgram((p) => ({ ...p, sideBlocks: (p.sideBlocks || []).map((b) => (b.id === id ? { ...b, title } : b)) }));
   const addSideRow = (blockId) => updateProgram((p) => ({ ...p, sideBlocks: (p.sideBlocks || []).map((b) => (b.id === blockId ? { ...b, rows: [...b.rows, { id: uid(), label: "New row" }] } : b)) }));
@@ -7056,7 +7063,7 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
       {manageTab === "teams" && (
       <div style={styles.manageGrid}>
         {config.teams.map((team) => (
-          <details key={team.id} style={styles.teamCard} open={!isMobile}>
+          <details key={team.id} style={styles.teamCard} open={!!freshIds[team.id]}>
             <summary style={styles.teamCardSummary}>{team.name || "Untitled team"}</summary>
             <div style={styles.teamCardBody}>
             <div style={styles.teamCardHead}>
@@ -7278,7 +7285,7 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
         {program.sections.map((section, sIdx) => {
           const dividerDraft = section.kind === "divider" ? getOverrideDraft(section.id) : null;
           return (
-          <details key={section.id} style={{ ...styles.teamCard, marginBottom: 10 }} open={!isMobile}>
+          <details key={section.id} style={{ ...styles.teamCard, marginBottom: 10 }} open={!!freshIds[section.id]}>
             <summary style={styles.teamCardSummary}>
               {section.kind === "divider" ? (section.label || "Untitled divider") : (section.program || "Untitled program group")}
             </summary>
@@ -7482,7 +7489,7 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
         <div style={{ ...styles.sectionLabel, marginTop: 24 }}>Side-by-side sections (e.g. Kids Coaches, Ushering)</div>
         <div style={styles.manageGrid}>
           {(program.sideBlocks || []).map((block) => (
-            <details key={block.id} style={styles.teamCard} open={!isMobile}>
+            <details key={block.id} style={styles.teamCard} open={!!freshIds[block.id]}>
               <summary style={styles.teamCardSummary}>{block.title || "Untitled section"}</summary>
               <div style={styles.teamCardBody}>
               <div style={styles.teamCardHead}>
