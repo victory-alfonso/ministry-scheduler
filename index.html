@@ -6716,6 +6716,7 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
   const [role3, setRole3] = useState("");
   const [role4, setRole4] = useState("");
   const [overrideDraft, setOverrideDraft] = useState({});
+  const [progModal, setProgModal] = useState(null); // "+ Program" popup for the print program
   const [newVolunteerName, setNewVolunteerName] = useState({});
   // Drag-to-reorder roles: { teamId, roleId, overId } while a handle is held
   const [roleDrag, setRoleDrag] = useState(null);
@@ -6978,6 +6979,213 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
   };
   const removeProgramSubRole = (sectionId, tag) => {
     updateProgram((p) => ({ ...p, sections: p.sections.map((s) => (s.id === sectionId ? { ...s, programSubRoles: (s.programSubRoles || []).filter((t) => t !== tag) } : s)) }));
+  };
+
+  // ---- "+ Program" popup (same idea as the Events tab) ----
+  const durationToMins = (text) => {
+    const t = norm(text).toUpperCase();
+    const n = parseInt(t, 10);
+    if (isNaN(n)) return "";
+    return /HR/.test(t) ? String(n * 60) : String(n);
+  };
+  const firstClock = (text) => {
+    const m = parseClockToMinutes(norm(text).split(/\s[–-]\s/)[0]);
+    return m == null ? "" : minutesToHHMM(m);
+  };
+  const blankProgTask = () => ({ id: uid(), task: "", linkedRole: "", fixedText: "", showWeeks: null });
+  const openProgModal = (section) => {
+    const rows = section ? section.rows || [] : [];
+    const start = rows[0] ? firstClock(rows[0].time) : "";
+    const mins = rows[0] ? durationToMins(rows[0].duration) : "";
+    setProgModal({
+      sectionId: section ? section.id : null,
+      program: section ? section.program || "" : "",
+      startAt: start, mins, initStart: start, initMins: mins,
+      afterId: "", shiftBelow: false,
+      subRoles: section ? section.programSubRoles || [] : [],
+      tasks: rows.length
+        ? rows.map((r) => ({ id: r.id, task: r.task || "", linkedRole: r.linkedRole || "", fixedText: r.fixedText || "", showWeeks: r.showWeeks && r.showWeeks.length ? r.showWeeks : null }))
+        : [blankProgTask()],
+    });
+  };
+  // how many mins the program grew (new program = its whole length)
+  const progShiftDelta = (m) => {
+    const now = parseInt(m.mins, 10) || 0;
+    return m.sectionId ? now - (parseInt(m.initMins, 10) || 0) : now;
+  };
+  const saveProgModal = () => {
+    const m = progModal;
+    if (!m) return;
+    const startMin = parseClockToMinutes(m.startAt);
+    const minsNum = parseInt(m.mins, 10);
+    const hasMins = !isNaN(minsNum) && minsNum > 0;
+    // untouched time/mins on an existing program = keep the original text (e.g. "1 HR")
+    const keepTiming = !!m.sectionId && m.startAt === m.initStart && m.mins === m.initMins;
+    const sectionId = m.sectionId || uid();
+    if (!m.sectionId) markFresh(sectionId);
+    const p = program;
+    const old = p.sections.find((s) => s.id === sectionId);
+    const oldRows = old ? old.rows || [] : [];
+    const rows = (m.tasks.length ? m.tasks : [blankProgTask()]).map((t, i) => {
+      const base = oldRows.find((r) => r.id === t.id) || {};
+      const row = { ...base, id: t.id, task: t.task, linkedRole: t.linkedRole, fixedText: t.linkedRole ? "" : t.fixedText, showWeeks: t.showWeeks };
+      if (i === 0 && !keepTiming) {
+        row.time = startMin == null ? "" : hasMins ? `${minutesToHHMM(startMin)} – ${minutesToHHMM(startMin + minsNum)}` : minutesToHHMM(startMin);
+        row.duration = hasMins ? `${minsNum} MINS` : "";
+      }
+      if (row.time === undefined) row.time = "";
+      if (row.duration === undefined) row.duration = "";
+      return row;
+    });
+    const section = { ...(old || { id: sectionId, kind: "group" }), program: m.program, programSubRoles: m.subRoles, rows };
+    const rest = p.sections.filter((s) => s.id !== sectionId);
+    let at = old ? p.sections.findIndex((s) => s.id === sectionId) : rest.length;
+    if (m.afterId) {
+      const idx = rest.findIndex((s) => s.id === m.afterId);
+      if (idx >= 0) at = idx + 1;
+    }
+    let sections = [...rest.slice(0, at), section, ...rest.slice(at)];
+    // push the later times by the extra mins, up to the END divider (rows with overrides are left alone)
+    const skipped = [];
+    const delta = progShiftDelta(m);
+    if (m.shiftBelow && delta !== 0) {
+      let ended = false;
+      sections = sections.map((s, i) => {
+        if (i <= at || ended) return s;
+        if (s.kind === "divider") {
+          if (/^END/i.test(norm(s.label))) ended = true;
+          if (!norm(s.time)) return s;
+          if ((s.overrides || []).length) { skipped.push(s.label || "divider"); return s; }
+          return { ...s, time: shiftTimeText(s.time, delta) };
+        }
+        return { ...s, rows: (s.rows || []).map((r) => {
+          if (!norm(r.time)) return r;
+          if ((r.overrides || []).length) { skipped.push(r.task || s.program || "row"); return r; }
+          return { ...r, time: shiftTimeText(r.time, delta) };
+        }) };
+      });
+    }
+    updateProgram({ ...p, sections });
+    if (skipped.length) window.alert("Not shifted (they have overrides, please check): " + skipped.join(", "));
+    setProgModal(null);
+  };
+  const renderProgModal = () => {
+    const m = progModal;
+    const setM = (field, value) => setProgModal((cur) => ({ ...cur, [field]: value }));
+    const setTask = (id, field, value) => setProgModal((cur) => ({ ...cur, tasks: cur.tasks.map((t) => (t.id === id ? { ...t, [field]: value } : t)) }));
+    const toggleTaskWeek = (t, w) => {
+      const cur = t.showWeeks && t.showWeeks.length ? t.showWeeks : WEEKS.slice();
+      const next = cur.includes(w) ? cur.filter((x) => x !== w) : [...cur, w].sort((a, b) => a - b);
+      if (next.length === 0) return; // at least one week
+      setTask(t.id, "showWeeks", next.length === WEEKS.length ? null : next);
+    };
+    const lbl = { fontSize: 12, fontWeight: 700, color: "var(--t6B6B6B)", marginBottom: 3 };
+    const sectionName = (s) => (s.kind === "divider" ? (s.label || "Divider") : (s.program || ((s.rows || [])[0] || {}).task || "Untitled program"));
+    return ReactDOM.createPortal(
+      <div className="no-print" style={styles.modalOverlay} onMouseDown={(ev) => { if (ev.target === ev.currentTarget) setProgModal(null); }}>
+        <div style={{ ...styles.modalCard, maxWidth: 580, maxHeight: "90vh", overflowY: "auto" }}>
+          <div style={styles.modalIconRow}>
+            <div style={{ ...styles.modalIconBadge, background: "var(--b1F3864)" }}>＋</div>
+            <div style={styles.modalTitle}>{m.sectionId ? "Edit program" : "Add program"}</div>
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+            <div style={{ flex: "1 1 130px" }}>
+              <div style={lbl}>Start at (optional)</div>
+              <input type="time" value={m.startAt} onChange={(ev) => setM("startAt", ev.target.value)}
+                style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box" }} />
+            </div>
+            <div style={{ flex: "0 0 84px" }}>
+              <div style={lbl}>Mins</div>
+              <input value={m.mins} onChange={(ev) => setM("mins", ev.target.value)} inputMode="numeric" placeholder="e.g. 7"
+                style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box" }} />
+            </div>
+          </div>
+          <div style={{ fontSize: 11.5, color: "var(--t6B6B6B)", marginBottom: 12 }}>
+            Times are for the first service slot. Other slots shift automatically.
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <div style={lbl}>Program</div>
+            <input value={m.program} onChange={(ev) => setM("program", ev.target.value)} placeholder="e.g. COMMUNION" autoFocus
+              style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box", fontWeight: 700 }} />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <div style={lbl}>Place after</div>
+            <select value={m.afterId} onChange={(ev) => setM("afterId", ev.target.value)}
+              style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box" }}>
+              <option value="">{m.sectionId ? "Keep current position" : "At the end"}</option>
+              {program.sections.filter((s) => s.id !== m.sectionId).map((s) => (
+                <option key={s.id} value={s.id}>{sectionName(s)}</option>
+              ))}
+            </select>
+          </div>
+          <div style={lbl}>Role / Task (linked to a ministry role)</div>
+          {m.tasks.map((t) => (
+            <div key={t.id} style={{ border: "1px solid var(--lE4DCC6)", borderRadius: 8, padding: 8, marginBottom: 8 }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 6 }}>
+                <input value={t.task} onChange={(ev) => setTask(t.id, "task", ev.target.value)} placeholder="Task (optional — leave blank if same as program)"
+                  style={{ ...styles.roleEditInput, flex: "1 1 150px" }} />
+                <select value={t.linkedRole} onChange={(ev) => setTask(t.id, "linkedRole", ev.target.value)}
+                  style={{ ...styles.roleEditInput, flex: "1 1 170px" }}>
+                  <option value="">Linked role: none</option>
+                  {allRoleOptions.map((r) => <option key={r.tag} value={r.tag}>{r.label}</option>)}
+                </select>
+                {!t.linkedRole && (
+                  <input value={t.fixedText} onChange={(ev) => setTask(t.id, "fixedText", ev.target.value)} placeholder="Fixed text (optional)"
+                    style={{ ...styles.roleEditInput, flex: "1 1 100%" }} />
+                )}
+                <button onClick={() => setProgModal((cur) => ({ ...cur, tasks: cur.tasks.filter((x) => x.id !== t.id) }))}
+                  style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove role/task">✕</button>
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <span style={{ fontSize: 11.5, color: "var(--t8A7F5E)" }}>Show on weeks:</span>
+                {WEEKS.map((w) => (
+                  <label key={w} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11.5, color: "var(--t8A7F5E)" }}>
+                    <input type="checkbox" checked={!t.showWeeks || t.showWeeks.includes(w)} onChange={() => toggleTaskWeek(t, w)} />
+                    {w}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+          <button onClick={() => setProgModal((cur) => ({ ...cur, tasks: [...cur.tasks, blankProgTask()] }))}
+            style={{ ...styles.smallBtn, background: "var(--b2F4858)", marginBottom: 14 }}>+ Role / Task</button>
+          <div style={lbl}>Extra lines under Program (pulled live from a ministry role, e.g. 1st Song, 2nd Song)</div>
+          {m.subRoles.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+              {m.subRoles.map((tag) => {
+                const opt = allRoleOptions.find((r) => r.tag === tag);
+                return (
+                  <span key={tag} style={{ background: "var(--bEFE7D3)", borderRadius: 20, padding: "3px 6px 3px 10px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                    {opt ? opt.label : tag}
+                    <button onClick={() => setM("subRoles", m.subRoles.filter((k) => k !== tag))}
+                      style={{ border: "none", background: "none", color: "var(--tA6402F)", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }} aria-label="Remove">×</button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          <select value="" onChange={(ev) => { if (ev.target.value) setM("subRoles", [...m.subRoles, ev.target.value]); }}
+            style={{ ...styles.roleEditInput, width: "100%", boxSizing: "border-box", marginBottom: 12 }}>
+            <option value="">+ Add a ministry role as an extra line…</option>
+            {allRoleOptions.filter((r) => !m.subRoles.includes(r.tag)).map((r) => <option key={r.tag} value={r.tag}>{r.label}</option>)}
+          </select>
+          {progShiftDelta(m) !== 0 && (
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, marginBottom: 12 }}>
+              <input type="checkbox" checked={!!m.shiftBelow} onChange={(ev) => setM("shiftBelow", ev.target.checked)} />
+              Shift the programs below by {progShiftDelta(m) > 0 ? "+" : ""}{progShiftDelta(m)} mins (until the END divider)
+            </label>
+          )}
+          <div style={{ fontSize: 11.5, color: "var(--t6B6B6B)", marginBottom: 16 }}>
+            Different Time/Duration on certain weeks or slots? Use Overrides on the row in the card after saving.
+          </div>
+          <div style={styles.modalActions}>
+            <button onClick={() => setProgModal(null)} style={styles.modalCancelBtn}>Cancel</button>
+            <button onClick={saveProgModal} style={{ ...styles.smallBtn, padding: "9px 18px" }}>Save</button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
   };
 
   // ---- Per-week/slot Time & Duration overrides for a print-program row ----
@@ -7301,6 +7509,7 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
               <div style={{ display: "flex", gap: 4 }}>
                 <button onClick={() => moveSection(section.id, -1)} disabled={sIdx === 0} style={styles.linkDanger}>↑</button>
                 <button onClick={() => moveSection(section.id, 1)} disabled={sIdx === program.sections.length - 1} style={styles.linkDanger}>↓</button>
+                {section.kind !== "divider" && <button onClick={() => openProgModal(section)} style={styles.linkDanger}>Edit</button>}
                 <button onClick={() => removeSection(section.id)} style={styles.linkDanger}>Remove</button>
               </div>
             </div>
@@ -7482,9 +7691,11 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
           );
         })}
         <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+          <button onClick={() => openProgModal(null)} style={styles.smallBtn}>+ Program</button>
           <button onClick={() => addSection("group")} style={styles.smallBtn}>Add program group</button>
           <button onClick={() => addSection("divider")} style={styles.smallBtn}>Add divider</button>
         </div>
+        {progModal && renderProgModal()}
 
         <div style={{ ...styles.sectionLabel, marginTop: 24 }}>Side-by-side sections (e.g. Kids Coaches, Ushering)</div>
         <div style={styles.manageGrid}>
