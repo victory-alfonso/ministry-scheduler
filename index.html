@@ -2446,7 +2446,7 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
       programNote: first ? first.programNote || "" : "",
       afterId: "",
       programSubRoles: first ? first.programSubRoles || [] : [],
-      tasks: group ? group.map((r) => ({ id: r.id, task: r.task || "", linkedRole: r.linkedRole || "", fixedText: r.fixedText || "" })) : [blankTask()],
+      tasks: group ? group.map((r) => ({ id: r.id, task: r.task || "", linkedRole: r.linkedRole || "", fixedText: r.fixedText || "", mergeVolAbove: !!r.mergeVolAbove })) : [blankTask()],
     });
   };
   // "Start at" has to agree with "When": Before = earlier than the service start, During = from the start on, After = once the service has ended
@@ -2475,7 +2475,7 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
       const built = tasks.map((t, i) => {
         const base = old.find((r) => r.id === t.id) || {};
         return {
-          ...base, id: t.id, phase: m.phase, task: t.task, linkedRole: t.linkedRole, fixedText: t.fixedText,
+          ...base, id: t.id, phase: m.phase, task: t.task, linkedRole: t.linkedRole, fixedText: t.fixedText, mergeVolAbove: !!t.mergeVolAbove,
           duration: i === 0 ? m.duration : "", startAt: i === 0 ? m.startAt : "",
           program: i === 0 ? m.program : "", programNote: i === 0 ? m.programNote : "",
           programSubRoles: i === 0 ? m.programSubRoles : [],
@@ -2588,6 +2588,10 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
                   style={{ ...styles.roleEditInput, flex: "1 1 100%" }} />
               )}
               <button onClick={() => removeTask(t.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove role/task">✕</button>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, flex: "1 1 100%" }}>
+                <input type="checkbox" checked={!!t.mergeVolAbove} onChange={() => setTask(t.id, "mergeVolAbove", !t.mergeVolAbove)} />
+                Merge the volunteer cell with the row above
+              </label>
             </div>
           ))}
           <button onClick={addTask} style={{ ...styles.smallBtn, background: "var(--b2F4858)", marginBottom: 14 }}>+ Role / Task</button>
@@ -3496,6 +3500,8 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
       const group = computed.filter((c) => c.phase === phaseId);
       const timeSpans = spanList(group.map((c, i) => i === 0 || !!c.time));
       const programSpans = spanList(group.map((c, i) => i === 0 || !!norm(c.row.program)));
+      // rows with "merge volunteer with row above" share the cell of the row above (left, vertically centered)
+      const volSpans = spanList(group.map((c, i) => i === 0 || !c.row.mergeVolAbove));
       return group.map(({ row, time, durationText }, i) => (
         <tr key={row.id}>
           {timeSpans[i] > 0 && (
@@ -3525,7 +3531,11 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
               <div style={{ fontWeight: 400, fontStyle: "italic", fontSize: 10.5, marginTop: row.task ? 3 : 0, color: "var(--t3B5A8A)" }}>{verseFor(row.linkedRole)}</div>
             )}
           </td>
-          <td style={styles.sheetTd}>{row.fixedText || eventVolunteer(openEvent, row.linkedRole)}</td>
+          {volSpans[i] > 0 && (
+            <td rowSpan={volSpans[i]} style={volSpans[i] > 1 ? { ...styles.sheetTd, verticalAlign: "middle", textAlign: "left" } : styles.sheetTd}>
+              {row.fixedText || eventVolunteer(openEvent, row.linkedRole)}
+            </td>
+          )}
           <td style={{ ...styles.sheetTd, textAlign: "center" }}>
             <span style={{ display: "inline-block", width: 12, height: 12, border: "1px solid var(--l23211D)", borderRadius: 3 }} />
           </td>
@@ -6396,7 +6406,7 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
                         )}
                       </td>
                       {startsVolGroup && (
-                        <td rowSpan={volSpan} style={styles.sheetTd}><VolunteerCell row={row} /></td>
+                        <td rowSpan={volSpan} style={volSpan > 1 ? { ...styles.sheetTd, verticalAlign: "middle", textAlign: "left" } : styles.sheetTd}><VolunteerCell row={row} /></td>
                       )}
                       <td style={{ ...styles.sheetTd, textAlign: "center" }}>
                         {row.checkbox && (
