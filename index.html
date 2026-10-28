@@ -2590,7 +2590,7 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
               <button onClick={() => removeTask(t.id)} style={{ ...styles.smallBtn, background: "var(--bA6402F)" }} aria-label="Remove role/task">✕</button>
               <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, flex: "1 1 100%" }}>
                 <input type="checkbox" checked={!!t.mergeVolAbove} onChange={() => setTask(t.id, "mergeVolAbove", !t.mergeVolAbove)} />
-                Merge the volunteer cell with the row above
+                Merge the volunteer cell with the row above (only if same name)
               </label>
             </div>
           ))}
@@ -3501,7 +3501,9 @@ function EventsView({ config, updateConfig: updateConfigRaw, canEdit }) {
       const timeSpans = spanList(group.map((c, i) => i === 0 || !!c.time));
       const programSpans = spanList(group.map((c, i) => i === 0 || !!norm(c.row.program)));
       // rows with "merge volunteer with row above" share the cell of the row above (left, vertically centered)
-      const volSpans = spanList(group.map((c, i) => i === 0 || !c.row.mergeVolAbove));
+      // (only when the name is the same as the row above; different names stay separate)
+      const volValues = group.map((c) => normKey(c.row.fixedText || eventVolunteer(openEvent, c.row.linkedRole)));
+      const volSpans = spanList(group.map((c, i) => i === 0 || !(c.row.mergeVolAbove && volValues[i] && volValues[i] === volValues[i - 1])));
       return group.map(({ row, time, durationText }, i) => (
         <tr key={row.id}>
           {timeSpans[i] > 0 && (
@@ -6266,17 +6268,21 @@ function MasterListView({ config, monthState, updateMonthState, week, slot, year
     // one merged notes cell down the whole table, goes in the first body row
     const bodyRowCount = program.sections.reduce((n, sec) => n + (sec.kind === "divider" ? 1 : (sec.rows || []).filter((row) => rowVisibleForWeek(row, week)).length), 0);
     // "merge volunteer with row above" can go across sections; a divider band breaks it
+    // ...but only when it is ticked AND the name is the same as the row above; different names stay separate
     const volMerge = {};
     let volHeadId = null;
+    let volHeadValue = "";
     program.sections.forEach((sec) => {
-      if (sec.kind === "divider") { volHeadId = null; return; }
+      if (sec.kind === "divider") { volHeadId = null; volHeadValue = ""; return; }
       (sec.rows || []).filter((row) => rowVisibleForWeek(row, week)).forEach((row) => {
-        if (row.mergeVolAbove && volHeadId) {
+        const rowValue = normKey(resolvePrintRow(config, monthState, week, slot, row).value);
+        if (row.mergeVolAbove && volHeadId && rowValue && rowValue === volHeadValue) {
           volMerge[row.id] = { start: false, span: 0 };
           volMerge[volHeadId].span++;
           if (row.checkbox) volMerge[volHeadId].checkbox = true;
         } else {
           volHeadId = row.id;
+          volHeadValue = rowValue;
           volMerge[row.id] = { start: true, span: 1, checkbox: !!row.checkbox };
         }
       });
@@ -7733,7 +7739,7 @@ function ManageView({ config, updateConfig, monthState, updateMonthState, monthL
                     {(rowIdx > 0 || (sIdx > 0 && program.sections[sIdx - 1].kind !== "divider")) && (
                       <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "var(--t8A7F5E)" }}>
                         <input type="checkbox" checked={!!row.mergeVolAbove} onChange={() => updateRow(section.id, row.id, "mergeVolAbove", !row.mergeVolAbove)} />
-                        Merge the volunteer cell with the row above
+                        Merge the volunteer cell with the row above (only if same name)
                       </label>
                     )}
                     {row.linkedRole && (
